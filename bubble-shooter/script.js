@@ -57,12 +57,12 @@ function resizeCanvas() {
     const maxW = isMobileView ? window.innerWidth : window.innerWidth * 0.9;
     const maxH = isMobileView ? window.innerHeight : window.innerHeight * 0.92;
     const hoodH = document.getElementById('hood').offsetHeight || 48;
-    // Portrait: width < height, target ~9:16 aspect
+    // Portrait aspect ratio: mobile ~9:16, desktop wider ~10:16
     let h = maxH - hoodH;
-    let w = h * (9 / 16);
+    let w = isMobileView ? h * (9 / 16) : h * (10 / 16);
     if (w > maxW) {
         w = maxW;
-        h = w * (16 / 9);
+        h = isMobileView ? w * (16 / 9) : w * (16 / 10);
     }
     canvas.width = Math.floor(w);
     canvas.height = Math.floor(h);
@@ -75,16 +75,52 @@ GameBackground.init(canvas.width, canvas.height);
 
 let score = 0;
 
+// ── Preload bubble images ──
+const bubbleImages = {};
+const bubbleImageMap = {
+    '#c45c5c': 'images/red-bubble.png',
+    '#c4a84e': 'images/yellow-bubble.png',
+    '#5aab5a': 'images/green-bubble.png'
+};
+(function preloadBubbleImages() {
+    for (const [color, src] of Object.entries(bubbleImageMap)) {
+        const img = new Image();
+        img.src = src;
+        bubbleImages[color] = img;
+    }
+})();
+
+// Preload firing (player) bubble image
+const firingBubbleImg = new Image();
+firingBubbleImg.src = 'images/firing-bubble.png';
+
+// Preload background image
+const bgImg = new Image();
+bgImg.src = 'images/background.png';
+
+// Preload clouds overlay image
+const cloudsImg = new Image();
+cloudsImg.src = 'images/clouds.png';
+let cloudAngle = 0;
+
+// Preload shield image
+const shieldImg = new Image();
+shieldImg.src = 'images/shield.png';
+
+// Preload bullet image
+const bulletImg = new Image();
+bulletImg.src = 'images/bullet.png';
+
 const bubbleTypes = [
-    { color: '#c45c5c', radius: 10, points: 3, count: 4 }, // Soft Red - small
-    { color: '#c4a84e', radius: 13, points: 2, count: 4 }, // Soft Yellow - medium
-    { color: '#5aab5a', radius: 18, points: 1, count: 4 }  // Soft Green - large
+    { color: '#c45c5c', radius: 18, points: 3, count: 4 }, // Soft Red - small
+    { color: '#c4a84e', radius: 22, points: 2, count: 4 }, // Soft Yellow - medium
+    { color: '#5aab5a', radius: 30, points: 1, count: 4 }  // Soft Green - large
 ];
 
 let player = {
     x: canvas.width / 2,
     y: canvas.height / 2,
-    radius: 20,
+    radius: 28,
     color: '#ffffff',
     angle: 0,
     arrowLength: 40
@@ -93,7 +129,13 @@ let player = {
 let projectile = null;
 let bubbles = [];
 let particles = [];
+let scorePopups = [];
 let gameOver = false;
+
+// ── Shield system ──
+let shield = null;           // { x, y, radius, life, pulse }
+let shieldLastScore = 0;     // score when last shield appeared
+const SHIELD_INTERVAL = 50;  // shield every 50 points
 let screenShake = 0;
 let gamePaused = false;
 let gameStartTime = 0;
@@ -189,7 +231,7 @@ function drawGameOver() {
     const numRows = entries.length;
     const headerH = tableH * 0.1;
     const rowH = (tableH - headerH - 4) / numRows;
-    const fontSize = Math.floor(Math.min(rowH * 0.52, sw(0.028)));
+    const fontSize = Math.floor(Math.min(rowH * 0.58, sw(0.038)));
 
     // Table bg
     ctx.fillStyle = 'rgba(10,10,30,0.9)';
@@ -218,7 +260,7 @@ function drawGameOver() {
     ctx.fillRect(tableL + 1, tableTop + 1, tableW - 2, headerH);
 
     // Header text
-    ctx.font = `bold ${Math.floor(headerH * 0.5)}px Arial`;
+    ctx.font = `bold ${Math.floor(headerH * 0.6)}px Arial`;
     cols.forEach(col => {
         ctx.textAlign = 'center';
         ctx.fillStyle = 'rgba(0,229,255,0.6)';
@@ -281,27 +323,28 @@ function drawGameOver() {
 
     // ── "Try Again" button ──
     const btnW = W * 0.55;
-    const btnH = sh(0.052);
+    const btnH = sh(0.055);
     const btnX = cx - btnW / 2;
     const btnY = tableBottom + (btnAreaH - btnH) / 2;
     const btnR = btnH / 2; // pill shape
 
     // Animated glow pulse
-    const glowPulse = 0.6 + 0.4 * Math.sin(performance.now() * 0.004);
-    const outerGlow = 18 + 10 * glowPulse;
+    const t_now = performance.now();
+    const glowPulse = 0.6 + 0.4 * Math.sin(t_now * 0.004);
 
-    // Outer neon glow aura
+    // Soft outer aura (double pass for rich bloom)
     ctx.save();
-    ctx.shadowColor = `rgba(0, 255, 255, ${0.5 * glowPulse})`;
-    ctx.shadowBlur = outerGlow;
-    ctx.fillStyle = 'rgba(0,229,255,0.08)';
+    ctx.shadowColor = `rgba(0, 255, 200, ${0.35 * glowPulse})`;
+    ctx.shadowBlur = 30 + 12 * glowPulse;
+    ctx.fillStyle = 'rgba(0,229,255,0.04)';
     ctx.beginPath();
-    ctx.roundRect(btnX - 4, btnY - 4, btnW + 8, btnH + 8, btnR + 4);
+    ctx.roundRect(btnX - 6, btnY - 6, btnW + 12, btnH + 12, btnR + 6);
     ctx.fill();
+    ctx.fill(); // second pass for bloom
     ctx.restore();
 
     // Drop shadow
-    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
     ctx.beginPath();
     ctx.roundRect(btnX + 2, btnY + 3, btnW, btnH, btnR);
     ctx.fill();
@@ -310,48 +353,81 @@ function drawGameOver() {
     ctx.save();
     const btnGrad = ctx.createLinearGradient(btnX, btnY, btnX + btnW, btnY + btnH);
     btnGrad.addColorStop(0, '#00ffcc');
-    btnGrad.addColorStop(0.3, '#00e5ff');
-    btnGrad.addColorStop(0.7, '#00b0ff');
-    btnGrad.addColorStop(1, '#6c5ce7');
+    btnGrad.addColorStop(0.25, '#00e5ff');
+    btnGrad.addColorStop(0.55, '#00b0ff');
+    btnGrad.addColorStop(0.85, '#6c5ce7');
+    btnGrad.addColorStop(1, '#a855f7');
     ctx.fillStyle = btnGrad;
-    ctx.shadowColor = 'rgba(0,229,255,0.7)';
-    ctx.shadowBlur = 20;
+    ctx.shadowColor = 'rgba(0,229,255,0.8)';
+    ctx.shadowBlur = 22;
     ctx.beginPath();
     ctx.roundRect(btnX, btnY, btnW, btnH, btnR);
     ctx.fill();
     ctx.restore();
 
-    // Inner shine (top half glossy)
+    // Inner shine (top half glossy capsule highlight)
     ctx.save();
-    ctx.globalAlpha = 0.35;
+    ctx.globalAlpha = 0.4;
     const shineGrad = ctx.createLinearGradient(btnX, btnY, btnX, btnY + btnH * 0.5);
-    shineGrad.addColorStop(0, 'rgba(255,255,255,0.8)');
+    shineGrad.addColorStop(0, 'rgba(255,255,255,0.9)');
+    shineGrad.addColorStop(0.5, 'rgba(255,255,255,0.2)');
     shineGrad.addColorStop(1, 'rgba(255,255,255,0)');
     ctx.fillStyle = shineGrad;
     ctx.beginPath();
-    ctx.roundRect(btnX + 2, btnY + 1, btnW - 4, btnH * 0.48, [btnR, btnR, 0, 0]);
+    ctx.roundRect(btnX + 3, btnY + 2, btnW - 6, btnH * 0.45, [btnR, btnR, 4, 4]);
     ctx.fill();
     ctx.restore();
 
-    // Neon border
+    // Animated shimmer sweep across button
     ctx.save();
-    ctx.strokeStyle = `rgba(0,255,255,${0.4 + 0.3 * glowPulse})`;
-    ctx.lineWidth = 1.5;
-    ctx.shadowColor = 'rgba(0,255,255,0.5)';
-    ctx.shadowBlur = 8;
+    const shimmerX = btnX + ((t_now * 0.08) % (btnW + 60)) - 30;
+    const shimGrad = ctx.createLinearGradient(shimmerX - 30, btnY, shimmerX + 30, btnY);
+    shimGrad.addColorStop(0, 'rgba(255,255,255,0)');
+    shimGrad.addColorStop(0.5, 'rgba(255,255,255,0.18)');
+    shimGrad.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = shimGrad;
     ctx.beginPath();
     ctx.roundRect(btnX, btnY, btnW, btnH, btnR);
+    ctx.clip();
+    ctx.fillRect(shimmerX - 30, btnY, 60, btnH);
+    ctx.restore();
+
+    // Crisp neon border — sharp glowing edges (triple stroke)
+    ctx.save();
+    // Outermost intense glow
+    ctx.strokeStyle = `rgba(0,255,220,${0.7 + 0.3 * glowPulse})`;
+    ctx.lineWidth = 4;
+    ctx.shadowColor = `rgba(0,255,200,${0.9 * glowPulse})`;
+    ctx.shadowBlur = 24;
+    ctx.beginPath();
+    ctx.roundRect(btnX, btnY, btnW, btnH, btnR);
+    ctx.stroke();
+    // Second glow pass for extra bloom
+    ctx.shadowBlur = 16;
+    ctx.stroke();
+    // Middle sharp bright edge
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = `rgba(0,255,255,${0.8 + 0.2 * glowPulse})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(btnX, btnY, btnW, btnH, btnR);
+    ctx.stroke();
+    // Innermost white crisp edge
+    ctx.strokeStyle = `rgba(255,255,255,${0.6 + 0.2 * glowPulse})`;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(btnX + 2, btnY + 2, btnW - 4, btnH - 4, btnR - 2);
     ctx.stroke();
     ctx.restore();
 
     // Button text with glow
     ctx.save();
     ctx.fillStyle = '#fff';
-    ctx.font = `bold ${sh(0.024)}px Arial`;
+    ctx.font = `bold ${sh(0.026)}px Arial`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.shadowColor = 'rgba(255,255,255,0.8)';
-    ctx.shadowBlur = 6;
+    ctx.shadowColor = 'rgba(255,255,255,0.9)';
+    ctx.shadowBlur = 8;
     ctx.fillText('\u27F3  Try Again', cx, btnY + btnH / 2);
     ctx.restore();
 
@@ -374,6 +450,8 @@ function restartGame() {
     gameElapsedTime = 0;
     timeDisplay.textContent = '0:00';
     liveScoreEl.textContent = '0';
+    shield = null;
+    shieldLastScore = 0;
     initWalls();
     initBubbles();
 }
@@ -504,37 +582,48 @@ function getAllBricks() {
     return bricks;
 }
 
+// Get neon brick color based on current strength
+function getBrickNeonColor() {
+    if (totalBricks > 9)  return { core: '#00ccff', glow: '#00eeff', light: '#66ddff', dark: '#0088bb' }; // Blue
+    if (totalBricks > 6)  return { core: '#00ff88', glow: '#00ffaa', light: '#66ffbb', dark: '#00aa55' }; // Green
+    if (totalBricks > 3)  return { core: '#ffcc00', glow: '#ffdd33', light: '#ffee77', dark: '#cc9900' }; // Yellow
+    return                        { core: '#cc0022', glow: '#dd1133', light: '#ee4455', dark: '#880011' }; // Dark Red
+}
+
+let brickPulse = 0; // animated pulse timer
+
 function drawBricks() {
     const allBricks = getAllBricks();
-    const DEPTH = 4; // 3D extrusion depth in pixels
+    const DEPTH = 4;
+    const neon = getBrickNeonColor();
+    brickPulse += 0.03;
+    const pulseGlow = 12 + Math.sin(brickPulse) * 6; // oscillates 6–18
 
     allBricks.forEach((brick) => {
-        // Skip tiny brick fragments that can't be rendered
         if (brick.w < 2 || brick.h < 2) return;
 
-        const color = BRICK_COLOR;
         const safeR = Math.min(3, brick.w / 2, brick.h / 2);
-
         ctx.save();
 
-        // ── 3D Extrusion shadow (dark offset behind the brick) ──
-        ctx.fillStyle = darkenColor(color, 80);
+        // ── 3D Extrusion shadow ──
+        ctx.fillStyle = 'rgba(0,0,0,0.45)';
         ctx.beginPath();
         ctx.roundRect(brick.x + DEPTH, brick.y + DEPTH, brick.w, brick.h, safeR);
         ctx.fill();
 
-        // ── Side face (right edge) for horizontal or bottom edge for vertical ──
-        ctx.fillStyle = darkenColor(color, 55);
+        // ── Side face (right edge) ──
+        ctx.fillStyle = neon.dark;
+        ctx.globalAlpha = 0.6;
         ctx.beginPath();
-        // Right face
         ctx.moveTo(brick.x + brick.w, brick.y);
         ctx.lineTo(brick.x + brick.w + DEPTH, brick.y + DEPTH);
         ctx.lineTo(brick.x + brick.w + DEPTH, brick.y + brick.h + DEPTH);
         ctx.lineTo(brick.x + brick.w, brick.y + brick.h);
         ctx.closePath();
         ctx.fill();
-        // Bottom face
-        ctx.fillStyle = darkenColor(color, 65);
+
+        // ── Bottom face ──
+        ctx.globalAlpha = 0.5;
         ctx.beginPath();
         ctx.moveTo(brick.x, brick.y + brick.h);
         ctx.lineTo(brick.x + DEPTH, brick.y + brick.h + DEPTH);
@@ -542,45 +631,59 @@ function drawBricks() {
         ctx.lineTo(brick.x + brick.w, brick.y + brick.h);
         ctx.closePath();
         ctx.fill();
+        ctx.globalAlpha = 1;
 
-        // ── Main top face with glow ──
-        ctx.shadowColor = color;
-        ctx.shadowBlur = 8;
+        // ── Main face: neon gradient ──
+        ctx.shadowColor = neon.glow;
+        ctx.shadowBlur = pulseGlow;
 
         const isHorizontal = (brick.side === 'top' || brick.side === 'bottom');
         const grad = isHorizontal
             ? ctx.createLinearGradient(brick.x, brick.y, brick.x, brick.y + brick.h)
             : ctx.createLinearGradient(brick.x, brick.y, brick.x + brick.w, brick.y);
-        grad.addColorStop(0, lightenColor(color, 50));
-        grad.addColorStop(0.4, lightenColor(color, 15));
-        grad.addColorStop(0.6, color);
-        grad.addColorStop(1, darkenColor(color, 25));
+        grad.addColorStop(0, neon.light);
+        grad.addColorStop(0.3, neon.core);
+        grad.addColorStop(0.7, neon.core);
+        grad.addColorStop(1, neon.dark);
 
         ctx.fillStyle = grad;
         ctx.beginPath();
         ctx.roundRect(brick.x, brick.y, brick.w, brick.h, safeR);
         ctx.fill();
+
+        // ── Second glow pass for extra bloom ──
+        ctx.shadowBlur = pulseGlow * 1.5;
+        ctx.globalAlpha = 0.3;
+        ctx.fill();
+        ctx.globalAlpha = 1;
         ctx.shadowBlur = 0;
 
-        // ── Top bevel highlight ──
-        if (brick.w > 4 && brick.h > 4) {
-            const innerR = Math.min(2, (brick.w - 2) / 2, (brick.h - 2) / 2);
-            // Bright top-left inner edge
-            ctx.strokeStyle = lightenColor(color, 70);
-            ctx.lineWidth = 1;
-            ctx.globalAlpha = 0.7;
+        // ── Inner highlight stripe (gives neon tube look) ──
+        if (brick.w > 5 && brick.h > 5) {
+            const innerR = Math.min(2, (brick.w - 4) / 2, (brick.h - 4) / 2);
+            const hGrad = isHorizontal
+                ? ctx.createLinearGradient(brick.x, brick.y, brick.x, brick.y + brick.h)
+                : ctx.createLinearGradient(brick.x, brick.y, brick.x + brick.w, brick.y);
+            hGrad.addColorStop(0, 'rgba(255,255,255,0.5)');
+            hGrad.addColorStop(0.35, 'rgba(255,255,255,0.15)');
+            hGrad.addColorStop(0.65, 'rgba(255,255,255,0)');
+            hGrad.addColorStop(1, 'rgba(0,0,0,0.15)');
+
+            ctx.fillStyle = hGrad;
             ctx.beginPath();
-            ctx.roundRect(brick.x + 1, brick.y + 1, brick.w - 2, brick.h - 2, innerR);
-            ctx.stroke();
-            ctx.globalAlpha = 1;
+            ctx.roundRect(brick.x + 2, brick.y + 2, brick.w - 4, brick.h - 4, innerR);
+            ctx.fill();
         }
 
-        // ── Crisp outer edge ──
-        ctx.strokeStyle = darkenColor(color, 50);
-        ctx.lineWidth = 1.2;
+        // ── Neon outer border ──
+        ctx.strokeStyle = neon.glow;
+        ctx.lineWidth = 1.5;
+        ctx.shadowColor = neon.glow;
+        ctx.shadowBlur = 6;
         ctx.beginPath();
         ctx.roundRect(brick.x, brick.y, brick.w, brick.h, safeR);
         ctx.stroke();
+        ctx.shadowBlur = 0;
 
         ctx.restore();
     });
@@ -755,6 +858,160 @@ function drawParticles() {
     }
 }
 
+// ── Celebratory Score Popups ──
+function drawScorePopups(dt) {
+    const step = Math.min(dt, 0.05); // cap dt to prevent skipping
+    for (let i = scorePopups.length - 1; i >= 0; i--) {
+        const p = scorePopups[i];
+        p.life -= step * 0.3; // lasts ~3.3 seconds
+        if (p.life <= 0) { scorePopups.splice(i, 1); continue; }
+
+        // Animate: scale up quickly then float up slowly
+        p.scale = Math.min(p.scale + step * 4, 1.5);
+        p.y -= step * 25;
+
+        const bounce = p.scale > 1.0 ? 1.0 + Math.sin((1 - p.life) * Math.PI * 3) * 0.1 * p.life : p.scale;
+        const fontSize = Math.floor(36 * bounce);
+
+        ctx.save();
+        ctx.globalAlpha = Math.min(p.life * 1.5, 1); // stay fully visible longer
+
+        // Glow
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 25 * p.life;
+
+        // Outline text
+        ctx.font = `bold ${fontSize}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.strokeStyle = 'rgba(0,0,0,0.7)';
+        ctx.lineWidth = 4;
+        ctx.strokeText(p.text, p.x, p.y);
+
+        // Fill with white
+        ctx.fillStyle = '#fff';
+        ctx.fillText(p.text, p.x, p.y);
+
+        ctx.shadowBlur = 0;
+        ctx.restore();
+    }
+}
+
+// ── Shield System ──
+function spawnShield() {
+    // Spawn inside the playable area (within brick walls), away from player
+    const margin = BRICK_THICKNESS + 30;
+    let x, y, attempts = 0;
+    do {
+        x = margin + Math.random() * (canvas.width - margin * 2);
+        y = margin + Math.random() * (canvas.height - margin * 2);
+        attempts++;
+    } while (Math.hypot(x - player.x, y - player.y) < 80 && attempts < 50);
+    shield = { x, y, radius: 30, spawnTime: performance.now(), duration: 5000, pulse: 0 }; // 5 real seconds
+}
+
+function updateShield(dt) {
+    // Shield spawns when: strength < 6 AND earned 75+ points since last shield
+    if (!shield && !gameOver && totalBricks < 6 && (score - shieldLastScore) >= SHIELD_INTERVAL) {
+        spawnShield();
+        shieldLastScore = score;
+    }
+
+    // Update shield timer (real wall-clock time — immune to frame spikes)
+    if (shield) {
+        const elapsed = performance.now() - shield.spawnTime;
+        const remaining = shield.duration - elapsed;
+        shield.pulse += Math.min(dt, 1.5) * 0.07;
+        if (remaining <= 0) {
+            shield = null; // expired after exactly 5 seconds
+        }
+    }
+
+    // Check projectile-shield collision
+    if (shield && projectile) {
+        const dist = Math.hypot(projectile.x - shield.x, projectile.y - shield.y);
+        if (dist < shield.radius + 8) {
+            // Shield collected!
+            const added = Math.min(6, TOTAL_BRICKS_START - totalBricks);
+            totalBricks += added;
+            updateStrengthBar();
+            spawnBurst(shield.x, shield.y, '#00ffcc', 30);
+            spawnBurst(shield.x, shield.y, '#66ffff', 20);
+            playShieldSound();
+
+            // Score popup for shield
+            scorePopups.push({
+                x: shield.x,
+                y: shield.y - 20,
+                text: '+' + added + ' \u{1F6E1}',
+                color: '#00ffcc',
+                life: 1.0,
+                scale: 0
+            });
+
+            shield = null;
+            projectile = null;
+        }
+    }
+}
+
+function drawShield() {
+    if (!shield) return;
+    const s = shield;
+    const pulse = 1 + Math.sin(s.pulse) * 0.15;
+    const r = s.radius * pulse;
+
+    // Blink faster when about to expire (last ~1.5 seconds)
+    const remaining = s.duration - (performance.now() - s.spawnTime);
+    if (remaining < 1500 && Math.sin(s.pulse * 8) > 0.3) return;
+
+    ctx.save();
+
+    // Outer glow
+    ctx.shadowColor = '#00ffcc';
+    ctx.shadowBlur = 25;
+
+    // Shield body — glowing circle with gradient
+    const grad = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, r);
+    grad.addColorStop(0, 'rgba(0,255,204,0.9)');
+    grad.addColorStop(0.5, 'rgba(0,200,170,0.6)');
+    grad.addColorStop(1, 'rgba(0,150,130,0.2)');
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, r, 0, Math.PI * 2);
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Shield icon — draw shield.png inside
+    ctx.shadowBlur = 0;
+    if (shieldImg.complete && shieldImg.naturalWidth > 0) {
+        const imgSize = r * 1.4;
+        ctx.drawImage(shieldImg, s.x - imgSize / 2, s.y - imgSize / 2, imgSize, imgSize);
+    }
+
+    // Ring border
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, r, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(0,255,204,0.8)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.restore();
+}
+
+function playShieldSound() {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.15);
+    osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.3);
+    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.4);
+}
+
 const MIN_BUBBLE_GAP = 15; // minimum gap between bubble edges
 
 function isTooClose(x, y, radius) {
@@ -810,7 +1067,7 @@ function initBubbles() {
 function drawPlayer() {
     const pr = player.radius;
 
-    // ── 3D Drop shadow ──
+    // ── Drop shadow ──
     ctx.save();
     ctx.globalAlpha = 0.3;
     ctx.fillStyle = '#000';
@@ -819,73 +1076,24 @@ function drawPlayer() {
     ctx.fill();
     ctx.restore();
 
-    // ── 3D Sphere body ──
-    const sphereGrad = ctx.createRadialGradient(
-        player.x - pr * 0.3, player.y - pr * 0.35, pr * 0.05,
-        player.x + pr * 0.1, player.y + pr * 0.1, pr * 1.05
-    );
-    sphereGrad.addColorStop(0, '#ffffff');
-    sphereGrad.addColorStop(0.3, '#e8e8f0');
-    sphereGrad.addColorStop(0.6, '#b0b0c0');
-    sphereGrad.addColorStop(0.85, '#707088');
-    sphereGrad.addColorStop(1, '#404058');
-
-    ctx.beginPath();
-    ctx.arc(player.x, player.y, pr, 0, Math.PI * 2);
-    ctx.fillStyle = sphereGrad;
-    ctx.shadowColor = 'rgba(180,200,255,0.5)';
-    ctx.shadowBlur = 18;
-    ctx.fill();
-    ctx.closePath();
-    ctx.shadowBlur = 0;
-
-    // ── Rim light ──
-    ctx.save();
-    ctx.globalAlpha = 0.15;
-    const rimGrad = ctx.createRadialGradient(
-        player.x + pr * 0.35, player.y + pr * 0.35, pr * 0.5,
-        player.x, player.y, pr * 1.05
-    );
-    rimGrad.addColorStop(0, 'rgba(255,255,255,0)');
-    rimGrad.addColorStop(0.8, 'rgba(255,255,255,0)');
-    rimGrad.addColorStop(1, 'rgba(150,180,255,0.7)');
-    ctx.beginPath();
-    ctx.arc(player.x, player.y, pr, 0, Math.PI * 2);
-    ctx.fillStyle = rimGrad;
-    ctx.fill();
-    ctx.restore();
-
-    // ── Specular highlight ──
-    ctx.save();
-    ctx.globalAlpha = 0.7;
-    ctx.beginPath();
-    ctx.arc(player.x - pr * 0.25, player.y - pr * 0.3, pr * 0.18, 0, Math.PI * 2);
-    ctx.fillStyle = '#fff';
-    ctx.fill();
-    ctx.restore();
-
-    // ── Border ──
-    ctx.beginPath();
-    ctx.arc(player.x, player.y, pr, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(100,100,140,0.5)';
-    ctx.lineWidth = 1.2;
-    ctx.stroke();
-    ctx.closePath();
-
-    // Draw rotating arrow
+    // ── Player bubble image (rotates with arrow, clipped to circle) ──
     ctx.save();
     ctx.translate(player.x, player.y);
     ctx.rotate(player.angle);
+
+    // Clip to circle
     ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(player.arrowLength, 0);
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 3;
-    ctx.shadowColor = 'rgba(255,255,255,0.6)';
-    ctx.shadowBlur = 6;
-    ctx.stroke();
-    ctx.closePath();
-    ctx.shadowBlur = 0;
+    ctx.arc(0, 0, pr, 0, Math.PI * 2);
+    ctx.clip();
+
+    if (firingBubbleImg.complete && firingBubbleImg.naturalWidth > 0) {
+        const size = pr * 2.4;
+        ctx.drawImage(firingBubbleImg, -size / 2, -size / 2, size, size);
+    } else {
+        ctx.fillStyle = '#b0b0c0';
+        ctx.fill();
+    }
+
     ctx.restore();
 }
 
@@ -896,10 +1104,11 @@ function drawBubbles() {
     bubbles.forEach((bubble, idx) => {
         const pulse = 1 + Math.sin(time + idx * 0.7) * 0.04;
         const r = bubble.radius * pulse;
+        const img = bubbleImages[bubble.color];
 
         ctx.save();
 
-        // ── 3D Drop shadow (ellipse below bubble) ──
+        // ── Drop shadow ──
         ctx.save();
         ctx.globalAlpha = 0.25;
         ctx.fillStyle = '#000';
@@ -908,82 +1117,19 @@ function drawBubbles() {
         ctx.fill();
         ctx.restore();
 
-        // ── 3D Spherical body gradient (lit from top-left) ──
-        const grad = ctx.createRadialGradient(
-            bubble.x - r * 0.35, bubble.y - r * 0.35, r * 0.05,
-            bubble.x + r * 0.1, bubble.y + r * 0.1, r * 1.05
-        );
-        grad.addColorStop(0, lightenColor(bubble.color, 80));
-        grad.addColorStop(0.25, lightenColor(bubble.color, 35));
-        grad.addColorStop(0.55, bubble.color);
-        grad.addColorStop(0.8, darkenColor(bubble.color, 45));
-        grad.addColorStop(1, darkenColor(bubble.color, 75));
+        // ── Draw bubble image (or fallback to colored circle) ──
+        if (img && img.complete && img.naturalWidth > 0) {
+            const size = r * 2.2; // slightly larger than radius for visual match
+            ctx.drawImage(img, bubble.x - size / 2, bubble.y - size / 2, size, size);
+        } else {
+            // Fallback: simple colored circle
+            ctx.beginPath();
+            ctx.arc(bubble.x, bubble.y, r, 0, Math.PI * 2);
+            ctx.fillStyle = bubble.color;
+            ctx.fill();
+            ctx.closePath();
+        }
 
-        ctx.beginPath();
-        ctx.arc(bubble.x, bubble.y, r, 0, Math.PI * 2);
-        ctx.fillStyle = grad;
-        ctx.fill();
-        ctx.closePath();
-
-        // ── Dark border for depth ──
-        ctx.beginPath();
-        ctx.arc(bubble.x, bubble.y, r, 0, Math.PI * 2);
-        ctx.strokeStyle = darkenColor(bubble.color, 70);
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-        ctx.closePath();
-
-        // ── 3D Rim light (bottom-right edge catch light) ──
-        ctx.save();
-        ctx.globalAlpha = 0.18;
-        const rimGrad = ctx.createRadialGradient(
-            bubble.x + r * 0.4, bubble.y + r * 0.4, r * 0.6,
-            bubble.x + r * 0.3, bubble.y + r * 0.3, r * 1.05
-        );
-        rimGrad.addColorStop(0, 'rgba(255,255,255,0)');
-        rimGrad.addColorStop(0.7, 'rgba(255,255,255,0)');
-        rimGrad.addColorStop(1, 'rgba(200,220,255,0.6)');
-        ctx.beginPath();
-        ctx.arc(bubble.x, bubble.y, r, 0, Math.PI * 2);
-        ctx.fillStyle = rimGrad;
-        ctx.fill();
-        ctx.restore();
-
-        // ── 3D Specular highlight (top-left bright spot) ──
-        const shineGrad = ctx.createRadialGradient(
-            bubble.x - r * 0.32, bubble.y - r * 0.38, r * 0.02,
-            bubble.x - r * 0.15, bubble.y - r * 0.2, r * 0.45
-        );
-        shineGrad.addColorStop(0, 'rgba(255,255,255,0.85)');
-        shineGrad.addColorStop(0.3, 'rgba(255,255,255,0.35)');
-        shineGrad.addColorStop(1, 'rgba(255,255,255,0)');
-
-        ctx.beginPath();
-        ctx.arc(bubble.x, bubble.y, r, 0, Math.PI * 2);
-        ctx.fillStyle = shineGrad;
-        ctx.fill();
-        ctx.closePath();
-
-        // ── Secondary small highlight (adds realism) ──
-        ctx.save();
-        ctx.globalAlpha = 0.4;
-        ctx.beginPath();
-        ctx.arc(bubble.x - r * 0.25, bubble.y - r * 0.3, r * 0.12, 0, Math.PI * 2);
-        ctx.fillStyle = '#fff';
-        ctx.fill();
-        ctx.restore();
-
-        ctx.restore();
-
-        // Draw score number inside bubble (with subtle shadow for depth)
-        ctx.save();
-        ctx.font = `bold ${Math.floor(r * 0.9)}px Arial`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillStyle = 'rgba(0,0,0,0.3)';
-        ctx.fillText(bubble.points, bubble.x + 1, bubble.y + 1);
-        ctx.fillStyle = '#000';
-        ctx.fillText(bubble.points, bubble.x, bubble.y);
         ctx.restore();
     });
 }
@@ -1014,41 +1160,31 @@ function drawProjectile() {
         projectileTrail.push({ x: projectile.x, y: projectile.y, life: 1.0 });
         if (projectileTrail.length > 12) projectileTrail.shift();
 
-        // ── Draw comet trail ──
+        // ── Draw trailing bullet copies (fading behind main) ──
         ctx.save();
         for (let i = 0; i < projectileTrail.length; i++) {
             const t = projectileTrail[i];
             t.life -= 0.06;
             if (t.life <= 0) continue;
-            const trailR = 3 * t.life;
-            const grad = ctx.createRadialGradient(t.x, t.y, 0, t.x, t.y, trailR * 2);
-            grad.addColorStop(0, `rgba(200,220,255,${t.life * 0.4})`);
-            grad.addColorStop(1, 'rgba(100,150,255,0)');
-            ctx.fillStyle = grad;
-            ctx.beginPath();
-            ctx.arc(t.x, t.y, trailR * 2, 0, Math.PI * 2);
-            ctx.fill();
+            if (bulletImg.complete && bulletImg.naturalWidth > 0) {
+                const trailSize = 28 * t.life;
+                ctx.globalAlpha = t.life * 0.5;
+                ctx.drawImage(bulletImg, t.x - trailSize / 2, t.y - trailSize / 2, trailSize, trailSize);
+            }
         }
         ctx.restore();
 
-        // ── 3D Projectile sphere ──
-        const pr = 5;
-        const grad = ctx.createRadialGradient(
-            projectile.x - pr * 0.3, projectile.y - pr * 0.3, pr * 0.1,
-            projectile.x, projectile.y, pr
-        );
-        grad.addColorStop(0, '#ffffff');
-        grad.addColorStop(0.5, '#c0d0ff');
-        grad.addColorStop(1, '#5570aa');
-
-        ctx.beginPath();
-        ctx.arc(projectile.x, projectile.y, pr, 0, Math.PI * 2);
-        ctx.fillStyle = grad;
-        ctx.shadowColor = 'rgba(150,200,255,0.8)';
-        ctx.shadowBlur = 12;
-        ctx.fill();
-        ctx.closePath();
-        ctx.shadowBlur = 0;
+        // ── Main bullet image ──
+        if (bulletImg.complete && bulletImg.naturalWidth > 0) {
+            const size = 32;
+            ctx.drawImage(bulletImg, projectile.x - size / 2, projectile.y - size / 2, size, size);
+        } else {
+            ctx.beginPath();
+            ctx.arc(projectile.x, projectile.y, 10, 0, Math.PI * 2);
+            ctx.fillStyle = '#c0d0ff';
+            ctx.fill();
+            ctx.closePath();
+        }
     } else {
         projectileTrail = [];
     }
@@ -1103,6 +1239,16 @@ function update(timestamp) {
                     score += bubble.points;
                     scoreEl.textContent = score;
 
+                    // Spawn celebratory score popup
+                    scorePopups.push({
+                        x: bubble.x,
+                        y: bubble.y,
+                        text: '+' + bubble.points,
+                        color: bubble.color,
+                        life: 1.0,
+                        scale: 0
+                    });
+
                     player.x = bubble.x;
                     player.y = bubble.y;
 
@@ -1132,8 +1278,24 @@ function update(timestamp) {
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Animated background
-    GameBackground.draw(ctx, dt);
+    // Static background image
+    if (bgImg.complete && bgImg.naturalWidth > 0) {
+        ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+    } else {
+        GameBackground.draw(ctx, dt);
+    }
+
+    // Clouds drifting left to right
+    if (cloudsImg.complete && cloudsImg.naturalWidth > 0) {
+        cloudAngle += dt * 0.15; // horizontal scroll speed (pixels per second)
+        if (cloudAngle >= canvas.width) cloudAngle -= canvas.width;
+        ctx.save();
+        ctx.globalAlpha = 0.4;
+        // Draw two copies for seamless horizontal loop
+        ctx.drawImage(cloudsImg, cloudAngle - canvas.width, 0, canvas.width, canvas.height);
+        ctx.drawImage(cloudsImg, cloudAngle, 0, canvas.width, canvas.height);
+        ctx.restore();
+    }
 
     // Screen shake effect
     if (screenShake > 0) {
@@ -1147,11 +1309,16 @@ function update(timestamp) {
 
     updateParticles();
 
+    // ── Shield logic ──
+    updateShield(dt);
+
     drawBricks();
     drawBubbles();
+    drawShield();
     drawPlayer();
     drawProjectile();
     drawParticles();
+    drawScorePopups(dt);
 
     if (gameOver) {
         drawGameOver();
