@@ -55,23 +55,58 @@ function playShootSound() {
 function resizeCanvas() {
     const isMobileView = window.innerWidth <= 768;
     const maxW = isMobileView ? window.innerWidth : window.innerWidth * 0.9;
-    const maxH = isMobileView ? window.innerHeight : window.innerHeight * 0.92;
-    const hoodH = document.getElementById('hood').offsetHeight || 48;
-    // Portrait aspect ratio: mobile ~9:16, desktop wider ~10:16
-    let h = maxH - hoodH;
-    let w = isMobileView ? h * (9 / 16) : h * (10 / 16);
-    if (w > maxW) {
-        w = maxW;
-        h = isMobileView ? w * (16 / 9) : w * (16 / 10);
-    }
-    canvas.width = Math.floor(w);
-    canvas.height = Math.floor(h);
-    // Sync container width so hood matches canvas
+    // Use the actual visible viewport height
+    const maxH = window.innerHeight;
     const container = document.getElementById('game-container');
-    container.style.width = canvas.width + 'px';
+
+    // On mobile: fill full width, height = remaining after hood
+    // On desktop: use portrait aspect ratio
+    if (isMobileView) {
+        const w = maxW;
+        container.style.width = w + 'px';
+        container.style.setProperty('--s', Math.min(w / 400, 1));
+        const hoodH = document.getElementById('hood').offsetHeight || 34;
+        const h = maxH - hoodH;
+        canvas.width = Math.floor(w);
+        canvas.height = Math.floor(h);
+    } else {
+        const estimatedHoodH = 48;
+        let h = maxH - estimatedHoodH;
+        let w = h * (12 / 16);
+        if (w > maxW) {
+            w = maxW;
+            h = w * (16 / 12);
+        }
+        canvas.width = Math.floor(w);
+        canvas.height = Math.floor(h);
+        container.style.width = canvas.width + 'px';
+        const uiScale = Math.min(canvas.width / 400, 1);
+        container.style.setProperty('--s', uiScale);
+        const actualHoodH = document.getElementById('hood').offsetHeight || (48 * uiScale);
+        const totalH = canvas.height + actualHoodH;
+        if (totalH > maxH) {
+            h = maxH - actualHoodH;
+            w = h * (12 / 16);
+            if (w > maxW) {
+                w = maxW;
+                h = w * (16 / 12);
+            }
+            canvas.width = Math.floor(w);
+            canvas.height = Math.floor(h);
+            container.style.width = canvas.width + 'px';
+            container.style.setProperty('--s', Math.min(canvas.width / 400, 1));
+        }
+    }
 }
 resizeCanvas();
 GameBackground.init(canvas.width, canvas.height);
+
+// ── Dynamic scale factor ──
+// All game element sizes are designed for a ~400px wide canvas.
+// Scale proportionally when canvas is smaller or larger.
+const REF_WIDTH = 480;
+let scaleFactor = canvas.width / REF_WIDTH;
+function S(baseValue) { return baseValue * scaleFactor; }
 
 let score = 0;
 
@@ -111,19 +146,23 @@ shieldImg.src = 'images/shield.png';
 const bulletImg = new Image();
 bulletImg.src = 'images/bullet.png';
 
-const bubbleTypes = [
-    { color: '#c45c5c', radius: 18, points: 3, count: 4 }, // Soft Red - small
-    { color: '#c4a84e', radius: 22, points: 2, count: 4 }, // Soft Yellow - medium
-    { color: '#5aab5a', radius: 30, points: 1, count: 4 }  // Soft Green - large
+// Base radii (designed for REF_WIDTH 400px) — will be scaled via S()
+const BUBBLE_BASE = [
+    { color: '#c45c5c', baseRadius: 18, points: 3, count: 4 }, // Soft Red - small
+    { color: '#c4a84e', baseRadius: 22, points: 2, count: 4 }, // Soft Yellow - medium
+    { color: '#5aab5a', baseRadius: 30, points: 1, count: 4 }  // Soft Green - large
 ];
+
+// Scaled bubbleTypes (rebuilt on resize)
+let bubbleTypes = BUBBLE_BASE.map(b => ({ ...b, radius: S(b.baseRadius) }));
 
 let player = {
     x: canvas.width / 2,
     y: canvas.height / 2,
-    radius: 28,
+    radius: S(28),
     color: '#ffffff',
     angle: 0,
-    arrowLength: 40
+    arrowLength: S(40)
 };
 
 let projectile = null;
@@ -136,6 +175,7 @@ let gameOver = false;
 let shield = null;           // { x, y, radius, life, pulse }
 let shieldLastScore = 0;     // score when last shield appeared
 const SHIELD_INTERVAL = 50;  // shield every 50 points
+const SHIELD_BASE_RADIUS = 30;
 let screenShake = 0;
 let gamePaused = false;
 let gameStartTime = 0;
@@ -172,167 +212,230 @@ function drawGameOver() {
 
     // Add to leaderboard once
     if (!gameOverResult) {
-        gameOverResult = Leaderboard.addEntry('You', score, gameElapsedTime);
+        const displayName = playerName || 'You';
+        gameOverResult = Leaderboard.addEntry(displayName, score, gameElapsedTime);
+        try {
+            window.parent.postMessage({
+                type: 'GAME_OVER',
+                game: 'bubble-shooter',
+                points: score,
+                time: Math.round(gameElapsedTime),
+                score: finalScore
+            }, '*');
+        } catch (e) {}
     }
 
-    const entries = gameOverResult.entries;
+    const entries = gameOverResult.entries.slice(0, 10);
     const playerRank = gameOverResult.rank;
 
-    // Full dark overlay
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+    // ── Full overlay ──
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
     ctx.fillRect(0, 0, W, H);
 
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
-    // ── Size helpers: sw = width-based, sh = height-based ──
-    const sw = (f) => Math.floor(W * f);
-    const sh = (f) => Math.floor(H * f);
+    // ── Font size helpers based on canvas width for crisp scaling ──
+    const F = (px) => Math.round(W * px / 400); // based on 400px ref width
 
-    // ── Header section (GAME OVER + score + rank) ──
-    let y = sh(0.025);
+    // ── Card ──
+    const cardW = W * 0.92;
+    const cardH = H * 0.88;
+    const cardL = (W - cardW) / 2;
+    const cardT = (H - cardH) / 2;
+    const cardR = F(14);
+    const pad = F(14);
 
-    // GAME OVER title
+    // Card bg — solid dark, no blur
+    ctx.fillStyle = '#0c0c24';
+    ctx.beginPath();
+    ctx.roundRect(cardL, cardT, cardW, cardH, cardR);
+    ctx.fill();
+
+    // Card border — crisp cyan
+    ctx.strokeStyle = 'rgba(0, 229, 255, 0.3)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(cardL, cardT, cardW, cardH, cardR);
+    ctx.stroke();
+
+    // ── Top accent line ──
+    ctx.fillStyle = 'rgba(255, 71, 87, 0.15)';
+    ctx.fillRect(cardL + 1, cardT + 1, cardW - 2, F(4));
+
+    // ── Y cursor ──
+    let y = cardT + F(28);
+
+    // ══ GAME OVER — big & bold ══
     ctx.fillStyle = '#ff4757';
-    ctx.font = `bold ${sh(0.035)}px Arial`;
+    ctx.font = `bold ${F(28)}px Arial`;
     ctx.fillText('GAME OVER', cx, y);
-    y += sh(0.042);
+    y += F(40);
 
-    // Big score
+    // ══ Big score number ══
     ctx.fillStyle = '#ffd93d';
-    ctx.font = `bold ${sh(0.05)}px Arial`;
+    ctx.font = `bold ${F(48)}px Arial`;
     ctx.fillText(finalScore, cx, y);
-    y += sh(0.027);
+    y += F(18);
 
-    // "SCORE" label + points/time on same line
+    // "SCORE" label
+    ctx.fillStyle = '#666';
+    ctx.font = `bold ${F(11)}px Arial`;
+    ctx.fillText('S C O R E', cx, y);
+    y += F(26);
+
+    // ══ Stats row — 3 boxes ══
+    const boxGap = F(8);
+    const boxW = (cardW - pad * 2 - boxGap * 2) / 3;
+    const boxH = F(44);
+    const boxL = cardL + pad;
+    const boxR = F(8);
+
     const mins = Math.floor(gameElapsedTime / 60);
     const secs = gameElapsedTime % 60;
     const timeStr = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-    ctx.fillStyle = '#999';
-    ctx.font = `${sh(0.016)}px Arial`;
-    ctx.fillText(`SCORE  ·  Points: ${score}  ·  Time: ${timeStr}`, cx, y);
-    y += sh(0.03);
 
-    // Rank badge
-    ctx.fillStyle = playerRank <= 3 ? '#ffd93d' : '#00e5ff';
-    ctx.font = `bold ${sh(0.022)}px Arial`;
-    ctx.fillText(`🏅 Your Rank: #${playerRank}`, cx, y);
-    y += sh(0.03);
-
-    // ── Leaderboard table — fill remaining space minus button area ──
-    const btnAreaH = sh(0.08);  // space reserved for button at bottom
-    const tableTop = y;
-    const tableBottom = H - btnAreaH;
-    const tableH = tableBottom - tableTop;
-    const tableW = W * 0.94;
-    const tableL = (W - tableW) / 2;
-
-    // Compute row height dynamically from available space
-    const numRows = entries.length;
-    const headerH = tableH * 0.1;
-    const rowH = (tableH - headerH - 4) / numRows;
-    const fontSize = Math.floor(Math.min(rowH * 0.58, sw(0.038)));
-
-    // Table bg
-    ctx.fillStyle = 'rgba(10,10,30,0.9)';
-    ctx.beginPath();
-    ctx.roundRect(tableL, tableTop, tableW, tableH, 6);
-    ctx.fill();
-
-    // Table border
-    ctx.strokeStyle = 'rgba(0,229,255,0.12)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.roundRect(tableL, tableTop, tableW, tableH, 6);
-    ctx.stroke();
-
-    // Column layout
-    const cols = [
-        { label: 'Rank', x: tableL + tableW * 0.08 },
-        { label: 'Name', x: tableL + tableW * 0.27 },
-        { label: 'Pts',  x: tableL + tableW * 0.48 },
-        { label: 'Time', x: tableL + tableW * 0.68 },
-        { label: 'Score',x: tableL + tableW * 0.89 }
+    const statBoxes = [
+        { label: 'POINTS', value: String(score), color: '#ff6b6b' },
+        { label: 'TIME', value: timeStr, color: '#00e5ff' },
+        { label: 'RANK', value: `#${playerRank}`, color: playerRank <= 3 ? '#ffd93d' : '#a855f7' },
     ];
 
-    // Header bg
-    ctx.fillStyle = 'rgba(0,229,255,0.06)';
-    ctx.fillRect(tableL + 1, tableTop + 1, tableW - 2, headerH);
+    statBoxes.forEach((s, i) => {
+        const bx = boxL + i * (boxW + boxGap);
 
-    // Header text
-    ctx.font = `bold ${Math.floor(headerH * 0.6)}px Arial`;
-    cols.forEach(col => {
-        ctx.textAlign = 'center';
-        ctx.fillStyle = 'rgba(0,229,255,0.6)';
-        ctx.fillText(col.label, col.x, tableTop + headerH / 2);
+        // Box bg
+        ctx.fillStyle = 'rgba(255,255,255,0.04)';
+        ctx.beginPath();
+        ctx.roundRect(bx, y, boxW, boxH, boxR);
+        ctx.fill();
+
+        // Box border
+        ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(bx, y, boxW, boxH, boxR);
+        ctx.stroke();
+
+        const bcx = bx + boxW / 2;
+
+        // Label
+        ctx.fillStyle = '#555';
+        ctx.font = `bold ${F(9)}px Arial`;
+        ctx.fillText(s.label, bcx, y + boxH * 0.32);
+
+        // Value — big & colored
+        ctx.fillStyle = s.color;
+        ctx.font = `bold ${F(16)}px Arial`;
+        ctx.fillText(s.value, bcx, y + boxH * 0.72);
     });
 
-    // Header separator
-    ctx.strokeStyle = 'rgba(0,229,255,0.1)';
+    y += boxH + F(18);
+
+    // ══ Leaderboard header ══
+    ctx.fillStyle = '#ffd93d';
+    ctx.font = `bold ${F(14)}px Arial`;
+    ctx.textAlign = 'left';
+    ctx.fillText('🏆  TOP 10', cardL + pad, y);
+    ctx.textAlign = 'center';
+
+    // Divider
+    y += F(10);
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(tableL + 3, tableTop + headerH);
-    ctx.lineTo(tableL + tableW - 3, tableTop + headerH);
+    ctx.moveTo(cardL + pad, y);
+    ctx.lineTo(cardL + cardW - pad, y);
     ctx.stroke();
+    y += F(8);
 
-    // Medal colors
+    // ══ Column headers ══
+    const innerW = cardW - pad * 2;
+    const cols = {
+        rank:  cardL + pad + innerW * 0.06,
+        name:  cardL + pad + innerW * 0.30,
+        pts:   cardL + pad + innerW * 0.54,
+        time:  cardL + pad + innerW * 0.74,
+        score: cardL + pad + innerW * 0.93,
+    };
+
+    ctx.fillStyle = '#555';
+    ctx.font = `bold ${F(9)}px Arial`;
+    ['#', 'NAME', 'PTS', 'TIME', 'SCORE'].forEach((lbl, i) => {
+        ctx.fillText(lbl, [cols.rank, cols.name, cols.pts, cols.time, cols.score][i], y);
+    });
+    y += F(14);
+
+    // ══ Leaderboard rows ══
+    const rowH = F(22);
+    const rowFont = F(11);
+    const medals = ['🥇', '🥈', '🥉'];
     const medalColors = ['#ffd93d', '#c0c0c0', '#cd7f32'];
-    const rowColors   = ['#e8d48f', '#c8c8c8', '#c9a06c'];
+    const rowTextColors = ['#e8d48f', '#c8c8c8', '#c9a06c'];
 
-    // Rows
     entries.forEach((e, i) => {
-        const rowY = tableTop + headerH + rowH * i + rowH / 2;
-        const isPlayer = (e.name === 'You' && e.score === gameOverResult.score);
+        const ry = y + rowH * i;
+        const rcy = ry + rowH / 2;
+        const isP = !!e.isPlayer;
 
-        // Player row highlight
-        if (isPlayer) {
-            ctx.fillStyle = 'rgba(0,229,255,0.08)';
-            ctx.fillRect(tableL + 1, rowY - rowH / 2, tableW - 2, rowH);
-        } else if (i % 2 === 1) {
-            ctx.fillStyle = 'rgba(255,255,255,0.012)';
-            ctx.fillRect(tableL + 1, rowY - rowH / 2, tableW - 2, rowH);
+        // Player row — highlighted
+        if (isP) {
+            ctx.fillStyle = 'rgba(0, 229, 255, 0.1)';
+            ctx.beginPath();
+            ctx.roundRect(cardL + pad - F(4), ry, innerW + F(8), rowH, F(4));
+            ctx.fill();
+            // Left accent
+            ctx.fillStyle = '#00e5ff';
+            ctx.beginPath();
+            ctx.roundRect(cardL + pad - F(4), ry + F(3), F(3), rowH - F(6), 2);
+            ctx.fill();
+        } else if (i % 2 === 0) {
+            ctx.fillStyle = 'rgba(255,255,255,0.02)';
+            ctx.fillRect(cardL + pad, ry, innerW, rowH);
         }
 
-        const base = i < 3 ? rowColors[i] : (isPlayer ? '#00e5ff' : '#999');
-        const rkCol = i < 3 ? medalColors[i] : (isPlayer ? '#00e5ff' : '#666');
+        const baseCol = i < 3 ? rowTextColors[i] : (isP ? '#00e5ff' : '#aaa');
+        const rkCol   = i < 3 ? medalColors[i] : (isP ? '#00e5ff' : '#aaa');
 
-        ctx.textAlign = 'center';
-
-        // Rank
+        // Rank — medal emoji for top 3, number for rest
         ctx.fillStyle = rkCol;
-        ctx.font = `bold ${fontSize}px Arial`;
-        ctx.fillText(i + 1, cols[0].x, rowY);
+        ctx.font = `bold ${F(13)}px Arial`;
+        if (i < 3) {
+            ctx.fillText(medals[i], cols.rank, rcy);
+        } else {
+            ctx.fillText(String(i + 1), cols.rank, rcy);
+        }
 
         // Name
-        ctx.fillStyle = isPlayer ? '#00e5ff' : base;
-        ctx.font = isPlayer ? `bold ${fontSize}px Arial` : `${fontSize}px Arial`;
-        ctx.fillText(e.name, cols[1].x, rowY);
+        ctx.fillStyle = isP ? '#00e5ff' : baseCol;
+        ctx.font = isP ? `bold ${rowFont}px Arial` : `${rowFont}px Arial`;
+        ctx.fillText(isP ? `${e.name} ✦` : e.name, cols.name, rcy);
 
         // Pts
-        ctx.fillStyle = base;
-        ctx.font = `${fontSize}px Arial`;
-        ctx.fillText(e.points, cols[2].x, rowY);
+        ctx.fillStyle = baseCol;
+        ctx.font = `${rowFont}px Arial`;
+        ctx.fillText(e.points, cols.pts, rcy);
 
         // Time
-        ctx.fillText(Leaderboard.formatTime(e.time), cols[3].x, rowY);
+        ctx.fillText(Leaderboard.formatTime(e.time), cols.time, rcy);
 
         // Score
-        ctx.fillStyle = isPlayer ? '#00e5ff' : (i < 3 ? medalColors[i] : '#00e5ff');
-        ctx.font = `bold ${fontSize}px Arial`;
-        ctx.fillText(e.score, cols[4].x, rowY);
+        ctx.fillStyle = isP ? '#00e5ff' : (i < 3 ? medalColors[i] : '#00e5ff');
+        ctx.font = `bold ${rowFont}px Arial`;
+        ctx.fillText(e.score, cols.score, rcy);
     });
 
-    // ── "Try Again" button ──
-    const btnW = W * 0.55;
-    const btnH = sh(0.055);
+    // ══ Try Again button ══
+    const btnW = cardW * 0.65;
+    const btnH = F(42);
     const btnX = cx - btnW / 2;
-    const btnY = tableBottom + (btnAreaH - btnH) / 2;
-    const btnR = btnH / 2; // pill shape
+    const btnY = cardT + cardH - F(22) - btnH;
+    const btnR = btnH / 2;
 
-    // Animated glow pulse
     const t_now = performance.now();
     const glowPulse = 0.6 + 0.4 * Math.sin(t_now * 0.004);
 
-    // Soft outer aura (double pass for rich bloom)
+    // Outer glow aura
     ctx.save();
     ctx.shadowColor = `rgba(0, 255, 200, ${0.35 * glowPulse})`;
     ctx.shadowBlur = 30 + 12 * glowPulse;
@@ -340,7 +443,7 @@ function drawGameOver() {
     ctx.beginPath();
     ctx.roundRect(btnX - 6, btnY - 6, btnW + 12, btnH + 12, btnR + 6);
     ctx.fill();
-    ctx.fill(); // second pass for bloom
+    ctx.fill();
     ctx.restore();
 
     // Drop shadow
@@ -349,7 +452,7 @@ function drawGameOver() {
     ctx.roundRect(btnX + 2, btnY + 3, btnW, btnH, btnR);
     ctx.fill();
 
-    // Main neon gradient body
+    // Gradient body
     ctx.save();
     const btnGrad = ctx.createLinearGradient(btnX, btnY, btnX + btnW, btnY + btnH);
     btnGrad.addColorStop(0, '#00ffcc');
@@ -358,19 +461,17 @@ function drawGameOver() {
     btnGrad.addColorStop(0.85, '#6c5ce7');
     btnGrad.addColorStop(1, '#a855f7');
     ctx.fillStyle = btnGrad;
-    ctx.shadowColor = 'rgba(0,229,255,0.8)';
-    ctx.shadowBlur = 22;
     ctx.beginPath();
     ctx.roundRect(btnX, btnY, btnW, btnH, btnR);
     ctx.fill();
     ctx.restore();
 
-    // Inner shine (top half glossy capsule highlight)
+    // Glossy highlight
     ctx.save();
-    ctx.globalAlpha = 0.4;
+    ctx.globalAlpha = 0.35;
     const shineGrad = ctx.createLinearGradient(btnX, btnY, btnX, btnY + btnH * 0.5);
     shineGrad.addColorStop(0, 'rgba(255,255,255,0.9)');
-    shineGrad.addColorStop(0.5, 'rgba(255,255,255,0.2)');
+    shineGrad.addColorStop(0.5, 'rgba(255,255,255,0.15)');
     shineGrad.addColorStop(1, 'rgba(255,255,255,0)');
     ctx.fillStyle = shineGrad;
     ctx.beginPath();
@@ -378,7 +479,7 @@ function drawGameOver() {
     ctx.fill();
     ctx.restore();
 
-    // Animated shimmer sweep across button
+    // Shimmer sweep
     ctx.save();
     const shimmerX = btnX + ((t_now * 0.08) % (btnW + 60)) - 30;
     const shimGrad = ctx.createLinearGradient(shimmerX - 30, btnY, shimmerX + 30, btnY);
@@ -392,9 +493,8 @@ function drawGameOver() {
     ctx.fillRect(shimmerX - 30, btnY, 60, btnH);
     ctx.restore();
 
-    // Crisp neon border — sharp glowing edges (triple stroke)
+    // Neon border — triple stroke
     ctx.save();
-    // Outermost intense glow
     ctx.strokeStyle = `rgba(0,255,220,${0.7 + 0.3 * glowPulse})`;
     ctx.lineWidth = 4;
     ctx.shadowColor = `rgba(0,255,200,${0.9 * glowPulse})`;
@@ -402,17 +502,14 @@ function drawGameOver() {
     ctx.beginPath();
     ctx.roundRect(btnX, btnY, btnW, btnH, btnR);
     ctx.stroke();
-    // Second glow pass for extra bloom
     ctx.shadowBlur = 16;
     ctx.stroke();
-    // Middle sharp bright edge
     ctx.shadowBlur = 0;
     ctx.strokeStyle = `rgba(0,255,255,${0.8 + 0.2 * glowPulse})`;
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.roundRect(btnX, btnY, btnW, btnH, btnR);
     ctx.stroke();
-    // Innermost white crisp edge
     ctx.strokeStyle = `rgba(255,255,255,${0.6 + 0.2 * glowPulse})`;
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -420,18 +517,13 @@ function drawGameOver() {
     ctx.stroke();
     ctx.restore();
 
-    // Button text with glow
-    ctx.save();
+    // Button text — crisp, no blur
     ctx.fillStyle = '#fff';
-    ctx.font = `bold ${sh(0.026)}px Arial`;
+    ctx.font = `bold ${F(17)}px Arial`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.shadowColor = 'rgba(255,255,255,0.9)';
-    ctx.shadowBlur = 8;
-    ctx.fillText('\u27F3  Try Again', cx, btnY + btnH / 2);
-    ctx.restore();
+    ctx.fillText('⟳  Try Again', cx, btnY + btnH / 2);
 
-    // Store button bounds for hit-testing
     tryAgainBtn = { x: btnX, y: btnY, w: btnW, h: btnH };
 }
 
@@ -443,6 +535,13 @@ function restartGame() {
     tryAgainBtn = null;
     gamePaused = false;
     projectile = null;
+    // Recalculate scale factor on restart
+    scaleFactor = canvas.width / REF_WIDTH;
+    bubbleTypes = BUBBLE_BASE.map(b => ({ ...b, radius: S(b.baseRadius) }));
+    player.radius = S(28);
+    player.arrowLength = S(40);
+    BRICK_THICKNESS = S(BRICK_BASE_THICKNESS);
+    BRICK_GAP = S(BRICK_BASE_GAP);
     player.x = canvas.width / 2;
     player.y = canvas.height / 2;
     gameStartTime = performance.now();
@@ -457,8 +556,10 @@ function restartGame() {
 }
 
 // Brick system - 12 bricks distributed around the full perimeter
-const BRICK_THICKNESS = 12;
-const BRICK_GAP = 3;
+const BRICK_BASE_THICKNESS = 12;
+const BRICK_BASE_GAP = 3;
+let BRICK_THICKNESS = S(BRICK_BASE_THICKNESS);
+let BRICK_GAP = S(BRICK_BASE_GAP);
 const BRICK_COLOR = '#6c5ce7'; // Neon Purple
 const TOTAL_BRICKS_START = 12;
 let totalBricks = TOTAL_BRICKS_START;
@@ -900,14 +1001,14 @@ function drawScorePopups(dt) {
 // ── Shield System ──
 function spawnShield() {
     // Spawn inside the playable area (within brick walls), away from player
-    const margin = BRICK_THICKNESS + 30;
+    const margin = BRICK_THICKNESS + S(30);
     let x, y, attempts = 0;
     do {
         x = margin + Math.random() * (canvas.width - margin * 2);
         y = margin + Math.random() * (canvas.height - margin * 2);
         attempts++;
-    } while (Math.hypot(x - player.x, y - player.y) < 80 && attempts < 50);
-    shield = { x, y, radius: 30, spawnTime: performance.now(), duration: 5000, pulse: 0 }; // 5 real seconds
+    } while (Math.hypot(x - player.x, y - player.y) < S(80) && attempts < 50);
+    shield = { x, y, radius: S(SHIELD_BASE_RADIUS), spawnTime: performance.now(), duration: 5000, pulse: 0 }; // 5 real seconds
 }
 
 function updateShield(dt) {
@@ -1012,17 +1113,17 @@ function playShieldSound() {
     osc.stop(audioCtx.currentTime + 0.4);
 }
 
-const MIN_BUBBLE_GAP = 15; // minimum gap between bubble edges
+const MIN_BUBBLE_BASE_GAP = 15; // minimum gap between bubble edges
 
 function isTooClose(x, y, radius) {
     // Check distance from player
-    if (Math.hypot(x - player.x, y - player.y) < player.radius + radius + 50) {
+    if (Math.hypot(x - player.x, y - player.y) < player.radius + radius + S(50)) {
         return true;
     }
     // Check distance from all existing bubbles
     for (const b of bubbles) {
         const dist = Math.hypot(x - b.x, y - b.y);
-        if (dist < b.radius + radius + MIN_BUBBLE_GAP) {
+        if (dist < b.radius + radius + S(MIN_BUBBLE_BASE_GAP)) {
             return true;
         }
     }
@@ -1167,7 +1268,7 @@ function drawProjectile() {
             t.life -= 0.06;
             if (t.life <= 0) continue;
             if (bulletImg.complete && bulletImg.naturalWidth > 0) {
-                const trailSize = 28 * t.life;
+                const trailSize = S(28) * t.life;
                 ctx.globalAlpha = t.life * 0.5;
                 ctx.drawImage(bulletImg, t.x - trailSize / 2, t.y - trailSize / 2, trailSize, trailSize);
             }
@@ -1176,11 +1277,11 @@ function drawProjectile() {
 
         // ── Main bullet image ──
         if (bulletImg.complete && bulletImg.naturalWidth > 0) {
-            const size = 32;
+            const size = S(32);
             ctx.drawImage(bulletImg, projectile.x - size / 2, projectile.y - size / 2, size, size);
         } else {
             ctx.beginPath();
-            ctx.arc(projectile.x, projectile.y, 10, 0, Math.PI * 2);
+            ctx.arc(projectile.x, projectile.y, S(10), 0, Math.PI * 2);
             ctx.fillStyle = '#c0d0ff';
             ctx.fill();
             ctx.closePath();
@@ -1232,7 +1333,7 @@ function update(timestamp) {
                 const bubble = bubbles[i];
                 const dist = Math.hypot(projectile.x - bubble.x, projectile.y - bubble.y);
 
-                if (dist < bubble.radius + 5) {
+                if (dist < bubble.radius + S(5)) {
                     // Collision detected
                     spawnBurst(bubble.x, bubble.y, bubble.color, bubble.radius);
                     playPopSound(bubble.color);
@@ -1360,7 +1461,7 @@ function fire(canvasX, canvasY) {
     if (!projectile && now - fireCooldown > 300) {
         fireCooldown = now;
         playShootSound();
-        const speed = 10;
+        const speed = S(10);
         projectile = {
             x: player.x,
             y: player.y,
@@ -1401,6 +1502,13 @@ canvas.addEventListener('mousemove', (e) => {
 
 window.addEventListener('resize', () => {
     resizeCanvas();
+    // Update scale factor for new canvas size
+    scaleFactor = canvas.width / REF_WIDTH;
+    bubbleTypes = BUBBLE_BASE.map(b => ({ ...b, radius: S(b.baseRadius) }));
+    player.radius = S(28);
+    player.arrowLength = S(40);
+    BRICK_THICKNESS = S(BRICK_BASE_THICKNESS);
+    BRICK_GAP = S(BRICK_BASE_GAP);
     GameBackground.resize(canvas.width, canvas.height);
     player.x = canvas.width / 2;
     player.y = canvas.height / 2;
@@ -1457,6 +1565,41 @@ Leaderboard.onClose(() => {
         lastTime = 0;
         pauseBtn.innerHTML = '&#9208;';
         pauseBtn.title = 'Pause';
+    }
+});
+
+// ── Listen for leaderboard data from parent (Next.js) ──
+let playerName = ''; // Set by parent so we can identify the player's entry
+
+window.addEventListener('message', (e) => {
+    if (e.data?.type === 'LEADERBOARD_DATA') {
+        const apiEntries = e.data.entries;
+        if (!Array.isArray(apiEntries)) return;
+        if (e.data.playerName) playerName = e.data.playerName;
+
+        // Map API format to game format, mark player's entry
+        const mapped = apiEntries.map(entry => ({
+            name: entry.name || 'Unknown',
+            points: entry.points || 0,
+            time: entry.time || 0,
+            score: entry.score || 0,
+            isPlayer: playerName && (entry.name || '').toLowerCase() === playerName.toLowerCase(),
+        }));
+
+        Leaderboard.setEntries(mapped);
+
+        // If panel is open, re-render rows
+        if (Leaderboard.isOpen) {
+            Leaderboard.renderRows();
+        }
+
+        // If game is over, update the game over result with fresh API data
+        if (gameOver && gameOverResult) {
+            const playerScore = gameOverResult.score;
+            const playerIdx = mapped.findIndex(en => en.isPlayer);
+            const rank = playerIdx >= 0 ? playerIdx + 1 : mapped.length + 1;
+            gameOverResult = { entries: mapped.slice(0, 10), score: playerScore, rank };
+        }
     }
 });
 
