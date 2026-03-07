@@ -1,44 +1,36 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from "next/link";
 import Image from "next/image";
 import { useAuth } from "@/context/AuthContext";
 
-const games = [
-  {
-    id: 'bubble-shooter',
-    title: 'Neon Bubble Shooter',
-    description: 'Pop neon bubbles, collect shields, and survive as long as you can!',
-    color: '#00e5ff',
-    image: '/games/bubble-shooter/images/background.png',
-    players: '2.1k',
-    rating: 4.8,
-    tag: 'Popular',
-  },
-  {
-    id: 'coming-soon-1',
-    title: 'Space Runner',
-    description: 'Navigate through asteroids in this high-speed space adventure.',
-    color: '#a855f7',
-    emoji: '🚀',
-    players: '—',
-    rating: null,
-    comingSoon: true,
-  },
-  {
-    id: 'coming-soon-2',
-    title: 'Neon Pong',
-    description: 'Classic pong reimagined with neon visuals and power-ups.',
-    color: '#ff2d78',
-    emoji: '🏓',
-    players: '—',
-    rating: null,
-    comingSoon: true,
-  },
-];
+const GAMES_BASE = process.env.NEXT_PUBLIC_GAMES_BASE_URL || '/games';
+const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 export default function Home() {
   const { isLoggedIn } = useAuth();
+  const [games, setGames] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch(`${API}/games`);
+        const data = await res.json();
+        setGames(Array.isArray(data) ? data : []);
+      } catch { /* ignore */ }
+      setLoading(false);
+    })();
+  }, []);
+
+  const formatSchedule = (game) => {
+    if (!game.showSchedule || !game.scheduleStart || !game.scheduleEnd) return null;
+    const opts = { dateStyle: 'medium', timeStyle: 'short' };
+    const start = new Date(game.scheduleStart).toLocaleString(undefined, opts);
+    const end = new Date(game.scheduleEnd).toLocaleString(undefined, opts);
+    return `Game will be live from ${start} to ${end}`;
+  };
 
   return (
     <div className="bg-grid relative" style={{ overflow: 'hidden' }}>
@@ -64,120 +56,170 @@ export default function Home() {
         </div>
 
         {/* ── Games Grid ── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {games.map((game, i) => (
-            <div
-              key={game.id}
-              className="glass-card group transition-all duration-300 animate-fade-in-up relative overflow-hidden flex flex-col"
-              style={{ animationDelay: `${i * 0.08}s` }}
-              onMouseEnter={e => {
-                e.currentTarget.style.borderColor = game.color + '40';
-                e.currentTarget.style.boxShadow = `0 0 30px ${game.color}15`;
-                e.currentTarget.style.transform = 'translateY(-4px)';
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.borderColor = 'var(--glass-border)';
-                e.currentTarget.style.boxShadow = 'none';
-                e.currentTarget.style.transform = 'translateY(0)';
-              }}
-            >
-              {/* Game visual banner */}
-              <div className="relative h-40 sm:h-48 flex items-center justify-center overflow-hidden" style={{
-                borderBottom: `1px solid ${game.color}15`,
-              }}>
-                {game.image ? (
-                  <>
-                    <Image
-                      src={game.image}
-                      alt={game.title}
-                      fill
-                      className="object-cover"
-                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                      priority
-                    />
-                    <div style={{
-                      position: 'absolute',
-                      inset: 0,
-                      background: `linear-gradient(to top, rgba(11,11,26,0.95) 0%, rgba(11,11,26,0.3) 40%, transparent 100%)`,
-                    }} />
-                  </>
-                ) : (
-                  <>
-                    <div style={{
-                      position: 'absolute',
-                      inset: 0,
-                      background: `radial-gradient(circle at 50% 80%, ${game.color}18, transparent 70%)`,
-                    }} />
-                    <span className="text-6xl sm:text-7xl select-none" style={{
-                      filter: `drop-shadow(0 0 20px ${game.color}60)`,
-                    }}>
-                      {game.emoji}
-                    </span>
-                  </>
-                )}
+        {loading ? (
+          <div className="text-center py-16">
+            <div className="w-10 h-10 border-2 border-t-transparent rounded-full animate-spin mx-auto mb-3" style={{ borderColor: 'rgba(0,229,255,0.3)', borderTopColor: 'transparent' }} />
+          </div>
+        ) : games.length === 0 ? (
+          <div className="text-center py-16">
+            <p className="text-lg" style={{ color: 'var(--text-muted)' }}>No games available yet.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {games.map((game, i) => {
+              const color = game.color || '#00e5ff';
+              const thumb = game.thumbnail
+                ? `${GAMES_BASE}/${game.gamePath}/${game.thumbnail}`
+                : null;
+              const schedule = !game.isLive ? formatSchedule(game) : null;
 
-                {/* Tag */}
-                {game.tag && (
-                  <span className="absolute top-3 left-3 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full" style={{
-                    background: 'rgba(0,255,136,0.12)',
-                    color: 'var(--neon-green)',
-                    border: '1px solid rgba(0,255,136,0.25)',
+              return (
+                <div
+                  key={game._id}
+                  className="glass-card group transition-all duration-300 animate-fade-in-up relative overflow-hidden flex flex-col"
+                  style={{ animationDelay: `${i * 0.08}s`, opacity: game.isLive ? 1 : 0.6 }}
+                  onMouseEnter={e => {
+                    if (!game.isLive) return;
+                    e.currentTarget.style.borderColor = color + '40';
+                    e.currentTarget.style.boxShadow = `0 0 30px ${color}15`;
+                    e.currentTarget.style.transform = 'translateY(-4px)';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.borderColor = 'var(--glass-border)';
+                    e.currentTarget.style.boxShadow = 'none';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                  }}
+                >
+                  {/* Game visual banner */}
+                  <div className="relative h-40 sm:h-48 flex items-center justify-center overflow-hidden" style={{
+                    borderBottom: `1px solid ${color}15`,
                   }}>
-                    {game.tag}
-                  </span>
-                )}
+                    {thumb ? (
+                      <>
+                        <Image
+                          src={thumb}
+                          alt={game.name}
+                          fill
+                          className="object-cover"
+                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                          priority
+                        />
+                        <div style={{
+                          position: 'absolute',
+                          inset: 0,
+                          background: `linear-gradient(to top, rgba(11,11,26,0.95) 0%, rgba(11,11,26,0.3) 40%, transparent 100%)`,
+                        }} />
+                      </>
+                    ) : (
+                      <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(circle at 50% 80%, ${color}18, transparent 70%)` }}>
+                        <span className="absolute inset-0 flex items-center justify-center text-6xl sm:text-7xl select-none" style={{ filter: `drop-shadow(0 0 20px ${color}60)` }}>🎮</span>
+                      </div>
+                    )}
 
-                {/* Coming Soon overlay */}
-                {game.comingSoon && (
-                  <span className="absolute top-3 right-3 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full" style={{
-                    background: 'rgba(168,85,247,0.15)',
-                    color: 'var(--neon-purple)',
-                    border: '1px solid rgba(168,85,247,0.3)',
-                  }}>
-                    Coming Soon
-                  </span>
-                )}
-              </div>
+                    {/* Tag */}
+                    {game.tag && (
+                      <span className="absolute top-3 left-3 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full" style={{
+                        background: 'rgba(0,255,136,0.12)',
+                        color: 'var(--neon-green)',
+                        border: '1px solid rgba(0,255,136,0.25)',
+                      }}>
+                        {game.tag}
+                      </span>
+                    )}
 
-              {/* Card body */}
-              <div className="p-5 flex flex-col flex-1">
-                <h3 className="text-base font-bold mb-1" style={{ color: 'var(--text-primary)' }}>
-                  {game.title}
-                </h3>
-                <p className="text-xs mb-4 leading-relaxed flex-1" style={{ color: 'var(--text-muted)' }}>
-                  {game.description}
-                </p>
+                    {/* Not Live badge */}
+                    {!game.isLive && (
+                      <span className="absolute top-3 right-3 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full" style={{
+                        background: 'rgba(255,45,120,0.15)',
+                        color: '#ff5c8a',
+                        border: '1px solid rgba(255,45,120,0.3)',
+                      }}>
+                        Not Live
+                      </span>
+                    )}
 
-                {/* Footer row */}
-                <div className="flex items-center justify-between mb-3">
-                  {game.players !== '—' && (
-                    <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>👥 {game.players} players</span>
-                  )}
-                  {game.rating && (
-                    <span className="text-[11px] font-medium" style={{ color: 'var(--neon-yellow)' }}>⭐ {game.rating}</span>
-                  )}
-                  {game.comingSoon && (
-                    <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>Stay tuned</span>
-                  )}
-                </div>
-
-                {/* Action */}
-                {game.comingSoon ? (
-                  <div className="btn-neon text-sm w-full text-center" style={{ opacity: 0.4, cursor: 'not-allowed' }}>
-                    🔒 Coming Soon
+                    {/* Paid badge */}
+                    {!game.isFree && game.isLive && (
+                      <span className="absolute top-3 right-3 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full" style={{
+                        background: 'rgba(255,217,61,0.12)',
+                        color: 'var(--neon-yellow)',
+                        border: '1px solid rgba(255,217,61,0.3)',
+                      }}>PKR {game.price}</span>
+                    )}
                   </div>
-                ) : (
-                  <Link href={`/games/${game.id}`}
-                    className="btn-neon btn-neon-primary text-sm w-full text-center"
-                    style={{ textDecoration: 'none' }}
-                  >
-                    ▶ Play Now
-                  </Link>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
+
+                  {/* Card body */}
+                  <div className="p-5 flex flex-col flex-1">
+                    <h3 className="text-base font-bold mb-1" style={{ color: 'var(--text-primary)' }}>
+                      {game.name}
+                    </h3>
+                    <p className="text-xs mb-4 leading-relaxed flex-1" style={{ color: 'var(--text-muted)' }}>
+                      {game.description || 'No description'}
+                    </p>
+
+                    {/* Game type banner */}
+                    {game.isLive && game.gameType === 'rewarding' && (
+                      <div className="mb-3 px-3 py-2 rounded-lg" style={{ background: 'linear-gradient(135deg, rgba(0,255,136,0.08), rgba(255,217,61,0.08))', border: '1px solid rgba(0,255,136,0.15)' }}>
+                        <div className="flex items-center gap-2">
+                          <span style={{ fontSize: 14 }}>💰</span>
+                          <span className="text-[11px] font-bold" style={{ color: '#00ff88' }}>Play & Earn Cash Rewards</span>
+                        </div>
+                        {game.conversionRate > 0 && (
+                          <p className="text-[10px] mt-1 ml-6" style={{ color: 'rgba(255,255,255,0.4)' }}>Score points and win real money!</p>
+                        )}
+                      </div>
+                    )}
+                    {game.isLive && game.gameType === 'competitive' && (
+                      <div className="mb-3 px-3 py-2 rounded-lg" style={{ background: 'linear-gradient(135deg, rgba(255,217,61,0.08), rgba(168,85,247,0.08))', border: '1px solid rgba(255,217,61,0.15)' }}>
+                        <div className="flex items-center gap-2">
+                          <span style={{ fontSize: 14 }}>🏆</span>
+                          <span className="text-[11px] font-bold" style={{ color: '#ffd93d' }}>Compete & Win Prizes</span>
+                        </div>
+                        {game.prizes?.length > 0 && (
+                          <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5 ml-6">
+                            {game.prizes.slice(0, 3).map((p, j) => {
+                              const icons = ['🥇', '🥈', '🥉'];
+                              return <span key={j} className="text-[10px]" style={{ color: 'rgba(255,255,255,0.5)' }}>{icons[j] || `${j+1}.`} {p}</span>;
+                            })}
+                            {game.prizes.length > 3 && <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>+{game.prizes.length - 3} more</span>}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Schedule info if not live and showSchedule */}
+                    {schedule && (
+                      <p className="text-[11px] mb-3 font-medium" style={{ color: 'var(--neon-yellow)' }}>
+                        🕐 {schedule}
+                      </p>
+                    )}
+
+                    {/* Action */}
+                    {!game.isLive ? (
+                      <div className="btn-neon text-sm w-full text-center" style={{ opacity: 0.4, cursor: 'not-allowed' }}>
+                        🔒 Not Available
+                      </div>
+                    ) : game.isFree ? (
+                      <Link href={`/games/${game.slug}`}
+                        className="btn-neon btn-neon-primary text-sm w-full text-center"
+                        style={{ textDecoration: 'none' }}
+                      >
+                        ▶ Play Now
+                      </Link>
+                    ) : (
+                      <Link href={`/games/${game.slug}`}
+                        className="btn-neon btn-neon-primary text-sm w-full text-center"
+                        style={{ textDecoration: 'none' }}
+                      >
+                        🔓 Unlock &amp; Play — PKR {game.price}
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -47,8 +47,40 @@ const navLinks = [
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userDropdown, setUserDropdown] = useState(false);
+  const [claimableTotal, setClaimableTotal] = useState(0);
   const dropdownRef = useRef(null);
-  const { user, isLoggedIn, isAdmin, logout, loading } = useAuth();
+  const { user, isLoggedIn, isAdmin, logout, loading, walletBalance, authFetch } = useAuth();
+
+  const fetchAdminClaimableTotal = async () => {
+    if (!isLoggedIn || !isAdmin) {
+      setClaimableTotal(0);
+      return;
+    }
+
+    // Primary source: dedicated summary endpoint.
+    try {
+      const data = await authFetch('/wallet/admin/claimable-summary');
+      const apiTotal = Number(data?.totalClaimable);
+      if (Number.isFinite(apiTotal) && apiTotal >= 0) {
+        setClaimableTotal(apiTotal);
+        return;
+      }
+    } catch {
+      // Fall through to wallet-based fallback.
+    }
+
+    // Fallback source: sum current player wallet balances.
+    try {
+      const wallets = await authFetch('/wallet/admin/all');
+      const total = (Array.isArray(wallets) ? wallets : []).reduce((sum, wallet) => {
+        if (!wallet?.user || wallet.user.role === 'admin') return sum;
+        return sum + Number(wallet.balance || 0);
+      }, 0);
+      setClaimableTotal(total);
+    } catch {
+      setClaimableTotal(0);
+    }
+  };
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -60,6 +92,10 @@ export default function Navbar() {
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
+
+  useEffect(() => {
+    fetchAdminClaimableTotal();
+  }, [isLoggedIn, isAdmin, authFetch]);
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50" style={{
@@ -110,6 +146,38 @@ export default function Navbar() {
           {/* ── Right side: Auth buttons or User dropdown ── */}
           <div className="hidden md:flex items-center gap-3">
             {isLoggedIn ? (
+              <>
+                {/* Wallet / Claimable Badge */}
+                {isAdmin ? (
+                  <Link href="/dashboard/claimable" className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all duration-200" style={{
+                    border: '1px solid rgba(255,217,61,0.25)',
+                    background: 'rgba(255,217,61,0.08)',
+                    color: '#ffd93d',
+                    textDecoration: 'none',
+                    fontSize: 13,
+                    fontWeight: 700,
+                  }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,217,61,0.16)'; e.currentTarget.style.boxShadow = '0 0 12px rgba(255,217,61,0.15)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,217,61,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
+                    title="Total players claimable amount"
+                  >
+                    💰 PKR {Math.round(claimableTotal).toLocaleString()}
+                  </Link>
+                ) : (
+                  <Link href="/wallet" className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all duration-200" style={{
+                    border: '1px solid rgba(0,255,136,0.2)',
+                    background: 'rgba(0,255,136,0.05)',
+                    color: '#00ff88',
+                    textDecoration: 'none',
+                    fontSize: 13,
+                    fontWeight: 700,
+                  }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,255,136,0.12)'; e.currentTarget.style.boxShadow = '0 0 12px rgba(0,255,136,0.15)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,255,136,0.05)'; e.currentTarget.style.boxShadow = 'none'; }}
+                  >
+                    💰 PKR {walletBalance.toLocaleString()}
+                  </Link>
+                )}
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setUserDropdown(!userDropdown)}
@@ -139,7 +207,16 @@ export default function Navbar() {
                     background: 'var(--bg-card)',
                     border: '1px solid var(--glass-border)',
                   }}>
-                    <Link href="/profile" className="flex items-center gap-3 px-4 py-2.5 text-sm transition-colors"
+                    {!isAdmin && (
+                      <Link href="/wallet" onClick={() => setUserDropdown(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm transition-colors"
+                        style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}
+                        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,255,136,0.08)'; e.currentTarget.style.color = '#00ff88'; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                      >
+                        💰 Wallet
+                      </Link>
+                    )}
+                    <Link href="/profile" onClick={() => setUserDropdown(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm transition-colors"
                       style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}
                       onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,229,255,0.08)'; e.currentTarget.style.color = 'var(--neon-cyan)'; }}
                       onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
@@ -147,7 +224,7 @@ export default function Navbar() {
                       <UserIcon /> Profile
                     </Link>
                     {isAdmin && (
-                      <Link href="/dashboard" className="flex items-center gap-3 px-4 py-2.5 text-sm transition-colors"
+                      <Link href="/dashboard" onClick={() => setUserDropdown(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm transition-colors"
                         style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}
                         onMouseEnter={e => { e.currentTarget.style.background = 'rgba(168,85,247,0.08)'; e.currentTarget.style.color = 'var(--neon-purple)'; }}
                         onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
@@ -155,7 +232,7 @@ export default function Navbar() {
                         🛡️ Dashboard
                       </Link>
                     )}
-                    <Link href="/settings" className="flex items-center gap-3 px-4 py-2.5 text-sm transition-colors"
+                    <Link href="/settings" onClick={() => setUserDropdown(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm transition-colors"
                       style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}
                       onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,229,255,0.08)'; e.currentTarget.style.color = 'var(--neon-cyan)'; }}
                       onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
@@ -173,6 +250,7 @@ export default function Navbar() {
                   </div>
                 )}
               </div>
+              </> 
             ) : (
               <>
                 <Link href="/login" className="btn-neon text-sm">
@@ -239,6 +317,27 @@ export default function Navbar() {
                     <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{user?.role === 'admin' ? 'Administrator' : 'Player'}</p>
                   </div>
                 </div>
+                {isAdmin ? (
+                  <Link
+                    href="/dashboard/claimable"
+                    onClick={() => setMobileOpen(false)}
+                    className="block w-[calc(100%-2rem)] mx-4 px-4 py-2.5 rounded-xl text-left"
+                    style={{
+                      background: 'rgba(255,217,61,0.08)', border: '1px solid rgba(255,217,61,0.22)',
+                      color: '#ffd93d', fontWeight: 700, fontSize: 14, textDecoration: 'none',
+                    }}
+                  >
+                    💰 PKR {Math.round(claimableTotal).toLocaleString()}
+                  </Link>
+                ) : (
+                  <Link href="/wallet" onClick={() => setMobileOpen(false)}
+                    className="flex items-center gap-2 mx-4 px-4 py-2.5 rounded-xl" style={{
+                      background: 'rgba(0,255,136,0.06)', border: '1px solid rgba(0,255,136,0.15)',
+                      color: '#00ff88', textDecoration: 'none', fontWeight: 700, fontSize: 14,
+                    }}>
+                    💰 PKR {walletBalance.toLocaleString()}
+                  </Link>
+                )}
                 {isAdmin && (
                   <Link href="/dashboard" onClick={() => setMobileOpen(false)}
                     className="block px-4 py-3 rounded-xl text-base font-medium transition-all"
@@ -267,6 +366,7 @@ export default function Navbar() {
           </div>
         </div>
       )}
+
     </nav>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 
 const AuthContext = createContext(null);
@@ -11,6 +11,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [walletBalance, setWalletBalance] = useState(0);
   const router = useRouter();
 
   // Hydrate from localStorage on mount
@@ -30,6 +31,23 @@ export function AuthProvider({ children }) {
     setLoading(false);
   }, []);
 
+  const fetchBalance = useCallback(async (tk) => {
+    const t = tk || token;
+    if (!t) return;
+    try {
+      const res = await fetch(`${API}/wallet/balance`, {
+        headers: { Authorization: `Bearer ${t}` },
+      });
+      const data = await res.json();
+      if (data.balance !== undefined) setWalletBalance(data.balance);
+    } catch { /* ignore */ }
+  }, [token]);
+
+  // Fetch balance when token is available
+  useEffect(() => {
+    if (token) fetchBalance();
+  }, [token, fetchBalance]);
+
   const signup = async (name, email, password) => {
     const res = await fetch(`${API}/users/register`, {
       method: 'POST',
@@ -42,6 +60,7 @@ export function AuthProvider({ children }) {
     setUser(data.user);
     localStorage.setItem('gz_token', data.token);
     localStorage.setItem('gz_user', JSON.stringify(data.user));
+    fetchBalance(data.token);
     return data;
   };
 
@@ -57,12 +76,14 @@ export function AuthProvider({ children }) {
     setUser(data.user);
     localStorage.setItem('gz_token', data.token);
     localStorage.setItem('gz_user', JSON.stringify(data.user));
+    fetchBalance(data.token);
     return data;
   };
 
   const logout = () => {
     setToken(null);
     setUser(null);
+    setWalletBalance(0);
     localStorage.removeItem('gz_token');
     localStorage.removeItem('gz_user');
     router.push('/');
@@ -78,7 +99,13 @@ export function AuthProvider({ children }) {
         ...options.headers,
       },
     });
-    return res.json();
+    const contentType = res.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      throw new Error(`Server error (${res.status}) — unexpected response format`);
+    }
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || `Request failed (${res.status})`);
+    return data;
   };
 
   const isAdmin = user?.role === 'admin';
@@ -90,6 +117,8 @@ export function AuthProvider({ children }) {
       loading,
       isAdmin,
       isLoggedIn: !!user,
+      walletBalance,
+      fetchBalance,
       signup,
       login,
       logout,

@@ -206,7 +206,6 @@ function playGameOverSound() {
 function restartGame() {
     score = 0;
     scoreEl.textContent = score;
-    GameHUD.reset();
     gameOver = false;
     gamePaused = false;
     projectile = null;
@@ -1015,7 +1014,6 @@ function update(timestamp) {
                     playPopSound(bubble.color);
                     score += bubble.points;
                     scoreEl.textContent = score;
-                    GameHUD.updateScore(score);
 
                     // Spawn celebratory score popup
                     scorePopups.push({

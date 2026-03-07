@@ -11,6 +11,19 @@ const gameScoreSchema = new mongoose.Schema({
     required: true,
     index: true
   },
+  // Contest period tracking (competitive games only)
+  contestId: {
+    type: String,
+    default: null,
+  },
+  contestStart: {
+    type: Date,
+    default: null,
+  },
+  contestEnd: {
+    type: Date,
+    default: null,
+  },
   points: {
     type: Number,
     required: true,
@@ -34,9 +47,9 @@ const gameScoreSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Fast leaderboard queries
-gameScoreSchema.index({ game: 1, score: -1 });
-// Fast user-specific queries
-gameScoreSchema.index({ user: 1, game: 1 });
+// Fast leaderboard queries (contest-aware)
+gameScoreSchema.index({ game: 1, contestId: 1, score: -1 });
+// Fast user-specific queries (contest-aware)
+gameScoreSchema.index({ user: 1, game: 1, contestId: 1 });
 
 module.exports = mongoose.model('GameScore', gameScoreSchema);

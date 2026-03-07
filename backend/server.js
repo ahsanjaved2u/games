@@ -11,6 +11,13 @@ const requestLogger = require('./middleware/logger');
 const userRoutes = require('./routes/userRoutes');
 const logRoutes = require('./routes/logRoutes');
 const scoreRoutes = require('./routes/scoreRoutes');
+const gameRoutes = require('./routes/gameRoutes');
+const walletRoutes = require('./routes/walletRoutes');
+
+// Competitive prize cron
+const cron = require('node-cron');
+const Game = require('./models/Game');
+const { distributeGamePrizes } = require('./controllers/competitionController');
 
 // Connect to MongoDB
 connectDB();
@@ -34,6 +41,8 @@ app.use(requestLogger);
 app.use('/api/users', userRoutes);
 app.use('/api/logs', logRoutes);
 app.use('/api/scores', scoreRoutes);
+app.use('/api/games', gameRoutes);
+app.use('/api/wallet', walletRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -47,4 +56,53 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+});
+
+// ── Competitive Prize Cron (runs every minute) ──
+// 1. Auto-unpublishes competitive games that are live but haven't started yet
+// 2. Auto-publishes competitive games when scheduleStart arrives
+// 3. Auto-unpublishes + distributes prizes when scheduleEnd passes
+cron.schedule('* * * * *', async () => {
+    try {
+        const now = new Date();
+
+        // Step 1 — force-unpublish: still before scheduleStart (shouldn't be live yet)
+        await Game.updateMany(
+            {
+                gameType: 'competitive',
+                isLive: true,
+                scheduleStart: { $ne: null, $gt: now },
+            },
+            { $set: { isLive: false } }
+        );
+
+        // Step 2 — auto-publish: scheduleStart has passed, scheduleEnd hasn't yet
+        await Game.updateMany(
+            {
+                gameType: 'competitive',
+                isLive: false,
+                prizesDistributed: false,
+                scheduleStart: { $ne: null, $lte: now },
+                scheduleEnd: { $ne: null, $gt: now },
+            },
+            { $set: { isLive: true } }
+        );
+
+        // Step 3 — auto-end + distribute prizes: scheduleEnd has passed
+        const expiredGames = await Game.find({
+            gameType: 'competitive',
+            prizesDistributed: false,
+            scheduleEnd: { $ne: null, $lte: now },
+        });
+        for (const game of expiredGames) {
+            const result = await distributeGamePrizes(game);
+            if (result.distributed) {
+                console.log(`[Cron] Prizes distributed for "${game.name}":`, result.results);
+            } else if (result.skipped) {
+                console.log(`[Cron] Skipped prizes for "${game.name}": ${result.reason}`);
+            }
+        }
+    } catch (err) {
+        console.error('[Cron] Prize distribution error:', err.message);
+    }
 });
