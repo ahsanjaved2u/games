@@ -15,6 +15,17 @@ const GAMES_DIR = process.env.GAMES_UPLOAD_DIR
 // ────────────────────────────────────────
 const getGames = async (req, res) => {
   try {
+    // Auto-publish / unpublish competitive games based on schedule
+    const now = new Date();
+    await Game.updateMany(
+      { gameType: 'competitive', scheduleStart: { $lte: now }, scheduleEnd: { $gt: now }, isLive: false, prizesDistributed: { $ne: true }, manualUnpublish: { $ne: true } },
+      { $set: { isLive: true } }
+    );
+    await Game.updateMany(
+      { gameType: 'competitive', scheduleEnd: { $lte: now }, isLive: true },
+      { $set: { isLive: false } }
+    );
+
     const games = await Game.find()
       .select('-instructions')
       .sort({ createdAt: -1 });
@@ -31,8 +42,19 @@ const getGames = async (req, res) => {
 // ────────────────────────────────────────
 const getGameBySlug = async (req, res) => {
   try {
-    const game = await Game.findOne({ slug: req.params.slug, isLive: true });
+    const game = await Game.findOne({ slug: req.params.slug });
     if (!game) return res.status(404).json({ message: 'Game not found' });
+
+    // Competitive: check schedule window in case auto-publish hasn't fired yet
+    if (!game.isLive && game.gameType === 'competitive' && game.scheduleStart && game.scheduleEnd) {
+      const now = new Date();
+      if (now >= new Date(game.scheduleStart) && now < new Date(game.scheduleEnd) && !game.prizesDistributed && !game.manualUnpublish) {
+        game.isLive = true;
+        await game.save();
+      }
+    }
+
+    if (!game.isLive) return res.status(404).json({ message: 'Game not found' });
     res.json(game);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -60,7 +82,7 @@ const getAllGamesAdmin = async (req, res) => {
 // ────────────────────────────────────────
 const createGame = async (req, res) => {
   try {
-    const { name, slug, description, thumbnail, isFree, price, isLive, gamePath, instructions, tag, color, scheduleStart, scheduleEnd, showSchedule, gameType, conversionRate, showCurrency, prizes, minPlayersThreshold } = req.body;
+    const { name, slug, description, thumbnail, isFree, price, isLive, gamePath, instructions, tag, color, scheduleStart, scheduleEnd, showSchedule, gameType, conversionRate, showCurrency, prizes, minPlayersThreshold, hasTimeLimit, timeLimitSeconds, rewardPeriodDays, rewardPeriodHours, rewardPeriodMinutes } = req.body;
 
     const existing = await Game.findOne({ slug });
     if (existing) return res.status(400).json({ message: 'A game with this slug already exists' });
@@ -98,6 +120,11 @@ const createGame = async (req, res) => {
       prizesDistributed: false,
       minPlayersThreshold: minPlayersThreshold || 0,
       activeContestId,
+      hasTimeLimit: hasTimeLimit || false,
+      timeLimitSeconds: timeLimitSeconds || 0,
+      rewardPeriodDays: rewardPeriodDays || 0,
+      rewardPeriodHours: rewardPeriodHours || 0,
+      rewardPeriodMinutes: rewardPeriodMinutes || 0,
     });
 
     res.status(201).json(game);
@@ -116,7 +143,7 @@ const updateGame = async (req, res) => {
     const game = await Game.findById(req.params.id);
     if (!game) return res.status(404).json({ message: 'Game not found' });
 
-    const fields = ['name', 'slug', 'description', 'thumbnail', 'isFree', 'price', 'isLive', 'gamePath', 'instructions', 'tag', 'color', 'gameType', 'conversionRate', 'showCurrency', 'prizes', 'scheduleStart', 'scheduleEnd', 'showSchedule', 'minPlayersThreshold'];
+    const fields = ['name', 'slug', 'description', 'thumbnail', 'isFree', 'price', 'isLive', 'gamePath', 'instructions', 'tag', 'color', 'gameType', 'conversionRate', 'showCurrency', 'prizes', 'scheduleStart', 'scheduleEnd', 'showSchedule', 'minPlayersThreshold', 'hasTimeLimit', 'timeLimitSeconds', 'rewardPeriodDays', 'rewardPeriodHours', 'rewardPeriodMinutes'];
 
     // If admin changes schedule (start or end), reset prizesDistributed so the new round can pay out
     const incomingEnd = req.body.scheduleEnd;
@@ -128,6 +155,8 @@ const updateGame = async (req, res) => {
       (incomingStart !== undefined && (incomingStart ? new Date(incomingStart).toISOString() : null) !== currentStart);
     if (scheduleChanged) {
       game.prizesDistributed = false;
+      // New schedule round → clear manual unpublish so auto-publish can work
+      game.manualUnpublish = false;
     }
 
     fields.forEach(f => {
@@ -184,6 +213,8 @@ const toggleLive = async (req, res) => {
     if (!game) return res.status(404).json({ message: 'Game not found' });
 
     game.isLive = !game.isLive;
+    // Admin manually unpublishing → block auto-publish; re-publishing → clear block
+    game.manualUnpublish = !game.isLive;
     await game.save();
     res.json({ isLive: game.isLive });
   } catch (error) {

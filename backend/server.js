@@ -58,15 +58,28 @@ app.listen(PORT, () => {
     console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
 });
 
-// ── Competitive Prize Cron (runs every minute) ──
-// 1. Auto-unpublishes competitive games that are live but haven't started yet
-// 2. Auto-publishes competitive games when scheduleStart arrives
-// 3. Auto-unpublishes + distributes prizes when scheduleEnd passes
+// ── Games/Prizes Cron (runs every minute) ──
+// 1. Rewarding auto-publish when scheduleStart arrives (if not manually published)
+// 2. Auto-unpublish competitive games that are live but haven't started yet
+// 3. Auto-publish competitive games when scheduleStart arrives
+// 4. Auto-unpublish + distribute competitive prizes when scheduleEnd passes
 cron.schedule('* * * * *', async () => {
     try {
         const now = new Date();
 
-        // Step 1 — force-unpublish: still before scheduleStart (shouldn't be live yet)
+        // Step 1 — rewarding auto-publish by schedule start
+        // Manual publish still works independently via admin "Published" checkbox.
+        await Game.updateMany(
+            {
+                gameType: 'rewarding',
+                isLive: false,
+                showSchedule: true,
+                scheduleStart: { $ne: null, $lte: now },
+            },
+            { $set: { isLive: true } }
+        );
+
+        // Step 2 — force-unpublish: still before scheduleStart (shouldn't be live yet)
         await Game.updateMany(
             {
                 gameType: 'competitive',
@@ -76,7 +89,7 @@ cron.schedule('* * * * *', async () => {
             { $set: { isLive: false } }
         );
 
-        // Step 2 — auto-publish: scheduleStart has passed, scheduleEnd hasn't yet
+        // Step 3 — auto-publish: scheduleStart has passed, scheduleEnd hasn't yet
         await Game.updateMany(
             {
                 gameType: 'competitive',
@@ -88,7 +101,7 @@ cron.schedule('* * * * *', async () => {
             { $set: { isLive: true } }
         );
 
-        // Step 3 — auto-end + distribute prizes: scheduleEnd has passed
+        // Step 4 — auto-end + distribute prizes: scheduleEnd has passed
         const expiredGames = await Game.find({
             gameType: 'competitive',
             prizesDistributed: false,

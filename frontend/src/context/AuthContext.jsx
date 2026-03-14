@@ -43,9 +43,12 @@ export function AuthProvider({ children }) {
     } catch { /* ignore */ }
   }, [token]);
 
-  // Fetch balance when token is available
+  // Fetch balance when token is available, then poll every 30s
   useEffect(() => {
-    if (token) fetchBalance();
+    if (!token) return;
+    fetchBalance();
+    const id = setInterval(fetchBalance, 30000);
+    return () => clearInterval(id);
   }, [token, fetchBalance]);
 
   const signup = async (name, email, password) => {

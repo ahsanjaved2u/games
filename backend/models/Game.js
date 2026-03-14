@@ -98,12 +98,43 @@ const gameSchema = new mongoose.Schema({
     default: 0,
     min: [0, 'Threshold cannot be negative'],
   },
+  hasTimeLimit: {
+    type: Boolean,
+    default: false,
+  },
+  timeLimitSeconds: {
+    type: Number, // game duration in seconds (e.g. 600 = 10 minutes)
+    default: 0,
+    min: [0, 'Time limit cannot be negative'],
+  },
+  // When admin manually unpublishes, this prevents auto-publish from overriding.
+  // Cleared when a new schedule starts or admin re-publishes.
+  manualUnpublish: {
+    type: Boolean,
+    default: false,
+  },
   // Unique identifier for the current contest round.
   // Auto-set to "scheduleStart_scheduleEnd" whenever the schedule changes,
   // ensuring each new round gets a distinct ID even if admin reuses dates.
   activeContestId: {
     type: String,
     default: null,
+  },
+  // Reward period for rewarding games — after this duration, a new leaderboard entry + transaction is created
+  rewardPeriodDays: {
+    type: Number,
+    default: 0,
+    min: [0, 'Days cannot be negative'],
+  },
+  rewardPeriodHours: {
+    type: Number,
+    default: 0,
+    min: [0, 'Hours cannot be negative'],
+  },
+  rewardPeriodMinutes: {
+    type: Number,
+    default: 0,
+    min: [0, 'Minutes cannot be negative'],
   },
 }, {
   timestamps: true,

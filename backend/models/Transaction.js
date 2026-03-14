@@ -25,6 +25,10 @@ const transactionSchema = new mongoose.Schema({
     type: String,
     default: '',
   },
+  scheduleId: {
+    type: String,
+    default: '',
+  },
   status: {
     type: String,
     enum: ['completed', 'pending', 'rejected'],

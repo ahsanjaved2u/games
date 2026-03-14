@@ -522,19 +522,96 @@ const adminHandleWithdrawal = async (req, res) => {
 // @desc    Internal: auto-credit a player after a rewarding game best-score
 // @access  Internal (called from scoreController)
 // ────────────────────────────────────────
-const autoCreditScore = async (userId, gameSlug, gameName, earnedAmount) => {
+const autoCreditScore = async (userId, gameSlug, gameName, newTotalPkr) => {
   const wallet = await getOrCreateWallet(userId);
-  wallet.balance += earnedAmount;
-  await wallet.save();
+  const gameLabel = gameName || gameSlug;
 
-  await Transaction.create({
+  // Look for an existing reward transaction for this user + game
+  // (match both old and new description for backward compatibility)
+  const existingTxn = await Transaction.findOne({
     user: userId,
     type: 'credit',
-    amount: earnedAmount,
-    description: `New best score reward`,
-    game: gameName || gameSlug,
-    status: 'completed',
+    game: gameLabel,
+    description: { $in: ['Best score reward', 'New best score reward'] },
   });
+
+  if (existingTxn) {
+    // Player beat their own best — update the single transaction
+    const delta = parseFloat((newTotalPkr - existingTxn.amount).toFixed(2));
+    if (delta <= 0) return wallet.balance; // no increase, nothing to do
+
+    existingTxn.amount = parseFloat(newTotalPkr.toFixed(2));
+    existingTxn.description = 'Best score reward';
+    await existingTxn.save();
+
+    wallet.balance = parseFloat((wallet.balance + delta).toFixed(2));
+    await wallet.save();
+  } else {
+    // First time earning from this game — create the transaction
+    const amount = parseFloat(newTotalPkr.toFixed(2));
+    await Transaction.create({
+      user: userId,
+      type: 'credit',
+      amount,
+      description: 'Best score reward',
+      game: gameLabel,
+      status: 'completed',
+    });
+
+    wallet.balance = parseFloat((wallet.balance + amount).toFixed(2));
+    await wallet.save();
+  }
+
+  return wallet.balance;
+};
+
+// ────────────────────────────────────────
+// @desc    Internal: credit a player for a rewarding-game session.
+//          ONE transaction per player + game + schedule period.
+//          If the new score earns more PKR than the stored transaction,
+//          update the amount and add the delta to the wallet.
+//          A new schedule period → new transaction document.
+// @access  Internal (called from scoreController)
+// ────────────────────────────────────────
+const creditRewardingGame = async (userId, gameLabel, earnedPkr, scheduleId) => {
+  const wallet = await getOrCreateWallet(userId);
+  const sid = scheduleId || '';
+
+  // Find existing reward txn for this player + game + schedule
+  const existingTxn = await Transaction.findOne({
+    user: userId,
+    type: 'credit',
+    game: gameLabel,
+    scheduleId: sid,
+    description: 'Game reward',
+  });
+
+  if (existingTxn) {
+    // Only update if new earnings exceed the stored amount (best score wins)
+    const delta = parseFloat((earnedPkr - existingTxn.amount).toFixed(2));
+    if (delta <= 0) return wallet.balance; // current best is still higher
+
+    existingTxn.amount = parseFloat(earnedPkr.toFixed(2));
+    await existingTxn.save();
+
+    wallet.balance = parseFloat((wallet.balance + delta).toFixed(2));
+    await wallet.save();
+  } else {
+    // First play in this schedule period — create the transaction
+    const amount = parseFloat(earnedPkr.toFixed(2));
+    await Transaction.create({
+      user: userId,
+      type: 'credit',
+      amount,
+      description: 'Game reward',
+      game: gameLabel,
+      scheduleId: sid,
+      status: 'completed',
+    });
+
+    wallet.balance = parseFloat((wallet.balance + amount).toFixed(2));
+    await wallet.save();
+  }
 
   return wallet.balance;
 };
@@ -542,6 +619,7 @@ const autoCreditScore = async (userId, gameSlug, gameName, earnedAmount) => {
 module.exports = {
   getOrCreateWallet,
   autoCreditScore,
+  creditRewardingGame,
   getMyWallet,
   getMyBalance,
   requestWithdrawal,

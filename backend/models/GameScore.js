@@ -39,6 +39,11 @@ const gameScoreSchema = new mongoose.Schema({
     required: true,
     default: 0
   },
+  // Reward-period tracking for rewarding games
+  periodStart: {
+    type: Date,
+    default: null,
+  },
   totalPlays: {
     type: Number,
     default: 1

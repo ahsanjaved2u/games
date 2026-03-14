@@ -95,6 +95,11 @@ export default function Navbar() {
 
   useEffect(() => {
     fetchAdminClaimableTotal();
+    // Poll every 30s so admin sees updated totals without manual refresh
+    if (isLoggedIn && isAdmin) {
+      const id = setInterval(fetchAdminClaimableTotal, 30000);
+      return () => clearInterval(id);
+    }
   }, [isLoggedIn, isAdmin, authFetch]);
 
   return (
@@ -161,7 +166,7 @@ export default function Navbar() {
                     onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,217,61,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
                     title="Total players claimable amount"
                   >
-                    💰 PKR {Math.round(claimableTotal).toLocaleString()}
+                    💰 PKR {parseFloat(claimableTotal.toFixed(2)).toLocaleString()}
                   </Link>
                 ) : (
                   <Link href="/wallet" className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all duration-200" style={{
@@ -327,7 +332,7 @@ export default function Navbar() {
                       color: '#ffd93d', fontWeight: 700, fontSize: 14, textDecoration: 'none',
                     }}
                   >
-                    💰 PKR {Math.round(claimableTotal).toLocaleString()}
+                    💰 PKR {parseFloat(claimableTotal.toFixed(2)).toLocaleString()}
                   </Link>
                 ) : (
                   <Link href="/wallet" onClick={() => setMobileOpen(false)}

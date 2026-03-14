@@ -1,6 +1,20 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const scoreEl = document.getElementById('score');
+
+// Inject the strength bar into the shared HUD
+GameHUD.addStat(`
+    <div class="hood-btn" id="strength-btn">
+        <div id="strength-top">
+            <span id="strength-icon">&#9889;</span>
+            <span id="strength-label">12</span>
+        </div>
+        <div id="strength-track">
+            <div id="strength-bar"></div>
+        </div>
+    </div>
+`);
+
 const strengthBar = document.getElementById('strength-bar');
 const strengthLabel = document.getElementById('strength-label');
 const timeDisplay = document.getElementById('time-display');
@@ -974,10 +988,26 @@ function update(timestamp) {
     // Update elapsed time
     if (!gameOver && !gamePaused && gameStartTime) {
         gameElapsedTime = Math.round((performance.now() - gameStartTime - totalPauseTime) / 1000);
-        const mins = Math.floor(gameElapsedTime / 60);
-        const secs = gameElapsedTime % 60;
-        timeDisplay.textContent = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+
+        if (GameHUD.hasTimeLimit) {
+            // Countdown mode: show remaining time and end game when expired
+            const remaining = Math.max(0, GameHUD.timeLimitSeconds - gameElapsedTime);
+            const mins = Math.floor(remaining / 60);
+            const secs = remaining % 60;
+            timeDisplay.textContent = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+            if (remaining <= 0) {
+                gameOver = true;
+                playGameOverSound();
+                GameZone.gameOver(score, gameElapsedTime);
+            }
+        } else {
+            const mins = Math.floor(gameElapsedTime / 60);
+            const secs = gameElapsedTime % 60;
+            timeDisplay.textContent = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+        }
+
         liveScoreEl.textContent = GameZone.calcScore(score, gameElapsedTime);
+        GameHUD.updateScore(GameZone.calcScore(score, gameElapsedTime));
     }
 
     // Skip game logic when paused

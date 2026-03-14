@@ -20,7 +20,7 @@ export default function BubbleShooterPage() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const iframeRef = useRef(null);
-  const { isLoggedIn, authFetch, user } = useAuth();
+  const { isLoggedIn, authFetch, user, fetchBalance } = useAuth();
 
   useEffect(() => {
     (async () => {
@@ -57,6 +57,8 @@ export default function BubbleShooterPage() {
       type: 'GAME_CONFIG',
       conversionRate: game.conversionRate || 0,
       showCurrency: game.showCurrency || false,
+      hasTimeLimit: game.hasTimeLimit || false,
+      timeLimitSeconds: game.timeLimitSeconds || 0,
     }, '*');
   }, [game]);
 
@@ -72,12 +74,13 @@ export default function BubbleShooterPage() {
             body: JSON.stringify({ game: e.data.game || SLUG, points: e.data.points, time: e.data.time, score: e.data.score }),
           });
           sendLeaderboardToIframe();
+          fetchBalance();
         } catch { /* ignore */ }
       }
     };
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [isLoggedIn, authFetch, sendLeaderboardToIframe, sendGameConfig]);
+  }, [isLoggedIn, authFetch, sendLeaderboardToIframe, sendGameConfig, fetchBalance]);
 
   useEffect(() => {
     if (!started) return;

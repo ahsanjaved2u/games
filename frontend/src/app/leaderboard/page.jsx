@@ -42,6 +42,7 @@ function getScoreEntryGameSlug(entry) {
 /* ─────────────── Admin Summary View ─────────────── */
 function AdminSummaryView({ rows, loading }) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [typeFilter, setTypeFilter] = useState('all');
 
   if (loading) {
     return (
@@ -53,30 +54,37 @@ function AdminSummaryView({ rows, loading }) {
   }
 
   const filteredRows = rows.filter((row) => {
-    if (!searchTerm.trim()) return true;
-    const text = `${row.gameName || row.game} ${row.game}`.toLowerCase();
-    return text.includes(searchTerm.trim().toLowerCase());
+    if (typeFilter === 'rewarding' && !row.isRewarding) return false;
+    if (typeFilter === 'live' && !row.isLive) return false;
+    if (typeFilter === 'ended' && !row.isEnded) return false;
+    if (searchTerm.trim()) {
+      const text = `${row.gameName || row.game} ${row.game}`.toLowerCase();
+      if (!text.includes(searchTerm.trim().toLowerCase())) return false;
+    }
+    return true;
   });
 
-  if (filteredRows.length === 0) {
-    return (
-      <div className="glass-card text-center py-12 animate-fade-in-up">
-        <span style={{ fontSize: 30, display: 'block', marginBottom: 8, opacity: 0.35 }}>📋</span>
-        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No contest rows found.</p>
-      </div>
-    );
-  }
+  const rewardingCount = rows.filter(r => r.isRewarding).length;
+  const liveCount = rows.filter(r => r.isLive).length;
+  const endedCount = rows.filter(r => r.isEnded).length;
 
-  const liveCount = filteredRows.filter(r => r.isLive).length;
-  const endedCount = filteredRows.filter(r => !r.isLive).length;
+  const filterBtn = (key, label) => ({
+    background: typeFilter === key ? 'rgba(0,229,255,0.14)' : 'rgba(255,255,255,0.04)',
+    border: typeFilter === key ? '1px solid rgba(0,229,255,0.35)' : '1px solid rgba(255,255,255,0.12)',
+    color: typeFilter === key ? 'var(--neon-cyan)' : 'var(--text-secondary)',
+  });
 
   return (
     <div className="space-y-3 animate-fade-in-up">
       <div className="glass-card p-3">
-        <div className="grid grid-cols-3 gap-2 mb-3 text-center">
+        <div className="grid grid-cols-4 gap-2 mb-3 text-center">
           <div className="rounded-lg py-2" style={{ background: 'rgba(0,229,255,0.08)', border: '1px solid rgba(0,229,255,0.2)' }}>
-            <p className="text-base font-extrabold" style={{ color: 'var(--neon-cyan)' }}>{filteredRows.length}</p>
-            <p className="text-[10px] uppercase" style={{ color: 'var(--text-muted)' }}>Contests</p>
+            <p className="text-base font-extrabold" style={{ color: 'var(--neon-cyan)' }}>{rows.length}</p>
+            <p className="text-[10px] uppercase" style={{ color: 'var(--text-muted)' }}>Total</p>
+          </div>
+          <div className="rounded-lg py-2" style={{ background: 'rgba(0,255,136,0.08)', border: '1px solid rgba(0,255,136,0.2)' }}>
+            <p className="text-base font-extrabold" style={{ color: '#00ff88' }}>{rewardingCount}</p>
+            <p className="text-[10px] uppercase" style={{ color: 'var(--text-muted)' }}>Standard / Rewarding</p>
           </div>
           <div className="rounded-lg py-2" style={{ background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)' }}>
             <p className="text-base font-extrabold" style={{ color: '#22c55e' }}>{liveCount}</p>
@@ -86,6 +94,13 @@ function AdminSummaryView({ rows, loading }) {
             <p className="text-base font-extrabold" style={{ color: '#ff5c8a' }}>{endedCount}</p>
             <p className="text-[10px] uppercase" style={{ color: 'var(--text-muted)' }}>Ended</p>
           </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2 mb-3">
+          <button className="text-xs font-semibold px-3 py-1 rounded-full" style={filterBtn('all')} onClick={() => setTypeFilter('all')}>All</button>
+          <button className="text-xs font-semibold px-3 py-1 rounded-full" style={filterBtn('rewarding')} onClick={() => setTypeFilter('rewarding')}>💰 Standard / Rewarding</button>
+          <button className="text-xs font-semibold px-3 py-1 rounded-full" style={filterBtn('live')} onClick={() => setTypeFilter('live')}>🟢 Live</button>
+          <button className="text-xs font-semibold px-3 py-1 rounded-full" style={filterBtn('ended')} onClick={() => setTypeFilter('ended')}>🔴 Ended</button>
         </div>
 
         <input
@@ -103,6 +118,12 @@ function AdminSummaryView({ rows, loading }) {
       </div>
 
       <div className="glass-card overflow-hidden">
+        {filteredRows.length === 0 ? (
+          <div className="text-center py-12">
+            <span style={{ fontSize: 30, display: 'block', marginBottom: 8, opacity: 0.35 }}>📋</span>
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No {typeFilter === 'all' ? '' : typeFilter} entries found.</p>
+          </div>
+        ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1200px]">
             <thead>
@@ -119,18 +140,20 @@ function AdminSummaryView({ rows, loading }) {
             </thead>
             <tbody>
               {filteredRows.map((row) => {
-                const statusColor = row.isLive ? '#22c55e' : '#ff5c8a';
                 return (
-                  <tr key={`${row.game}-${row.contestId}`} style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                  <tr key={`${row.game}-${row.contestId || ''}-${row.periodStart || ''}`} style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
                     <td className="px-4 py-3 sticky left-0 z-10" style={{ background: 'var(--bg-card)' }}>
-                      <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{row.gameName || row.game}</p>
-                      <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>{formatContestDate(row.contestStart, row.contestEnd)}</p>
+                      <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                        {row.gameName || row.game}
+                        {row.isRewarding && <span className="text-[10px] font-normal ml-1" style={{ color: '#00ff88' }}>(Rewarding)</span>}
+                      </p>
+                      {(row.contestStart || row.periodStart) && <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>{formatContestDate(row.periodStart || row.contestStart, row.periodEnd || row.contestEnd)}</p>}
                       <span className="inline-block mt-1 text-[10px] font-bold uppercase px-2 py-0.5 rounded-full" style={{
-                        color: statusColor,
-                        background: row.isLive ? 'rgba(34,197,94,0.15)' : 'rgba(255,92,138,0.15)',
-                        border: row.isLive ? '1px solid rgba(34,197,94,0.35)' : '1px solid rgba(255,92,138,0.35)',
+                        color: row.isLive ? '#22c55e' : row.isEnded ? '#ff5c8a' : '#00ff88',
+                        background: row.isLive ? 'rgba(34,197,94,0.15)' : row.isEnded ? 'rgba(255,92,138,0.15)' : 'rgba(0,255,136,0.15)',
+                        border: row.isLive ? '1px solid rgba(34,197,94,0.35)' : row.isEnded ? '1px solid rgba(255,92,138,0.35)' : '1px solid rgba(0,255,136,0.35)',
                       }}>
-                        {row.isLive ? 'LIVE' : 'ENDED'}
+                        {row.isLive ? 'LIVE' : row.isEnded ? 'ENDED' : 'REWARDING'}
                       </span>
                     </td>
 
@@ -155,6 +178,7 @@ function AdminSummaryView({ rows, loading }) {
             </tbody>
           </table>
         </div>
+        )}
       </div>
     </div>
   );
@@ -204,13 +228,13 @@ function SummaryView({ summaryData, loading, isLoggedIn, user, games }) {
         emoji: '🎮',
       };
 
-      const timestamp = entry.contestStart || entry.lastPlayed || 0;
+      const timestamp = entry.contestStart || entry.periodStart || entry.lastPlayed || 0;
 
       return {
         ...entry,
         _slug: slug,
         _game: gameInfo,
-        _key: `${slug}-${entry.contestId || 'default'}-${index}`,
+        _key: `${slug}-${entry.contestId || ''}-${entry.periodStart || ''}-${index}`,
         _sortTs: new Date(timestamp).getTime() || 0,
       };
     })
@@ -288,15 +312,15 @@ function SummaryView({ summaryData, loading, isLoggedIn, user, games }) {
             </div>
             <div className="rounded-lg py-2" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)' }}>
               <p className="text-lg font-extrabold" style={{ color: 'var(--text-primary)' }}>{standardCount}</p>
-              <p className="text-[10px] uppercase" style={{ color: 'var(--text-muted)' }}>Standard</p>
+              <p className="text-[10px] uppercase" style={{ color: 'var(--text-muted)' }}>Standard / Rewarding</p>
             </div>
           </div>
 
           <div className="flex flex-wrap gap-2 mb-3">
             <button className="text-xs font-semibold px-3 py-1 rounded-full" style={filterButtonStyle('all')} onClick={() => setStatusFilter('all')}>All</button>
-            <button className="text-xs font-semibold px-3 py-1 rounded-full" style={filterButtonStyle('live')} onClick={() => setStatusFilter('live')}>Live</button>
-            <button className="text-xs font-semibold px-3 py-1 rounded-full" style={filterButtonStyle('ended')} onClick={() => setStatusFilter('ended')}>Ended</button>
-            <button className="text-xs font-semibold px-3 py-1 rounded-full" style={filterButtonStyle('standard')} onClick={() => setStatusFilter('standard')}>Standard</button>
+            <button className="text-xs font-semibold px-3 py-1 rounded-full" style={filterButtonStyle('live')} onClick={() => setStatusFilter('live')}>🟢 Live Contest</button>
+            <button className="text-xs font-semibold px-3 py-1 rounded-full" style={filterButtonStyle('ended')} onClick={() => setStatusFilter('ended')}>🔴 Ended Contest</button>
+            <button className="text-xs font-semibold px-3 py-1 rounded-full" style={filterButtonStyle('standard')} onClick={() => setStatusFilter('standard')}>🎮 Standard / Rewarding</button>
           </div>
 
           <input
@@ -335,12 +359,15 @@ function SummaryView({ summaryData, loading, isLoggedIn, user, games }) {
           visibleEntries.map((entry) => {
             const game = entry._game;
             const isContestEntry = !!entry.contestId;
+            const isPeriodEntry = !!entry.periodStart;
             const isLive = !!entry.isLive;
-            const status = isContestEntry ? (isLive ? 'LIVE' : 'ENDED') : 'STANDARD';
-            const statusColor = isContestEntry ? (isLive ? '#22c55e' : '#ff5c8a') : 'var(--text-muted)';
+            const status = (isContestEntry || isPeriodEntry) ? (isLive ? 'LIVE' : 'ENDED') : 'STANDARD';
+            const statusColor = (isContestEntry || isPeriodEntry) ? (isLive ? '#22c55e' : '#ff5c8a') : 'var(--text-muted)';
             const subtitle = isContestEntry
               ? formatContestDate(entry.contestStart, entry.contestEnd)
-              : `Last played: ${entry.lastPlayed ? new Date(entry.lastPlayed).toLocaleString() : 'Unknown'}`;
+              : isPeriodEntry
+                ? formatContestDate(entry.periodStart, entry.periodEnd)
+                : `Last played: ${entry.lastPlayed ? new Date(entry.lastPlayed).toLocaleString() : 'Unknown'}`;
 
             return (
               <div key={entry._key} className="px-4 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.045)' }}>
@@ -352,8 +379,8 @@ function SummaryView({ summaryData, loading, isLoggedIn, user, games }) {
                     </div>
                     <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full" style={{
                       color: statusColor,
-                      background: isContestEntry ? (isLive ? 'rgba(34,197,94,0.15)' : 'rgba(255,92,138,0.15)') : 'rgba(255,255,255,0.08)',
-                      border: isContestEntry ? (isLive ? '1px solid rgba(34,197,94,0.35)' : '1px solid rgba(255,92,138,0.35)') : '1px solid rgba(255,255,255,0.2)',
+                      background: (isContestEntry || isPeriodEntry) ? (isLive ? 'rgba(34,197,94,0.15)' : 'rgba(255,92,138,0.15)') : 'rgba(255,255,255,0.08)',
+                      border: (isContestEntry || isPeriodEntry) ? (isLive ? '1px solid rgba(34,197,94,0.35)' : '1px solid rgba(255,92,138,0.35)') : '1px solid rgba(255,255,255,0.2)',
                     }}>{status}</span>
                   </div>
                   <p className="text-[11px] mb-2" style={{ color: 'var(--text-muted)' }}>{subtitle}</p>
@@ -385,8 +412,8 @@ function SummaryView({ summaryData, loading, isLoggedIn, user, games }) {
                   <div>
                     <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full" style={{
                       color: statusColor,
-                      background: isContestEntry ? (isLive ? 'rgba(34,197,94,0.15)' : 'rgba(255,92,138,0.15)') : 'rgba(255,255,255,0.08)',
-                      border: isContestEntry ? (isLive ? '1px solid rgba(34,197,94,0.35)' : '1px solid rgba(255,92,138,0.35)') : '1px solid rgba(255,255,255,0.2)',
+                      background: (isContestEntry || isPeriodEntry) ? (isLive ? 'rgba(34,197,94,0.15)' : 'rgba(255,92,138,0.15)') : 'rgba(255,255,255,0.08)',
+                      border: (isContestEntry || isPeriodEntry) ? (isLive ? '1px solid rgba(34,197,94,0.35)' : '1px solid rgba(255,92,138,0.35)') : '1px solid rgba(255,255,255,0.2)',
                     }}>{status}</span>
                   </div>
 
@@ -427,9 +454,14 @@ function GameView({ game, isLoggedIn, authFetch, user }) {
   const [contests, setContests] = useState([]);
   const [selectedContest, setSelectedContest] = useState(null);
   const [contestsLoaded, setContestsLoaded] = useState(false);
+  const [rewardPeriods, setRewardPeriods] = useState([]);
+  const [selectedPeriod, setSelectedPeriod] = useState(null);
+  const [periodsLoaded, setPeriodsLoaded] = useState(false);
 
   const isCompetitive = game.gameType === 'competitive';
+  const isRewarding = game.gameType === 'rewarding';
 
+  // Fetch contest periods (competitive)
   useEffect(() => {
     if (!isCompetitive) { setContestsLoaded(true); return; }
     fetch(`${API}/scores/contests/${game.id}`)
@@ -444,27 +476,45 @@ function GameView({ game, isLoggedIn, authFetch, user }) {
       .catch(() => setContestsLoaded(true));
   }, [game.id, isCompetitive]);
 
+  // Fetch reward periods (rewarding)
   useEffect(() => {
-    if (!contestsLoaded) return;
+    if (!isRewarding) { setPeriodsLoaded(true); return; }
+    fetch(`${API}/scores/reward-periods/${game.id}`)
+      .then(r => r.json())
+      .then(data => {
+        if (!Array.isArray(data) || data.length === 0) { setPeriodsLoaded(true); return; }
+        setRewardPeriods(data);
+        const active = data.find(p => p.isActive) || data[0];
+        if (active) setSelectedPeriod(active.periodStart);
+        setPeriodsLoaded(true);
+      })
+      .catch(() => setPeriodsLoaded(true));
+  }, [game.id, isRewarding]);
+
+  useEffect(() => {
+    if (!contestsLoaded || !periodsLoaded) return;
     setLoading(true);
     let url = `${API}/scores/leaderboard/${game.id}?limit=10`;
     if (isCompetitive && selectedContest) url += `&contestId=${encodeURIComponent(selectedContest)}`;
+    if (isRewarding && selectedPeriod) url += `&periodStart=${encodeURIComponent(selectedPeriod)}`;
     fetch(url)
       .then(r => r.json())
       .then(data => { setLeaderboard(Array.isArray(data) ? data : []); setLoading(false); })
       .catch(() => setLoading(false));
-  }, [game.id, selectedContest, isCompetitive, contestsLoaded]);
+  }, [game.id, selectedContest, selectedPeriod, isCompetitive, isRewarding, contestsLoaded, periodsLoaded]);
 
   useEffect(() => {
-    if (!isLoggedIn || !contestsLoaded) { setMyStats(null); return; }
+    if (!isLoggedIn || !contestsLoaded || !periodsLoaded) { setMyStats(null); return; }
     let url = `/scores/me/${game.id}`;
     if (isCompetitive && selectedContest) url += `?contestId=${encodeURIComponent(selectedContest)}`;
+    if (isRewarding && selectedPeriod) url += `?periodStart=${encodeURIComponent(selectedPeriod)}`;
     authFetch(url)
       .then(data => setMyStats(data))
       .catch(() => setMyStats(null));
-  }, [game.id, isLoggedIn, authFetch, selectedContest, isCompetitive, contestsLoaded]);
+  }, [game.id, isLoggedIn, authFetch, selectedContest, selectedPeriod, isCompetitive, isRewarding, contestsLoaded, periodsLoaded]);
 
   const activeContest = contests.find(c => c.contestId === selectedContest);
+  const activePeriod = rewardPeriods.find(p => p.periodStart === selectedPeriod);
   const statusColor = activeContest?.isLive ? '#22c55e' : activeContest?.isEnded ? '#ff5c8a' : '#f59e0b';
   const statusLabel = activeContest?.isLive ? 'LIVE' : activeContest?.isEnded ? 'ENDED' : 'UPCOMING';
 
@@ -490,6 +540,15 @@ function GameView({ game, isLoggedIn, authFetch, user }) {
               color: statusColor,
             }}>
               {statusLabel} · {formatContestDate(activeContest.contestStart, activeContest.contestEnd)}
+            </span>
+          )}
+          {isRewarding && activePeriod && (
+            <span className="text-[10px] font-bold uppercase px-2.5 py-1 rounded-full" style={{
+              background: activePeriod.isActive ? 'rgba(0,255,136,0.15)' : 'rgba(255,92,138,0.15)',
+              border: activePeriod.isActive ? '1px solid rgba(0,255,136,0.35)' : '1px solid rgba(255,92,138,0.35)',
+              color: activePeriod.isActive ? '#00ff88' : '#ff5c8a',
+            }}>
+              {activePeriod.isActive ? 'ACTIVE' : 'ENDED'}
             </span>
           )}
         </div>
@@ -519,8 +578,34 @@ function GameView({ game, isLoggedIn, authFetch, user }) {
           </div>
         )}
 
-        {/* My stats inline row — only if logged in and played */}
-        {isLoggedIn && myStats && myStats.totalPlays > 0 && (
+        {/* Reward period tabs — compact scrollable chips (rewarding only) */}
+        {isRewarding && rewardPeriods.length > 0 && (
+          <div className="flex gap-1.5 px-3 py-2 overflow-x-auto border-b" style={{ borderColor: 'rgba(255,255,255,0.06)', scrollbarWidth: 'none' }}>
+            {rewardPeriods.map((p, idx) => {
+              const isSelected = p.periodStart === selectedPeriod;
+              const sColor = p.isActive ? '#00ff88' : '#ff5c8a';
+              const label = (p.isActive ? 'Current' : `Period ${rewardPeriods.length - idx}`) + ' · ' + formatContestDate(p.periodStart, p.periodEnd);
+              return (
+                <button
+                  key={p.periodStart}
+                  onClick={() => setSelectedPeriod(p.periodStart)}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full whitespace-nowrap transition-all text-[11px] font-semibold flex-shrink-0"
+                  style={{
+                    background: isSelected ? `${game.color}20` : 'rgba(255,255,255,0.04)',
+                    border: `1px solid ${isSelected ? game.color + '50' : 'rgba(255,255,255,0.08)'}`,
+                    color: isSelected ? game.color : 'var(--text-muted)',
+                  }}
+                >
+                  <span style={{ width: 5, height: 5, borderRadius: '50%', background: sColor, display: 'inline-block', flexShrink: 0 }} />
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* My stats inline row — only if logged in and played (competitive only) */}
+        {!isRewarding && isLoggedIn && myStats && myStats.totalPlays > 0 && (
           <div className="flex items-center gap-3 px-4 py-2.5" style={{
             background: `${game.color}08`,
             borderBottom: `1px solid ${game.color}18`,
@@ -538,10 +623,12 @@ function GameView({ game, isLoggedIn, authFetch, user }) {
                 <p className="text-sm font-extrabold" style={{ color: game.color }}>#{myStats.rank}</p>
                 <p className="text-[9px] uppercase" style={{ color: 'var(--text-muted)' }}>Rank</p>
               </div>
+              {!isRewarding && (
               <div>
                 <p className="text-sm font-extrabold" style={{ color: 'var(--neon-yellow)' }}>{myStats.bestScore}</p>
                 <p className="text-[9px] uppercase" style={{ color: 'var(--text-muted)' }}>Best</p>
               </div>
+              )}
             </div>
           </div>
         )}
@@ -718,6 +805,44 @@ export default function LeaderboardPage() {
               const contests = Array.isArray(contestData) ? contestData : [];
 
               if (contests.length === 0) {
+                // Check reward periods for rewarding games
+                try {
+                  const periodsRes = await fetch(`${API}/scores/reward-periods/${encodeURIComponent(slug)}`);
+                  const periodsData = periodsRes.ok ? await periodsRes.json() : [];
+                  const periods = Array.isArray(periodsData) ? periodsData : [];
+
+                  if (periods.length > 0) {
+                    const periodEntries = await Promise.all(
+                      periods.map(async (period) => {
+                        if (!period?.periodStart) return null;
+                        try {
+                          const stats = await authFetch(`/scores/me/${encodeURIComponent(slug)}?periodStart=${encodeURIComponent(period.periodStart)}`);
+                          if ((stats?.totalPlays || 0) <= 0) return null;
+                          return {
+                            game: slug,
+                            contestId: null,
+                            periodStart: period.periodStart,
+                            periodEnd: period.periodEnd,
+                            contestStart: null,
+                            contestEnd: null,
+                            isLive: !!period.isActive,
+                            isEnded: !period.isActive,
+                            rank: stats.rank ?? null,
+                            bestScore: stats.bestScore ?? 0,
+                            totalPlays: stats.totalPlays ?? 0,
+                            lastPlayed: stats?.record?.updatedAt || null,
+                          };
+                        } catch {
+                          return null;
+                        }
+                      })
+                    );
+
+                    const validPeriodEntries = periodEntries.filter(Boolean);
+                    if (validPeriodEntries.length > 0) return validPeriodEntries;
+                  }
+                } catch {}
+
                 const standard = await buildStandardEntry(slug, baseEntry);
                 return standard ? [standard] : [];
               }
@@ -789,9 +914,10 @@ export default function LeaderboardPage() {
 
     const buildFallbackAdminRows = async () => {
       const competitiveGames = games.filter(g => g.gameType === 'competitive');
-      if (competitiveGames.length === 0) return [];
+      const rewardingGames = games.filter(g => g.gameType === 'rewarding');
 
-      const rowsPerGame = await Promise.all(
+      // Build competitive rows (per contest)
+      const competitiveRows = await Promise.all(
         competitiveGames.map(async (game) => {
           try {
             const contestsRes = await fetch(`${API}/scores/contests/${encodeURIComponent(game.id)}`);
@@ -821,6 +947,7 @@ export default function LeaderboardPage() {
                     isCurrent: !!contest.isCurrent,
                     isLive: !!contest.isLive,
                     isEnded: !!contest.isEnded,
+                    isRewarding: false,
                     winners: leaderboard.slice(0, 10).map((entry, idx) => ({
                       rank: idx + 1,
                       userId: entry.userId,
@@ -841,9 +968,64 @@ export default function LeaderboardPage() {
         })
       );
 
-      return rowsPerGame
+      // Build rewarding rows (one row per period per rewarding game)
+      const rewardingRowsNested = await Promise.all(
+        rewardingGames.map(async (game) => {
+          try {
+            const periodsRes = await fetch(`${API}/scores/reward-periods/${encodeURIComponent(game.id)}`);
+            const periodsData = periodsRes.ok ? await periodsRes.json() : [];
+            const periods = Array.isArray(periodsData) ? periodsData : [];
+
+            if (periods.length > 0) {
+              const periodRows = await Promise.all(
+                periods.map(async (period) => {
+                  try {
+                    const lbRes = await fetch(`${API}/scores/leaderboard/${encodeURIComponent(game.id)}?limit=10&periodStart=${encodeURIComponent(period.periodStart)}`);
+                    const lbData = lbRes.ok ? await lbRes.json() : [];
+                    const lb = Array.isArray(lbData) ? lbData : [];
+                    if (lb.length === 0) return null;
+                    return {
+                      game: game.id, gameName: game.title,
+                      contestId: null, contestStart: null, contestEnd: null,
+                      periodStart: period.periodStart, periodEnd: period.periodEnd,
+                      isCurrent: false, isLive: !!period.isActive, isEnded: !period.isActive,
+                      isRewarding: true,
+                      winners: lb.slice(0, 10).map((e, i) => ({ rank: i + 1, userId: e.userId, name: e.name, score: e.score })),
+                    };
+                  } catch { return null; }
+                })
+              );
+              return periodRows.filter(Boolean);
+            }
+
+            const lbRes = await fetch(`${API}/scores/leaderboard/${encodeURIComponent(game.id)}?limit=10`);
+            const lbData = lbRes.ok ? await lbRes.json() : [];
+            const leaderboard = Array.isArray(lbData) ? lbData : [];
+            if (leaderboard.length === 0) return [];
+            return [{
+              game: game.id, gameName: game.title,
+              contestId: null, contestStart: null, contestEnd: null,
+              periodStart: null, periodEnd: null,
+              isCurrent: false, isLive: false, isEnded: false,
+              isRewarding: true,
+              winners: leaderboard.slice(0, 10).map((entry, idx) => ({
+                rank: idx + 1, userId: entry.userId, name: entry.name, score: entry.score,
+              })),
+            }];
+          } catch {
+            return [];
+          }
+        })
+      );
+      const rewardingRows = rewardingRowsNested.flat();
+
+      // Rewarding rows first, then competitive sorted by date
+      const allCompetitive = competitiveRows
         .flat()
+        .filter(Boolean)
         .sort((a, b) => new Date(b.contestStart || 0).getTime() - new Date(a.contestStart || 0).getTime());
+
+      return [...rewardingRows, ...allCompetitive];
     };
 
     authFetch('/scores/admin/contest-summary')

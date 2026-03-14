@@ -68,9 +68,11 @@ const emptyForm = {
   isFree: true, price: 0, isLive: false, gamePath: '',
   tag: '', color: '#00e5ff', gameType: 'rewarding',
   conversionRate: 0, showCurrency: false, prizes: [],
+  rewardPeriodDays: 0, rewardPeriodHours: 0, rewardPeriodMinutes: 0,
   instructions: [],
   scheduleStart: '', scheduleEnd: '', showSchedule: false,
   minPlayersThreshold: 0,
+  hasTimeLimit: false, timeLimitSeconds: 0,
 };
 
 function GamesManagement() {
@@ -86,6 +88,11 @@ function GamesManagement() {
   const [msg, setMsg] = useState(null);
   const [confirmModal, setConfirmModal] = useState({ open: false, title: '', body: '', onConfirm: null });
   const fileRef = useRef(null);
+
+  // Always start at top of page on load/refresh
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   const showConfirm = (title, body, onConfirm) => setConfirmModal({ open: true, title, body, onConfirm });
   const closeConfirm = () => setConfirmModal({ open: false, title: '', body: '', onConfirm: null });
@@ -181,11 +188,16 @@ function GamesManagement() {
       conversionRate: game.conversionRate || 0,
       showCurrency: game.showCurrency || false,
       prizes: game.prizes || [],
+      rewardPeriodDays: game.rewardPeriodDays || 0,
+      rewardPeriodHours: game.rewardPeriodHours || 0,
+      rewardPeriodMinutes: game.rewardPeriodMinutes || 0,
       instructions: game.instructions || [],
       scheduleStart: toLocalInput(game.scheduleStart),
       scheduleEnd: toLocalInput(game.scheduleEnd),
       showSchedule: game.showSchedule || false,
       minPlayersThreshold: game.minPlayersThreshold || 0,
+      hasTimeLimit: game.hasTimeLimit || false,
+      timeLimitSeconds: game.timeLimitSeconds || 0,
     });
     setEditingId(game._id);
     setShowForm(true);
@@ -369,6 +381,23 @@ function GamesManagement() {
                         <input type="checkbox" checked={form.showCurrency} onChange={e => setForm(f => ({ ...f, showCurrency: e.target.checked }))} /> Show PKR in game HUD
                       </label>
                     </Field>
+                    <Field label="Reward Period (new leaderboard + reward after this time)">
+                      <div className="flex gap-3 items-center flex-wrap">
+                        <div className="flex items-center gap-1.5">
+                          <input type="number" min="0" style={{ ...inputStyle, width: 70 }} value={form.rewardPeriodDays === 0 ? '' : form.rewardPeriodDays} onChange={e => setForm(f => ({ ...f, rewardPeriodDays: e.target.value === '' ? 0 : Number(e.target.value) }))} placeholder="0" />
+                          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>days</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <input type="number" min="0" max="23" style={{ ...inputStyle, width: 70 }} value={form.rewardPeriodHours === 0 ? '' : form.rewardPeriodHours} onChange={e => setForm(f => ({ ...f, rewardPeriodHours: e.target.value === '' ? 0 : Number(e.target.value) }))} placeholder="0" />
+                          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>hrs</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <input type="number" min="0" max="59" style={{ ...inputStyle, width: 70 }} value={form.rewardPeriodMinutes === 0 ? '' : form.rewardPeriodMinutes} onChange={e => setForm(f => ({ ...f, rewardPeriodMinutes: e.target.value === '' ? 0 : Number(e.target.value) }))} placeholder="0" />
+                          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>min</span>
+                        </div>
+                      </div>
+                      <p className="text-[10px] mt-1" style={{ color: 'var(--text-muted)' }}>Leave all at 0 for no time restriction (one combined record forever)</p>
+                    </Field>
                   </>
                 )}
                 {form.gameType === 'competitive' && (
@@ -405,6 +434,20 @@ function GamesManagement() {
                   </>
                 )}
                 {/* Live on site — rewarding only; competitive is auto-managed by schedule */}
+                <Field label="Game Duration" half>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <label className="flex items-center gap-2 cursor-pointer text-sm" style={{ color: 'var(--text-secondary)' }}>
+                      <input type="checkbox" checked={form.hasTimeLimit} onChange={e => setForm(f => ({ ...f, hasTimeLimit: e.target.checked, timeLimitSeconds: e.target.checked ? (f.timeLimitSeconds || 600) : 0 }))} /> Time-bound game
+                    </label>
+                    {form.hasTimeLimit && (
+                      <div className="flex items-center gap-2">
+                        <input type="number" min="1" style={{ ...inputStyle, flex: 1 }} value={form.timeLimitSeconds === 0 ? '' : Math.floor(form.timeLimitSeconds / 60)} onChange={e => setForm(f => ({ ...f, timeLimitSeconds: (Number(e.target.value) || 0) * 60 }))} placeholder="Minutes" />
+                        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>minutes</span>
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-[10px] mt-1" style={{ color: 'var(--text-muted)' }}>If enabled, game ends automatically after the set duration.</p>
+                </Field>
                 {form.gameType === 'rewarding' && (
                   <Field label="Live on site" half>
                     <label className="flex items-center gap-2 cursor-pointer text-sm" style={{ color: 'var(--text-secondary)' }}>
@@ -417,19 +460,13 @@ function GamesManagement() {
                     <p className="text-xs" style={{ color: 'var(--neon-yellow)' }}>Auto-managed by schedule dates below. No manual publish needed.</p>
                   </Field>
                 )}
-                {/* Schedule — always visible for competitive; optional toggle for rewarding */}
-                {form.gameType === 'rewarding' && (
-                  <Field label="Show Schedule on Frontend" half>
-                    <label className="flex items-center gap-2 cursor-pointer text-sm" style={{ color: 'var(--text-secondary)' }}>
-                      <input type="checkbox" checked={form.showSchedule} onChange={e => setForm(f => ({ ...f, showSchedule: e.target.checked }))} /> Show schedule info
-                    </label>
-                  </Field>
-                )}
-                {(form.gameType === 'competitive' || form.showSchedule) && (
+                {/* Schedule — only for competitive games */}
+                {form.gameType === 'competitive' && (
                   <>
                     <Field label="Schedule Start" half>
                       <input type="datetime-local" style={inputStyle} value={form.scheduleStart} onChange={e => setForm(f => ({ ...f, scheduleStart: e.target.value }))} />
                       {form.gameType === 'competitive' && <p className="text-[10px] mt-1" style={{ color: 'var(--text-muted)' }}>Game goes live automatically at this time.</p>}
+                      {form.gameType === 'rewarding' && <p className="text-[10px] mt-1" style={{ color: 'var(--text-muted)' }}>If not manually published, game auto-publishes when this time is reached.</p>}
                     </Field>
                     <Field label="Schedule End" half>
                       <input type="datetime-local" style={inputStyle} value={form.scheduleEnd} onChange={e => setForm(f => ({ ...f, scheduleEnd: e.target.value }))} />
@@ -525,16 +562,6 @@ function GamesManagement() {
                   >
                     <UploadIcon /> {uploadingId === game._id ? 'Uploading...' : 'Upload ZIP'}
                   </button>
-                  {/* Toggle Live — rewarding only; competitive is auto-managed */}
-                  {game.gameType !== 'competitive' && (
-                    <button onClick={() => handleToggle(game._id)} className="text-xs font-semibold px-3 py-2 rounded-lg transition-colors" style={{
-                      background: game.isLive ? 'rgba(255,45,120,0.1)' : 'rgba(0,255,136,0.1)',
-                      color: game.isLive ? '#ff5c8a' : 'var(--neon-green)',
-                      border: `1px solid ${game.isLive ? 'rgba(255,45,120,0.2)' : 'rgba(0,255,136,0.2)'}`,
-                    }}>
-                      {game.isLive ? 'Unpublish' : 'Publish'}
-                    </button>
-                  )}
                   {/* End Competition (competitive games only, not yet distributed) */}
                   {game.gameType === 'competitive' && !game.prizesDistributed && (
                     <button onClick={() => handleEndCompetition(game._id)} className="text-xs font-semibold px-3 py-2 rounded-lg" style={{ background: 'rgba(255,217,61,0.1)', color: 'var(--neon-yellow)', border: '1px solid rgba(255,217,61,0.2)' }}>

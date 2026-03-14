@@ -7,17 +7,21 @@ const {
   getMyScores,
   getMyGameScores,
   getContests,
-  getAdminContestSummary
+  getAdminContestSummary,
+  getPeriodRemaining,
+  getRewardingPeriods
 } = require('../controllers/scoreController');
 
 // Public
 router.get('/leaderboard/:game', getLeaderboard);
 router.get('/contests/:game', getContests);
+router.get('/reward-periods/:game', getRewardingPeriods);
 
 // Private (need login)
 router.post('/', protect, saveScore);
 router.get('/me', protect, getMyScores);
 router.get('/me/:game', protect, getMyGameScores);
+router.get('/period-remaining/:gameSlug', getPeriodRemaining);
 router.get('/admin/contest-summary', protect, admin, getAdminContestSummary);
 
 module.exports = router;

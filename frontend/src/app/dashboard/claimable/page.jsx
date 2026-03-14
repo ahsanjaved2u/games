@@ -381,7 +381,7 @@ function ClaimableSummaryContent() {
         <div className="glass-card p-4 mb-4">
           <p className="text-xs uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Total Claimable Now</p>
           <p className="text-3xl font-black" style={{ color: '#ffd93d' }}>
-            PKR {Math.round(summary.totalClaimable).toLocaleString()}
+            PKR {parseFloat(Number(summary.totalClaimable).toFixed(2)).toLocaleString()}
           </p>
           <p className="text-[11px] mt-1" style={{ color: 'var(--text-muted)' }}>
             This equals the total of all player balances shown in the table.
@@ -446,13 +446,13 @@ function ClaimableSummaryContent() {
                         <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>{row.playerEmail}</p>
                       </td>
                       <td className="px-4 py-3 text-right text-sm" style={{ color: 'var(--text-secondary)' }}>
-                        PKR {Math.round(row.wonAmount).toLocaleString()}
+                        PKR {parseFloat(Number(row.wonAmount).toFixed(2)).toLocaleString()}
                       </td>
                       <td className="px-4 py-3 text-right text-sm" style={{ color: '#ff9f43' }}>
-                        PKR {Math.round(row.redeemedAmount).toLocaleString()}
+                        PKR {parseFloat(Number(row.redeemedAmount).toFixed(2)).toLocaleString()}
                       </td>
                       <td className="px-4 py-3 text-right text-sm font-bold" style={{ color: '#00ff88' }}>
-                        PKR {Math.round(row.balanceAmount).toLocaleString()}
+                        PKR {parseFloat(Number(row.balanceAmount).toFixed(2)).toLocaleString()}
                       </td>
                     </tr>
                   ))}
@@ -460,13 +460,13 @@ function ClaimableSummaryContent() {
                   <tr style={{ borderTop: '2px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.03)' }}>
                     <td className="px-4 py-3 text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Total</td>
                     <td className="px-4 py-3 text-right text-sm font-bold" style={{ color: 'var(--text-secondary)' }}>
-                      PKR {Math.round(summary.totals.wonAmount).toLocaleString()}
+                      PKR {parseFloat(Number(summary.totals.wonAmount).toFixed(2)).toLocaleString()}
                     </td>
                     <td className="px-4 py-3 text-right text-sm font-bold" style={{ color: '#ff9f43' }}>
-                      PKR {Math.round(summary.totals.redeemedAmount).toLocaleString()}
+                      PKR {parseFloat(Number(summary.totals.redeemedAmount).toFixed(2)).toLocaleString()}
                     </td>
                     <td className="px-4 py-3 text-right text-sm font-extrabold" style={{ color: '#ffd93d' }}>
-                      PKR {Math.round(summary.totals.balanceAmount).toLocaleString()}
+                      PKR {parseFloat(Number(summary.totals.balanceAmount).toFixed(2)).toLocaleString()}
                     </td>
                   </tr>
                 </tbody>

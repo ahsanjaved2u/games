@@ -32,7 +32,7 @@ const distributeGamePrizes = async (game) => {
   const topScores = await GameScore.find({ game: game.slug })
     .sort({ score: -1 })
     .limit(game.prizes.length)
-    .populate('user', 'username email');
+    .populate('user', 'name email');
 
   // Enforce optional minimum-players threshold
   if (game.minPlayersThreshold > 0 && topScores.length < game.minPlayersThreshold) {
@@ -48,7 +48,7 @@ const distributeGamePrizes = async (game) => {
     const scoreDoc = topScores[i];
     const prizeAmount = game.prizes[i];
 
-    if (!scoreDoc || !prizeAmount) continue;
+    if (!scoreDoc || !prizeAmount || !scoreDoc.user) continue;
 
     // Credit wallet
     let wallet = await Wallet.findOne({ user: scoreDoc.user._id });
@@ -68,7 +68,7 @@ const distributeGamePrizes = async (game) => {
 
     results.push({
       rank: i + 1,
-      user: scoreDoc.user.username,
+      user: scoreDoc.user?.name,
       prize: prizeAmount,
     });
   }

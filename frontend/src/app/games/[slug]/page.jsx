@@ -16,8 +16,9 @@ export default function GamePage() {
   const [started, setStarted] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [periodEndsAt, setPeriodEndsAt] = useState(null);
   const iframeRef = useRef(null);
-  const { isLoggedIn, authFetch, user } = useAuth();
+  const { isLoggedIn, authFetch, user, fetchBalance } = useAuth();
 
   /* Fetch game metadata */
   useEffect(() => {
@@ -30,6 +31,20 @@ export default function GamePage() {
     })();
   }, [slug]);
 
+  /* Fetch reward period remaining for rewarding games */
+  useEffect(() => {
+    if (!game || game.gameType !== 'rewarding') return;
+    const pd = (game.rewardPeriodDays || 0) + (game.rewardPeriodHours || 0) + (game.rewardPeriodMinutes || 0);
+    if (pd <= 0) return;
+    (async () => {
+      try {
+        const res = await fetch(`${API}/scores/period-remaining/${slug}`);
+        const data = await res.json();
+        if (data.periodEndsAt) setPeriodEndsAt(new Date(data.periodEndsAt));
+      } catch { /* ignore */ }
+    })();
+  }, [game, slug]);
+
   /* Lock body scroll while on this page */
   useEffect(() => {
     document.body.style.overflow = 'hidden';
@@ -40,7 +55,21 @@ export default function GamePage() {
   const sendLeaderboardToIframe = useCallback(async () => {
     if (!game) return;
     try {
-      const res = await fetch(`${API}/scores/leaderboard/${slug}?limit=10`);
+      let url = `${API}/scores/leaderboard/${slug}?limit=10`;
+      // For rewarding games, fetch leaderboard for the current active period
+      if (game.gameType === 'rewarding') {
+        try {
+          const pRes = await fetch(`${API}/scores/reward-periods/${slug}`);
+          if (pRes.ok) {
+            const periods = await pRes.json();
+            if (Array.isArray(periods)) {
+              const active = periods.find(p => p.isActive) || periods[0];
+              if (active?.periodStart) url += `&periodStart=${encodeURIComponent(active.periodStart)}`;
+            }
+          }
+        } catch { /* use overall leaderboard as fallback */ }
+      }
+      const res = await fetch(url);
       if (!res.ok) return;
       const data = await res.json();
       if (iframeRef.current?.contentWindow) {
@@ -59,6 +88,8 @@ export default function GamePage() {
       type: 'GAME_CONFIG',
       conversionRate: game.conversionRate || 0,
       showCurrency: game.showCurrency || false,
+      hasTimeLimit: game.hasTimeLimit || false,
+      timeLimitSeconds: game.timeLimitSeconds || 0,
     }, '*');
   }, [game]);
 
@@ -76,7 +107,7 @@ export default function GamePage() {
       if (e.data?.type === 'GAME_OVER') {
         if (!isLoggedIn) return;
         try {
-          await authFetch('/scores', {
+          const result = await authFetch('/scores', {
             method: 'POST',
             body: JSON.stringify({
               game: slug,
@@ -85,6 +116,10 @@ export default function GamePage() {
               score: e.data.score,
             }),
           });
+          // Refresh wallet balance whenever the backend credited a reward
+          if (result?.walletCredited) fetchBalance();
+          // Update period countdown from response
+          if (result?.periodEndsAt) setPeriodEndsAt(new Date(result.periodEndsAt));
           sendLeaderboardToIframe();
         } catch { /* ignore */ }
         return;
@@ -119,6 +154,41 @@ export default function GamePage() {
     document.addEventListener('fullscreenchange', handler);
     return () => document.removeEventListener('fullscreenchange', handler);
   }, []);
+
+  /* Period countdown ticker — cyclic: restarts automatically when period ends */
+  const [periodTimeLeft, setPeriodTimeLeft] = useState(null);
+  useEffect(() => {
+    if (!game || game.gameType !== 'rewarding') { setPeriodTimeLeft(null); return; }
+    const pd = (game.rewardPeriodDays || 0);
+    const ph = (game.rewardPeriodHours || 0);
+    const pm = (game.rewardPeriodMinutes || 0);
+    const periodMs = (pd * 86400000) + (ph * 3600000) + (pm * 60000);
+    if (periodMs <= 0) { setPeriodTimeLeft(null); return; }
+
+    const tick = () => {
+      let remaining;
+      if (periodEndsAt) {
+        remaining = Math.max(0, periodEndsAt - Date.now());
+        if (remaining <= 0) {
+          // Period expired — cycle: show full period countdown
+          setPeriodEndsAt(null);
+          remaining = periodMs - (Date.now() % periodMs);
+        }
+      } else {
+        // No active user period — show cyclic countdown
+        remaining = periodMs - (Date.now() % periodMs);
+      }
+      setPeriodTimeLeft({
+        d: Math.floor(remaining / 86400000),
+        h: Math.floor((remaining % 86400000) / 3600000),
+        m: Math.floor((remaining % 3600000) / 60000),
+        s: Math.floor((remaining % 60000) / 1000),
+      });
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [game, periodEndsAt]);
 
   /* ── Loading / Error states ── */
   if (error) {
@@ -172,6 +242,17 @@ export default function GamePage() {
             backgroundSize: '200% 100%', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
             animation: 'titleShimmer 3s linear infinite',
           }}>{game.name}</span>
+          {periodTimeLeft && (
+            <span style={{
+              fontSize: 11, fontWeight: 700, color: '#ffd93d', fontVariantNumeric: 'tabular-nums',
+              marginLeft: 6, padding: '2px 8px', borderRadius: 6,
+              background: 'rgba(255,217,61,0.10)', border: '1px solid rgba(255,217,61,0.25)',
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+            }}>
+              <span style={{ fontSize: 9, fontWeight: 600, opacity: 0.85, letterSpacing: '0.3px' }}>Game session ends & your best score freezes in</span>
+              {periodTimeLeft.d > 0 ? `${periodTimeLeft.d}d ` : ''}{String(periodTimeLeft.h).padStart(2, '0')}:{String(periodTimeLeft.m).padStart(2, '0')}:{String(periodTimeLeft.s).padStart(2, '0')}
+            </span>
+          )}
         </div>
 
         <button onClick={toggleFullscreen} style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'rgba(255,255,255,0.7)', fontSize: 13, fontWeight: 600, padding: '6px 12px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', transition: 'all 0.2s' }} title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}>
