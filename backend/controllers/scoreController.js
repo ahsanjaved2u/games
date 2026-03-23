@@ -1,6 +1,7 @@
 const GameScore = require('../models/GameScore');
 const Game = require('../models/Game');
 const User = require('../models/User');
+const GameEntry = require('../models/GameEntry');
 const { autoCreditScore, creditRewardingGame } = require('./walletController');
 
 // @desc    Save a game score
@@ -16,6 +17,29 @@ const saveScore = async (req, res) => {
 
     // Fetch the game document (reused later for wallet credit)
     const gameDoc = await Game.findOne({ slug: game });
+
+    // ── Entry fee gate ──
+    if (gameDoc && gameDoc.entryFee > 0) {
+      let pStart = null;
+      if (gameDoc.gameType === 'competitive') {
+        pStart = gameDoc.scheduleStart ? new Date(gameDoc.scheduleStart) : null;
+      } else {
+        const periodMs = ((gameDoc.rewardPeriodDays || 0) * 86400000)
+                       + ((gameDoc.rewardPeriodHours || 0) * 3600000)
+                       + ((gameDoc.rewardPeriodMinutes || 0) * 60000);
+        if (periodMs > 0) {
+          const anchor = gameDoc.periodAnchor ? new Date(gameDoc.periodAnchor).getTime() : 0;
+          const elapsed = Date.now() - anchor;
+          pStart = new Date(anchor + Math.floor(elapsed / periodMs) * periodMs);
+        }
+      }
+      if (pStart) {
+        const entry = await GameEntry.findOne({ user: req.user._id, game: gameDoc._id, periodStart: pStart });
+        if (!entry) {
+          return res.status(403).json({ message: 'Entry fee not paid for this contest' });
+        }
+      }
+    }
 
     // Determine contest context for competitive games
     let contestId = null;
@@ -48,7 +72,9 @@ const saveScore = async (req, res) => {
       if (periodMs > 0) {
         // Global period: all players share the same period boundaries
         const now = Date.now();
-        const currentPeriodStart = new Date(Math.floor(now / periodMs) * periodMs);
+        const anchor = gameDoc.periodAnchor ? new Date(gameDoc.periodAnchor).getTime() : 0;
+        const elapsed = now - anchor;
+        const currentPeriodStart = new Date(anchor + Math.floor(elapsed / periodMs) * periodMs);
 
         // Find existing record for this user in the current global period
         const latest = await GameScore.findOne({ user: req.user._id, game, periodStart: currentPeriodStart });
@@ -616,13 +642,14 @@ const getPeriodRemaining = async (req, res) => {
       return res.json({ hasPeriod: false });
     }
 
-    // Global period: same boundaries for all players
     const now = Date.now();
-    const currentPeriodStart = Math.floor(now / periodMs) * periodMs;
-    const periodEndsAt = new Date(currentPeriodStart + periodMs);
+    // Use periodAnchor for correct alignment
+    const anchor = gameDoc.periodAnchor ? new Date(gameDoc.periodAnchor).getTime() : 0;
+    const elapsed = now - anchor;
+    const periodEndsAt = new Date(anchor + (Math.floor(elapsed / periodMs) + 1) * periodMs);
     const remaining = Math.max(0, periodEndsAt - now);
 
-    return res.json({ hasPeriod: true, periodMs, periodEndsAt, remaining });
+    return res.json({ hasPeriod: true, periodMs, periodEndsAt, remaining, periodAnchor: gameDoc.periodAnchor });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

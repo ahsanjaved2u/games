@@ -13,6 +13,8 @@ const logRoutes = require('./routes/logRoutes');
 const scoreRoutes = require('./routes/scoreRoutes');
 const gameRoutes = require('./routes/gameRoutes');
 const walletRoutes = require('./routes/walletRoutes');
+const entryRoutes = require('./routes/entryRoutes');
+const stripeRoutes = require('./stripe/stripeRoutes');
 
 // Competitive prize cron
 const cron = require('node-cron');
@@ -43,6 +45,8 @@ app.use('/api/logs', logRoutes);
 app.use('/api/scores', scoreRoutes);
 app.use('/api/games', gameRoutes);
 app.use('/api/wallet', walletRoutes);
+app.use('/api/entries', entryRoutes);
+app.use('/api/stripe', stripeRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

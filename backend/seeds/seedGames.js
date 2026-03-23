@@ -19,8 +19,6 @@ const seed = async () => {
       slug: 'bubble-shooter',
       description: 'Pop neon bubbles, collect shields, and survive as long as you can!',
       thumbnail: 'images/background.png',
-      isFree: true,
-      price: 0,
       isLive: true,
       gamePath: 'bubble-shooter',
       instructions: [

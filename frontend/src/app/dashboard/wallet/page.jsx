@@ -11,7 +11,7 @@ const inputStyle = {
 };
 
 function WalletManagement() {
-  const { authFetch } = useAuth();
+  const { authFetch, fetchBalance } = useAuth();
   const [tab, setTab] = useState('wallets');
   const [wallets, setWallets] = useState([]);
   const [withdrawals, setWithdrawals] = useState([]);
@@ -24,6 +24,9 @@ function WalletManagement() {
   const [actionDesc, setActionDesc] = useState('');
   const [actionGame, setActionGame] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // Confirm modal for withdrawal approve/reject
+  const [confirmAction, setConfirmAction] = useState(null);
 
   // User transaction history
   const [viewTxns, setViewTxns] = useState(null);
@@ -86,9 +89,11 @@ function WalletManagement() {
       });
       flash(data.message || `Withdrawal ${status}`);
       fetchWithdrawals();
+      fetchBalance();  // refresh admin navbar PKR
     } catch (err) {
       flash(err.message || 'Failed', 'error');
     }
+    setConfirmAction(null);
   };
 
   const viewUserHistory = async (userId, userName) => {
@@ -253,11 +258,11 @@ function WalletManagement() {
                     </div>
                     <span className="text-lg font-black" style={{ color: '#ffd93d' }}>PKR {w.amount.toLocaleString()}</span>
                     <div className="flex gap-2 shrink-0">
-                      <button onClick={() => handleWithdrawalAction(w._id, 'completed')}
+                      <button onClick={() => setConfirmAction({ id: w._id, status: 'completed', name: w.user?.name, amount: w.amount })}
                         className="text-xs font-semibold px-3 py-2 rounded-lg" style={{ background: 'rgba(0,255,136,0.1)', color: '#00ff88', border: '1px solid rgba(0,255,136,0.2)' }}>
                         ✓ Approve
                       </button>
-                      <button onClick={() => handleWithdrawalAction(w._id, 'rejected')}
+                      <button onClick={() => setConfirmAction({ id: w._id, status: 'rejected', name: w.user?.name, amount: w.amount })}
                         className="text-xs font-semibold px-3 py-2 rounded-lg" style={{ background: 'rgba(255,45,120,0.1)', color: '#ff5c8a', border: '1px solid rgba(255,45,120,0.2)' }}>
                         ✕ Reject
                       </button>
@@ -278,6 +283,41 @@ function WalletManagement() {
               })}
             </div>
           )
+        )}
+        {/* Confirm Modal */}
+        {confirmAction && (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)' }}
+            onClick={() => setConfirmAction(null)}>
+            <div className="glass-card p-6 animate-fade-in-up" style={{ maxWidth: 400, width: '90%' }} onClick={e => e.stopPropagation()}>
+              <div className="text-center mb-4">
+                <span style={{ fontSize: 40, display: 'block', marginBottom: 8 }}>
+                  {confirmAction.status === 'completed' ? '✅' : '❌'}
+                </span>
+                <p className="text-base font-bold mb-1" style={{ color: 'var(--text-primary)' }}>
+                  {confirmAction.status === 'completed' ? 'Approve Withdrawal?' : 'Reject Withdrawal?'}
+                </p>
+                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                  {confirmAction.status === 'completed'
+                    ? `PKR ${confirmAction.amount?.toLocaleString()} will be marked as paid to ${confirmAction.name}.`
+                    : `PKR ${confirmAction.amount?.toLocaleString()} will be refunded back to ${confirmAction.name}'s wallet.`}
+                </p>
+              </div>
+              <div className="flex gap-3 justify-center">
+                <button onClick={() => setConfirmAction(null)}
+                  className="text-xs font-semibold px-5 py-2.5 rounded-lg" style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--text-muted)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                  Cancel
+                </button>
+                <button onClick={() => handleWithdrawalAction(confirmAction.id, confirmAction.status)}
+                  className="text-xs font-semibold px-5 py-2.5 rounded-lg" style={{
+                    background: confirmAction.status === 'completed' ? 'rgba(0,255,136,0.15)' : 'rgba(255,45,120,0.15)',
+                    color: confirmAction.status === 'completed' ? '#00ff88' : '#ff5c8a',
+                    border: `1px solid ${confirmAction.status === 'completed' ? 'rgba(0,255,136,0.3)' : 'rgba(255,45,120,0.3)'}`,
+                  }}>
+                  {confirmAction.status === 'completed' ? '✓ Yes, Approve' : '✕ Yes, Reject'}
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>

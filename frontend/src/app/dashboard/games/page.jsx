@@ -38,12 +38,23 @@ const GamepadIcon = () => (
   </svg>
 );
 
-const Field = ({ label, children, half }) => (
-    <div style={{ flex: half ? '1 1 45%' : '1 1 100%', minWidth: half ? 200 : 'auto' }}>
+const Field = ({ label, children, half, full }) => (
+    <div style={{ flex: full ? '1 1 100%' : half ? '1 1 45%' : '1 1 100%', minWidth: half ? 200 : 'auto' }}>
       <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--text-muted)' }}>{label}</label>
       {children}
     </div>
   );
+
+const SectionHeader = ({ icon, title, subtitle }) => (
+  <div style={{ flex: '1 1 100%', marginTop: 8, marginBottom: 2 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+      <span style={{ fontSize: 15 }}>{icon}</span>
+      <span className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{title}</span>
+    </div>
+    {subtitle && <p className="text-[10px]" style={{ color: 'var(--text-muted)', marginLeft: 23 }}>{subtitle}</p>}
+    <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', marginTop: 8 }} />
+  </div>
+);
 
 const inputStyle = {
     width: '100%', padding: '10px 14px', borderRadius: 10,
@@ -65,10 +76,13 @@ const selectStyle = {
 
 const emptyForm = {
   name: '', slug: '', description: '', thumbnail: '',
-  isFree: true, price: 0, isLive: false, gamePath: '',
+  isLive: false, gamePath: '',
   tag: '', color: '#00e5ff', gameType: 'rewarding',
+  isFree: true,
   conversionRate: 0, showCurrency: false, prizes: [],
   rewardPeriodDays: 0, rewardPeriodHours: 0, rewardPeriodMinutes: 0,
+  entryFee: 0,
+  attemptCost: 0,
   instructions: [],
   scheduleStart: '', scheduleEnd: '', showSchedule: false,
   minPlayersThreshold: 0,
@@ -178,19 +192,20 @@ function GamesManagement() {
       slug: game.slug || '',
       description: game.description || '',
       thumbnail: game.thumbnail || '',
-      isFree: game.isFree !== false,
-      price: game.price || 0,
       isLive: game.isLive || false,
       gamePath: game.gamePath || '',
       tag: game.tag || '',
       color: game.color || '#00e5ff',
       gameType: game.gameType || 'rewarding',
+      isFree: !(game.entryFee > 0 || game.attemptCost > 0),
       conversionRate: game.conversionRate || 0,
       showCurrency: game.showCurrency || false,
       prizes: game.prizes || [],
       rewardPeriodDays: game.rewardPeriodDays || 0,
       rewardPeriodHours: game.rewardPeriodHours || 0,
       rewardPeriodMinutes: game.rewardPeriodMinutes || 0,
+      entryFee: game.entryFee || 0,
+      attemptCost: game.attemptCost || 0,
       instructions: game.instructions || [],
       scheduleStart: toLocalInput(game.scheduleStart),
       scheduleEnd: toLocalInput(game.scheduleEnd),
@@ -330,6 +345,9 @@ function GamesManagement() {
             </h2>
             <form onSubmit={handleSubmit}>
               <div className="flex flex-wrap gap-4 mb-4">
+
+                {/* ─── BASIC INFO ─── */}
+                <SectionHeader icon="📋" title="Basic Info" />
                 <Field label="Game Name" half>
                   <input style={inputStyle} value={form.name} onChange={e => handleNameChange(e.target.value)} required />
                 </Field>
@@ -354,27 +372,31 @@ function GamesManagement() {
                     <input style={{ ...inputStyle, flex: 1 }} value={form.color} onChange={e => setForm(f => ({ ...f, color: e.target.value }))} />
                   </div>
                 </Field>
-                <Field label="Pricing" half>
-                  <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                    <label className="flex items-center gap-2 cursor-pointer text-sm" style={{ color: 'var(--text-secondary)' }}>
-                      <input type="checkbox" checked={form.isFree} onChange={e => setForm(f => ({ ...f, isFree: e.target.checked }))} /> Free
-                    </label>
-                  </div>
-                </Field>
-                <Field label="Price (PKR)" half>
-                  <input type="number" min="0" style={{ ...inputStyle, display: form.isFree ? 'none' : 'block' }} placeholder="Price (PKR)" value={form.price === 0 ? '' : form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value === '' ? 0 : Number(e.target.value) }))} />
-                  {form.isFree && <span className="text-xs" style={{ color: 'var(--text-muted)' }}>N/A (Free game)</span>}
-                </Field>
+
+                {/* ─── TYPE & PRICING ─── */}
+                <SectionHeader icon="🎮" title="Type & Pricing" />
                 <Field label="Game Type" half>
                   <select style={selectStyle} value={form.gameType} onChange={e => setForm(f => ({ ...f, gameType: e.target.value }))}>
                     <option value="rewarding" style={{ background: '#1a1a3e', color: '#fff' }}>Rewarding</option>
                     <option value="competitive" style={{ background: '#1a1a3e', color: '#fff' }}>Competitive</option>
                   </select>
                 </Field>
+                <Field label="Pricing" half>
+                  <select style={selectStyle} value={form.isFree ? 'free' : 'paid'} onChange={e => {
+                    const free = e.target.value === 'free';
+                    setForm(f => ({ ...f, isFree: free, ...(free ? { entryFee: 0, attemptCost: 0 } : {}) }));
+                  }}>
+                    <option value="free" style={{ background: '#1a1a3e', color: '#fff' }}>Free</option>
+                    <option value="paid" style={{ background: '#1a1a3e', color: '#fff' }}>Paid</option>
+                  </select>
+                </Field>
+
+                {/* ─── REWARDING CONFIG ─── */}
                 {form.gameType === 'rewarding' && (
                   <>
+                    <SectionHeader icon="💰" title="Reward Settings" subtitle="Configure how players earn money from this game" />
                     <Field label="Conversion Rate (Score per 1 PKR)" half>
-                      <input type="number" min="0" style={inputStyle} placeholder="e.g. 10 = 10 score per 1 PKR" value={form.conversionRate === 0 ? '' : form.conversionRate} onChange={e => setForm(f => ({ ...f, conversionRate: e.target.value === '' ? 0 : Number(e.target.value) }))} />
+                      <input type="number" min="0" step="any" style={inputStyle} placeholder="e.g. 10 = 10 score per 1 PKR" value={form.conversionRate === 0 ? '' : form.conversionRate} onChange={e => setForm(f => ({ ...f, conversionRate: e.target.value === '' ? 0 : Number(e.target.value) }))} />
                     </Field>
                     <Field label="Show Reward Money" half>
                       <label className="flex items-center gap-2 cursor-pointer text-sm" style={{ color: 'var(--text-secondary)' }}>
@@ -398,10 +420,25 @@ function GamesManagement() {
                       </div>
                       <p className="text-[10px] mt-1" style={{ color: 'var(--text-muted)' }}>Leave all at 0 for no time restriction (one combined record forever)</p>
                     </Field>
+                    {!form.isFree && (
+                      <Field label="Attempt Cost — per play (PKR)" half>
+                        <input type="number" min="0" step="any" style={inputStyle} placeholder="Cost per play" value={form.attemptCost === 0 ? '' : form.attemptCost} onChange={e => setForm(f => ({ ...f, attemptCost: e.target.value === '' ? 0 : Number(e.target.value) }))} />
+                        <p className="text-[10px] mt-1" style={{ color: 'var(--text-muted)' }}>Charged <b>every single play</b>. Player pays each time they hit Start.</p>
+                      </Field>
+                    )}
                   </>
                 )}
+
+                {/* ─── COMPETITIVE CONFIG ─── */}
                 {form.gameType === 'competitive' && (
                   <>
+                    <SectionHeader icon="🏆" title="Competition Settings" subtitle="Configure entry fees, prizes, and competition rules" />
+                    {!form.isFree && (
+                      <Field label="Entry Fee — per contest (PKR)" half>
+                        <input type="number" min="0" step="any" style={inputStyle} placeholder="Entry fee" value={form.entryFee === 0 ? '' : form.entryFee} onChange={e => setForm(f => ({ ...f, entryFee: e.target.value === '' ? 0 : Number(e.target.value) }))} />
+                        <p className="text-[10px] mt-1" style={{ color: 'var(--text-muted)' }}>Charged <b>once</b> per contest to enter.</p>
+                      </Field>
+                    )}
                     <Field label="Prizes (PKR amounts)">
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                         {form.prizes.map((prize, i) => {
@@ -409,7 +446,7 @@ function GamesManagement() {
                           return (
                             <div key={i} className="flex gap-2 items-center">
                               <span className="text-xs font-bold shrink-0" style={{ color: 'var(--neon-cyan)', minWidth: 36 }}>{ordinal}</span>
-                              <input type="number" min="0" style={{ ...inputStyle, flex: 1 }} value={prize || ''} onChange={e => updatePrize(i, e.target.value)} placeholder={`${ordinal} prize in PKR (e.g. 5000)`} />
+                              <input type="number" min="0" step="any" style={{ ...inputStyle, flex: 1 }} value={prize || ''} onChange={e => updatePrize(i, e.target.value)} placeholder={`${ordinal} prize in PKR (e.g. 5000)`} />
                               <button type="button" onClick={() => removePrize(i)} className="text-xs" style={{ color: '#ff5c8a' }}>✕</button>
                             </div>
                           );
@@ -433,7 +470,9 @@ function GamesManagement() {
                     </Field>
                   </>
                 )}
-                {/* Live on site — rewarding only; competitive is auto-managed by schedule */}
+
+                {/* ─── TIMING & PUBLISHING ─── */}
+                <SectionHeader icon="⏱️" title="Timing & Publishing" />
                 <Field label="Game Duration" half>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                     <label className="flex items-center gap-2 cursor-pointer text-sm" style={{ color: 'var(--text-secondary)' }}>
@@ -456,21 +495,22 @@ function GamesManagement() {
                   </Field>
                 )}
                 {form.gameType === 'competitive' && (
-                  <Field label="Auto-publish" half>
-                    <p className="text-xs" style={{ color: 'var(--neon-yellow)' }}>Auto-managed by schedule dates below. No manual publish needed.</p>
+                  <Field label="Publishing" half>
+                    <p className="text-xs" style={{ color: 'var(--neon-yellow)' }}>Auto-managed by schedule. No manual publish needed.</p>
                   </Field>
                 )}
-                {/* Schedule — only for competitive games */}
+
+                {/* ─── SCHEDULE (competitive only) ─── */}
                 {form.gameType === 'competitive' && (
                   <>
+                    <SectionHeader icon="📅" title="Competition Schedule" subtitle="Set when the competition starts and ends" />
                     <Field label="Schedule Start" half>
                       <input type="datetime-local" style={inputStyle} value={form.scheduleStart} onChange={e => setForm(f => ({ ...f, scheduleStart: e.target.value }))} />
-                      {form.gameType === 'competitive' && <p className="text-[10px] mt-1" style={{ color: 'var(--text-muted)' }}>Game goes live automatically at this time.</p>}
-                      {form.gameType === 'rewarding' && <p className="text-[10px] mt-1" style={{ color: 'var(--text-muted)' }}>If not manually published, game auto-publishes when this time is reached.</p>}
+                      <p className="text-[10px] mt-1" style={{ color: 'var(--text-muted)' }}>Game goes live automatically at this time.</p>
                     </Field>
                     <Field label="Schedule End" half>
                       <input type="datetime-local" style={inputStyle} value={form.scheduleEnd} onChange={e => setForm(f => ({ ...f, scheduleEnd: e.target.value }))} />
-                      {form.gameType === 'competitive' && <p className="text-[10px] mt-1" style={{ color: 'var(--text-muted)' }}>Competition ends and prizes auto-distribute at this time.</p>}
+                      <p className="text-[10px] mt-1" style={{ color: 'var(--text-muted)' }}>Competition ends and prizes auto-distribute at this time.</p>
                     </Field>
                   </>
                 )}
@@ -528,11 +568,19 @@ function GamesManagement() {
                       color: game.isLive ? 'var(--neon-green)' : '#ff5c8a',
                       border: `1px solid ${game.isLive ? 'rgba(0,255,136,0.2)' : 'rgba(255,45,120,0.2)'}`,
                     }}>{game.isLive ? 'LIVE' : 'DRAFT'}</span>
-                    <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full" style={{
-                      background: game.isFree ? 'rgba(0,229,255,0.1)' : 'rgba(255,217,61,0.1)',
-                      color: game.isFree ? 'var(--neon-cyan)' : 'var(--neon-yellow)',
-                      border: `1px solid ${game.isFree ? 'rgba(0,229,255,0.2)' : 'rgba(255,217,61,0.2)'}`,
-                    }}>{game.isFree ? 'FREE' : `PKR ${game.price}`}</span>
+                    {(game.entryFee > 0 || game.attemptCost > 0) ? (
+                      <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full" style={{
+                        background: 'rgba(255,217,61,0.1)',
+                        color: 'var(--neon-yellow)',
+                        border: '1px solid rgba(255,217,61,0.2)',
+                      }}>{game.entryFee > 0 ? `Entry PKR ${game.entryFee}` : `PKR ${game.attemptCost}/play`}</span>
+                    ) : (
+                      <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full" style={{
+                        background: 'rgba(0,255,136,0.1)',
+                        color: 'var(--neon-green)',
+                        border: '1px solid rgba(0,255,136,0.2)',
+                      }}>FREE</span>
+                    )}
                     <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full" style={{
                       background: game.gameType === 'competitive' ? 'rgba(255,217,61,0.1)' : 'rgba(168,85,247,0.1)',
                       color: game.gameType === 'competitive' ? 'var(--neon-yellow)' : '#a855f7',

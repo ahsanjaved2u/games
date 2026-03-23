@@ -3,6 +3,7 @@ const Transaction = require('../models/Transaction');
 const User = require('../models/User');
 const Game = require('../models/Game');
 const GameScore = require('../models/GameScore');
+const { sendWithdrawalRequestToAdmin, sendWithdrawalApprovedToPlayer, sendWithdrawalRejectedToPlayer } = require('../utils/mailer');
 
 const safeIso = (value) => {
   if (!value) return null;
@@ -127,6 +128,9 @@ const requestWithdrawal = async (req, res) => {
         cardNumber: paymentMethod.cardNumber || '',
       },
     });
+
+    // Fire-and-forget email to admin
+    sendWithdrawalRequestToAdmin(req.user, amount, paymentMethod, note);
 
     res.status(201).json({ message: 'Withdrawal requested', balance: wallet.balance, transaction: txn });
   } catch (error) {
@@ -267,14 +271,30 @@ const adminGetClaimableSummary = async (req, res) => {
       { $group: { _id: '$user', total: { $sum: '$amount' } } }
     ]);
 
+    // Pending withdrawals — already deducted from wallet but not yet paid by admin.
+    // Add them back so admin sees the true amount still owed.
+    const pendingAgg = await Transaction.aggregate([
+      {
+        $match: {
+          user: { $in: userIds },
+          type: 'withdrawal',
+          status: 'pending',
+        }
+      },
+      { $group: { _id: '$user', total: { $sum: '$amount' } } }
+    ]);
+
     const wonMap = new Map(wonAgg.map(x => [String(x._id), Number(x.total || 0)]));
     const redeemedMap = new Map(redeemedAgg.map(x => [String(x._id), Number(x.total || 0)]));
+    const pendingMap = new Map(pendingAgg.map(x => [String(x._id), Number(x.total || 0)]));
 
     const rows = playerWallets.map((wallet) => {
       const userId = String(wallet.user._id);
       const wonAmount = wonMap.get(userId) || 0;
       const redeemedAmount = redeemedMap.get(userId) || 0;
-      const balanceAmount = Number(wallet.balance || 0);
+      const pendingWithdrawals = pendingMap.get(userId) || 0;
+      // True claimable = current wallet + pending withdrawals (not yet approved)
+      const balanceAmount = Number(wallet.balance || 0) + pendingWithdrawals;
 
       return {
         userId,
@@ -283,6 +303,7 @@ const adminGetClaimableSummary = async (req, res) => {
         wonAmount,
         redeemedAmount,
         balanceAmount,
+        pendingWithdrawals,
       };
     }).sort((a, b) => b.balanceAmount - a.balanceAmount);
 
@@ -290,8 +311,9 @@ const adminGetClaimableSummary = async (req, res) => {
       acc.wonAmount += row.wonAmount;
       acc.redeemedAmount += row.redeemedAmount;
       acc.balanceAmount += row.balanceAmount;
+      acc.pendingWithdrawals += row.pendingWithdrawals;
       return acc;
-    }, { wonAmount: 0, redeemedAmount: 0, balanceAmount: 0 });
+    }, { wonAmount: 0, redeemedAmount: 0, balanceAmount: 0, pendingWithdrawals: 0 });
 
     res.json({
       totalClaimable: totals.balanceAmount,
@@ -510,6 +532,16 @@ const adminHandleWithdrawal = async (req, res) => {
       const wallet = await getOrCreateWallet(txn.user);
       wallet.balance += txn.amount;
       await wallet.save();
+    }
+
+    // Fire-and-forget email to player
+    const player = await User.findById(txn.user);
+    if (player) {
+      if (status === 'completed') {
+        sendWithdrawalApprovedToPlayer(player.email, player.name, txn.amount);
+      } else {
+        sendWithdrawalRejectedToPlayer(player.email, player.name, txn.amount);
+      }
     }
 
     res.json({ message: `Withdrawal ${status}`, transaction: txn });

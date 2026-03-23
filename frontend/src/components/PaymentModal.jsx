@@ -55,7 +55,7 @@ export default function PaymentModal({ game, onClose, onSuccess }) {
             <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', fontSize: 20, cursor: 'pointer', lineHeight: 1 }}>✕</button>
           </div>
           <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', margin: '6px 0 0' }}>
-            {game.name} — <span style={{ color: '#ffd93d', fontWeight: 700 }}>PKR {game.price}</span>
+            {game.name} — <span style={{ color: '#ffd93d', fontWeight: 700 }}>PKR {game.entryFee}</span>
           </p>
         </div>
 
@@ -102,7 +102,7 @@ export default function PaymentModal({ game, onClose, onSuccess }) {
             border: 'none', boxShadow: '0 0 20px rgba(0,229,255,0.2)',
             transition: 'all 0.2s', opacity: processing ? 0.7 : 1,
           }}>
-            {processing ? 'Processing...' : tab === 'card' ? `Pay PKR ${game.price}` : 'Redeem & Unlock'}
+            {processing ? 'Processing...' : tab === 'card' ? `Pay PKR ${game.entryFee}` : 'Redeem & Unlock'}
           </button>
 
           <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', textAlign: 'center', marginTop: 10 }}>

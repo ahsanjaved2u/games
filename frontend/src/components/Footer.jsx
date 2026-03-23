@@ -52,15 +52,15 @@ export default function Footer() {
               Support
             </h4>
             <ul className="space-y-2">
-              {['Contact', 'FAQ', 'Privacy Policy', 'Terms'].map(item => (
-                <li key={item}>
-                  <Link href="#"
+              {[{ label: 'Contact', href: '#' }, { label: 'FAQ', href: '/faq' }, { label: 'Privacy Policy', href: '#' }, { label: 'Terms', href: '#' }].map(item => (
+                <li key={item.label}>
+                  <Link href={item.href}
                     className="text-sm transition-colors"
                     style={{ color: 'var(--text-muted)', textDecoration: 'none' }}
                     onMouseEnter={e => { e.currentTarget.style.color = 'var(--neon-cyan)'; }}
                     onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; }}
                   >
-                    {item}
+                    {item.label}
                   </Link>
                 </li>
               ))}

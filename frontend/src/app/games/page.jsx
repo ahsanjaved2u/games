@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import PaymentModal from '@/components/PaymentModal';
 import GameCard from '@/components/GameCard';
 import { useAuth } from '@/context/AuthContext';
 
@@ -11,7 +10,6 @@ export default function GamesPage() {
   const { isLoggedIn } = useAuth();
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [payGame, setPayGame] = useState(null);
 
   const fetchGames = async () => {
     try {
@@ -48,19 +46,11 @@ export default function GamesPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {games.map((game, i) => (
-              <GameCard key={game._id} game={game} i={i} isLoggedIn={isLoggedIn} onPay={setPayGame} />
+              <GameCard key={game._id} game={game} i={i} isLoggedIn={isLoggedIn} />
             ))}
           </div>
         )}
       </div>
-
-      {payGame && (
-        <PaymentModal
-          game={payGame}
-          onClose={() => setPayGame(null)}
-          onSuccess={() => { setPayGame(null); window.location.href = `/games/${payGame.slug}`; }}
-        />
-      )}
     </div>
   );
 }

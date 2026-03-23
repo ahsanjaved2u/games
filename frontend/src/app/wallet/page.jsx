@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
+import TopUpModal from '@/components/TopUpModal';
 
 export default function WalletPage() {
   const { authFetch, isLoggedIn, walletBalance, fetchBalance } = useAuth();
@@ -13,6 +14,8 @@ export default function WalletPage() {
   const [payMethod, setPayMethod] = useState('');
   const [payDetails, setPayDetails] = useState({});
   const [showWithdraw, setShowWithdraw] = useState(false);
+  const [showTopUp, setShowTopUp] = useState(false);
+  const [withdrawStep, setWithdrawStep] = useState(1); // 1=amount, 2=method+details
   const [submitting, setSubmitting] = useState(false);
   const [msg, setMsg] = useState(null);
 
@@ -66,6 +69,7 @@ export default function WalletPage() {
       setWithdrawNote('');
       setPayMethod('');
       setPayDetails({});
+      setWithdrawStep(1);
       setShowWithdraw(false);
       fetchBalance();
       const fresh = await authFetch('/wallet');
@@ -94,13 +98,13 @@ export default function WalletPage() {
   const typeConfig = {
     credit: { icon: '💰', color: '#00ff88', label: 'Credit', sign: '+' },
     debit: { icon: '📤', color: '#ff5c8a', label: 'Debit', sign: '-' },
-    withdrawal: { icon: '🏦', color: '#ffd93d', label: 'Withdraw', sign: '-' },
+    withdrawal: { icon: '🏦', color: '#ff5c8a', label: 'Withdraw', sign: '-' },
   };
 
   const statusColors = {
     completed: { bg: 'rgba(0,255,136,0.1)', color: '#00ff88', border: 'rgba(0,255,136,0.2)' },
     pending: { bg: 'rgba(255,217,61,0.1)', color: '#ffd93d', border: 'rgba(255,217,61,0.2)' },
-    rejected: { bg: 'rgba(255,45,120,0.1)', color: '#ff5c8a', border: 'rgba(255,45,120,0.2)' },
+    rejected: { bg: 'rgba(255,217,61,0.1)', color: '#ffd93d', border: 'rgba(255,217,61,0.2)' },
   };
 
   return (
@@ -129,12 +133,19 @@ export default function WalletPage() {
             </p>
             <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Available for withdrawal</p>
           </div>
-          <button onClick={() => setShowWithdraw(!showWithdraw)} className="btn-neon text-sm shrink-0" style={{
+          <button onClick={() => { setShowWithdraw(!showWithdraw); setWithdrawStep(1); setPayMethod(''); setPayDetails({}); setWithdrawAmount(''); setWithdrawNote(''); }} className="btn-neon text-sm shrink-0" style={{
             background: showWithdraw ? 'rgba(255,217,61,0.12)' : 'rgba(0,255,136,0.08)',
             borderColor: showWithdraw ? 'rgba(255,217,61,0.3)' : 'rgba(0,255,136,0.2)',
             color: showWithdraw ? '#ffd93d' : '#00ff88',
           }}>
             {showWithdraw ? '✕ Cancel' : '🏦 Withdraw'}
+          </button>
+          <button onClick={() => setShowTopUp(true)} className="btn-neon text-sm shrink-0" style={{
+            background: 'rgba(0,229,255,0.08)',
+            borderColor: 'rgba(0,229,255,0.25)',
+            color: '#00e5ff',
+          }}>
+            💳 Add Funds
           </button>
         </div>
 
@@ -143,22 +154,45 @@ export default function WalletPage() {
           <div className="glass-card p-5 mb-5 animate-fade-in-up">
             <form onSubmit={handleWithdraw}>
               <div className="flex flex-col gap-3">
-                <div>
-                  <label className="text-xs font-semibold mb-1 block" style={{ color: 'var(--text-muted)' }}>Amount (PKR)</label>
-                  <input
-                    type="number"
-                    min="1"
-                    max={walletBalance}
-                    value={withdrawAmount}
-                    onChange={e => setWithdrawAmount(e.target.value)}
-                    placeholder="Enter amount"
-                    required
-                    style={{
-                      width: '100%', padding: '10px 14px', borderRadius: 10, fontSize: 14, color: '#fff',
-                      background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', outline: 'none',
-                    }}
-                  />
-                </div>
+
+                {/* Step 1: Amount */}
+                {withdrawStep === 1 && (
+                  <>
+                    <div>
+                      <label className="text-xs font-semibold mb-1 block" style={{ color: 'var(--text-muted)' }}>Amount (PKR)</label>
+                      <input
+                        type="number"
+                        min="0.01"
+                        step="any"
+                        max={walletBalance}
+                        value={withdrawAmount}
+                        onChange={e => setWithdrawAmount(e.target.value)}
+                        placeholder="Enter amount"
+                        required
+                        style={{
+                          width: '100%', padding: '10px 14px', borderRadius: 10, fontSize: 14, color: '#fff',
+                          background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', outline: 'none',
+                        }}
+                      />
+                    </div>
+                    <button type="button" onClick={() => {
+                      const amt = Number(withdrawAmount);
+                      if (!amt || amt <= 0) { flash('Enter a valid amount', 'error'); return; }
+                      if (amt > walletBalance) { flash('Insufficient balance', 'error'); return; }
+                      setWithdrawStep(2);
+                    }} className="btn-neon btn-neon-primary text-sm">
+                      Next → Choose Payment Method
+                    </button>
+                  </>
+                )}
+
+                {/* Step 2: Method + Details */}
+                {withdrawStep === 2 && (
+                  <>
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Withdrawing <span style={{ color: '#ffd93d', fontWeight: 800 }}>PKR {Number(withdrawAmount).toLocaleString()}</span></p>
+                      <button type="button" onClick={() => setWithdrawStep(1)} className="text-xs" style={{ color: 'var(--neon-cyan)' }}>← Change amount</button>
+                    </div>
 
                 {/* Payment Method Selector */}
                 <div>
@@ -284,8 +318,10 @@ export default function WalletPage() {
                 )}
 
                 <button type="submit" className="btn-neon btn-neon-primary text-sm" disabled={submitting || !payMethod}>
-                  {submitting ? 'Submitting...' : 'Submit Request'}
+                  {submitting ? 'Submitting...' : 'Submit Withdrawal Request'}
                 </button>
+                  </>
+                )}
               </div>
             </form>
           </div>
@@ -333,7 +369,7 @@ export default function WalletPage() {
                         {txn.createdBy?.name && <span> · by {txn.createdBy.name}</span>}
                       </p>
                     </div>
-                    <span className="text-base font-bold whitespace-nowrap" style={{ color: cfg.color }}>
+                    <span className="text-base font-bold whitespace-nowrap" style={{ color: txn.status === 'rejected' ? '#ffd93d' : cfg.color }}>
                       {cfg.sign}PKR {txn.amount.toLocaleString()}
                     </span>
                   </div>
@@ -343,6 +379,17 @@ export default function WalletPage() {
           )}
         </div>
       </div>
+
+      {showTopUp && (
+        <TopUpModal
+          onClose={() => setShowTopUp(false)}
+          onSuccess={(amt) => {
+            setShowTopUp(false);
+            fetchBalance();
+            flash(`PKR ${amt.toLocaleString()} added to your wallet!`);
+          }}
+        />
+      )}
     </div>
   );
 }

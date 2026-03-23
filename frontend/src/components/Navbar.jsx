@@ -41,6 +41,7 @@ const navLinks = [
   { label: 'Home', href: '/' },
   { label: 'Games', href: '/games' },
   { label: 'Leaderboard', href: '/leaderboard' },
+  { label: 'FAQ', href: '/faq' },
   { label: 'About', href: '/about' },
 ];
 
@@ -69,12 +70,21 @@ export default function Navbar() {
       // Fall through to wallet-based fallback.
     }
 
-    // Fallback source: sum current player wallet balances.
+    // Fallback source: sum current player wallet balances + pending withdrawals.
     try {
-      const wallets = await authFetch('/wallet/admin/all');
+      const [wallets, pendingTxns] = await Promise.all([
+        authFetch('/wallet/admin/all'),
+        authFetch('/wallet/admin/withdrawals?status=pending').catch(() => []),
+      ]);
+      const pendingByUser = {};
+      (Array.isArray(pendingTxns) ? pendingTxns : []).forEach(t => {
+        const uid = typeof t.user === 'object' ? t.user._id : t.user;
+        pendingByUser[uid] = (pendingByUser[uid] || 0) + Number(t.amount || 0);
+      });
       const total = (Array.isArray(wallets) ? wallets : []).reduce((sum, wallet) => {
         if (!wallet?.user || wallet.user.role === 'admin') return sum;
-        return sum + Number(wallet.balance || 0);
+        const uid = wallet.user._id || wallet.user;
+        return sum + Number(wallet.balance || 0) + (pendingByUser[uid] || 0);
       }, 0);
       setClaimableTotal(total);
     } catch {

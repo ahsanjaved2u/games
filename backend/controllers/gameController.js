@@ -82,7 +82,7 @@ const getAllGamesAdmin = async (req, res) => {
 // ────────────────────────────────────────
 const createGame = async (req, res) => {
   try {
-    const { name, slug, description, thumbnail, isFree, price, isLive, gamePath, instructions, tag, color, scheduleStart, scheduleEnd, showSchedule, gameType, conversionRate, showCurrency, prizes, minPlayersThreshold, hasTimeLimit, timeLimitSeconds, rewardPeriodDays, rewardPeriodHours, rewardPeriodMinutes } = req.body;
+    const { name, slug, description, thumbnail, isLive, gamePath, instructions, tag, color, scheduleStart, scheduleEnd, showSchedule, gameType, conversionRate, showCurrency, prizes, minPlayersThreshold, hasTimeLimit, timeLimitSeconds, rewardPeriodDays, rewardPeriodHours, rewardPeriodMinutes, entryFee, attemptCost } = req.body;
 
     const existing = await Game.findOne({ slug });
     if (existing) return res.status(400).json({ message: 'A game with this slug already exists' });
@@ -103,8 +103,6 @@ const createGame = async (req, res) => {
 
     const game = await Game.create({
       name, slug, description, thumbnail,
-      isFree: isFree !== false,
-      price: price || 0,
       isLive: resolvedIsLive,
       gamePath: gamePath || slug,
       instructions: instructions || [],
@@ -125,6 +123,9 @@ const createGame = async (req, res) => {
       rewardPeriodDays: rewardPeriodDays || 0,
       rewardPeriodHours: rewardPeriodHours || 0,
       rewardPeriodMinutes: rewardPeriodMinutes || 0,
+      periodAnchor: new Date(),
+      entryFee: entryFee || 0,
+      attemptCost: attemptCost || 0,
     });
 
     res.status(201).json(game);
@@ -143,7 +144,7 @@ const updateGame = async (req, res) => {
     const game = await Game.findById(req.params.id);
     if (!game) return res.status(404).json({ message: 'Game not found' });
 
-    const fields = ['name', 'slug', 'description', 'thumbnail', 'isFree', 'price', 'isLive', 'gamePath', 'instructions', 'tag', 'color', 'gameType', 'conversionRate', 'showCurrency', 'prizes', 'scheduleStart', 'scheduleEnd', 'showSchedule', 'minPlayersThreshold', 'hasTimeLimit', 'timeLimitSeconds', 'rewardPeriodDays', 'rewardPeriodHours', 'rewardPeriodMinutes'];
+    const fields = ['name', 'slug', 'description', 'thumbnail', 'isLive', 'gamePath', 'instructions', 'tag', 'color', 'gameType', 'conversionRate', 'showCurrency', 'prizes', 'scheduleStart', 'scheduleEnd', 'showSchedule', 'minPlayersThreshold', 'hasTimeLimit', 'timeLimitSeconds', 'rewardPeriodDays', 'rewardPeriodHours', 'rewardPeriodMinutes', 'entryFee', 'attemptCost'];
 
     // If admin changes schedule (start or end), reset prizesDistributed so the new round can pay out
     const incomingEnd = req.body.scheduleEnd;
@@ -159,9 +160,18 @@ const updateGame = async (req, res) => {
       game.manualUnpublish = false;
     }
 
+    // Check if reward period fields are changing BEFORE applying updates
+    const periodFields = ['rewardPeriodDays', 'rewardPeriodHours', 'rewardPeriodMinutes'];
+    const periodChanged = periodFields.some(f => req.body[f] !== undefined && Number(req.body[f]) !== Number(game[f]));
+
     fields.forEach(f => {
       if (req.body[f] !== undefined) game[f] = req.body[f];
     });
+
+    // If reward period fields changed, reset the period anchor so the new period starts now
+    if (periodChanged) {
+      game.periodAnchor = new Date();
+    }
 
     // Recompute activeContestId from current schedule — ensures each unique start+end pair
     // gets its own contest ID, preventing old frozen leaderboards from being overwritten

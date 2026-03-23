@@ -3,10 +3,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
+import TopUpModal from '@/components/TopUpModal';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
-const money = (value) => `PKR ${Math.round(Number(value || 0)).toLocaleString()}`;
+const money = (value) => `PKR ${parseFloat(Number(value || 0).toFixed(2)).toLocaleString()}`;
 
 const getScoreEntryGameSlug = (entry) => {
   if (entry?.game) return entry.game;
@@ -230,6 +231,7 @@ export default function ProfilePage() {
   const [showAllGames, setShowAllGames] = useState(false);
   const [adminPanel, setAdminPanel] = useState('snapshot');
   const [playerPanel, setPlayerPanel] = useState('snapshot');
+  const [showTopUp, setShowTopUp] = useState(false);
 
   const panelButtonStyle = (active) => ({
     background: active ? 'rgba(0,229,255,0.14)' : 'rgba(255,255,255,0.04)',
@@ -775,6 +777,18 @@ export default function ProfilePage() {
                 <div className="text-right">
                   <p className="text-[11px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Current Balance</p>
                   <p className="text-2xl font-black" style={{ color: '#ffd93d' }}>{money(profile.totals.balanceAmount)}</p>
+                  <button
+                    type="button"
+                    onClick={() => setShowTopUp(true)}
+                    className="mt-2 text-xs font-semibold px-3 py-1.5 rounded-lg"
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(0,229,255,0.15), rgba(0,255,136,0.1))',
+                      border: '1px solid rgba(0,229,255,0.35)',
+                      color: 'var(--neon-cyan)',
+                    }}
+                  >
+                    💳 Add Funds
+                  </button>
                 </div>
               </div>
             </div>
@@ -924,6 +938,13 @@ export default function ProfilePage() {
           </>
         ) : null}
       </div>
+
+      {showTopUp && (
+        <TopUpModal
+          onClose={() => setShowTopUp(false)}
+          onSuccess={() => setShowTopUp(false)}
+        />
+      )}
     </div>
   );
 }

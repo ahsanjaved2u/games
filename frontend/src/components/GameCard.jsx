@@ -183,8 +183,9 @@ function RewardingSchedulePanel({ scheduleStart, isLive, conversionRate }) {
   );
 }
 
-function RewardPeriodCountdown({ days, hours, minutes, slug }) {
+function RewardPeriodCountdown({ days, hours, minutes, slug, anchor }) {
   const periodMs = (days * 86400000) + (hours * 3600000) + (minutes * 60000);
+  const anchorMs = anchor ? new Date(anchor).getTime() : 0;
   const [periodEndsAt, setPeriodEndsAt] = useState(null);
 
   useEffect(() => {
@@ -198,7 +199,8 @@ function RewardPeriodCountdown({ days, hours, minutes, slug }) {
   }, [slug]);
 
   const [time, setTime] = useState(() => {
-    const rem = periodMs - (Date.now() % periodMs);
+    const elapsed = Date.now() - anchorMs;
+    const rem = periodMs - (elapsed % periodMs);
     return calcTime(Date.now() + rem);
   });
 
@@ -209,10 +211,12 @@ function RewardPeriodCountdown({ days, hours, minutes, slug }) {
         remaining = Math.max(0, periodEndsAt - Date.now());
         if (remaining <= 0) {
           setPeriodEndsAt(null);
-          remaining = periodMs - (Date.now() % periodMs);
+          const elapsed = Date.now() - anchorMs;
+          remaining = periodMs - (elapsed % periodMs);
         }
       } else {
-        remaining = periodMs - (Date.now() % periodMs);
+        const elapsed = Date.now() - anchorMs;
+        remaining = periodMs - (elapsed % periodMs);
       }
       setTime({
         days: Math.floor(remaining / 86400000),
@@ -224,12 +228,12 @@ function RewardPeriodCountdown({ days, hours, minutes, slug }) {
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [periodMs, periodEndsAt]);
+  }, [periodMs, periodEndsAt, anchorMs]);
 
   return (
-    <div className="flex items-center gap-1 mt-2" style={{ color: 'rgba(255,217,61,0.9)' }}>
-      <span style={{ fontSize: 8, opacity: 0.85, fontWeight: 600, letterSpacing: '0.2px' }}>Game ends & best score freezes in</span>
-      <span style={{ fontSize: 10, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
+    <div className="flex items-center gap-1.5 mt-3" style={{ color: 'rgba(255,217,61,0.9)' }}>
+      <span style={{ fontSize: 11, opacity: 0.85, fontWeight: 600, letterSpacing: '0.2px' }}>Game ends & best score freezes in</span>
+      <span style={{ fontSize: 13, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
         {time.days > 0 && `${time.days}d `}
         {String(time.hours).padStart(2, '0')}:{String(time.mins).padStart(2, '0')}:{String(time.secs).padStart(2, '0')}
       </span>
@@ -237,7 +241,7 @@ function RewardPeriodCountdown({ days, hours, minutes, slug }) {
   );
 }
 
-export default function GameCard({ game, i, isLoggedIn, onPay }) {
+export default function GameCard({ game, i, isLoggedIn }) {
   const thumb = game.thumbnail ? `${GAMES_BASE}/${game.gamePath}/${game.thumbnail}` : null;
 
   const calcEffective = () => {
@@ -268,13 +272,6 @@ export default function GameCard({ game, i, isLoggedIn, onPay }) {
 
   const handlePlay = () => {
     if (!effectiveLive) return;
-    if (!game.isFree && !isLoggedIn) {
-      alert('Please log in to play paid games.');
-      return;
-    }
-    if (!game.isFree && typeof onPay === 'function') {
-      onPay(game);
-    }
   };
 
   return (
@@ -307,8 +304,14 @@ export default function GameCard({ game, i, isLoggedIn, onPay }) {
         {game.tag && (
           <span className="absolute top-3 left-3 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full" style={{ background: 'rgba(0,255,136,0.12)', color: 'var(--neon-green)', border: '1px solid rgba(0,255,136,0.25)' }}>{game.tag}</span>
         )}
-        {!game.isFree && effectiveLive && (
-          <span className="absolute top-3 right-3 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full" style={{ background: 'rgba(255,217,61,0.12)', color: 'var(--neon-yellow)', border: '1px solid rgba(255,217,61,0.3)' }}>PKR {game.price}</span>
+        {game.entryFee > 0 && effectiveLive && (
+          <span className="absolute top-3 right-3 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full" style={{ background: 'rgba(168,85,247,0.12)', color: '#c084fc', border: '1px solid rgba(168,85,247,0.3)' }}>🎟️ Entry PKR {game.entryFee}</span>
+        )}
+        {!game.entryFee && game.attemptCost > 0 && effectiveLive && (
+          <span className="absolute top-3 right-3 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full" style={{ background: 'rgba(255,217,61,0.12)', color: '#ffd93d', border: '1px solid rgba(255,217,61,0.3)' }}>🎯 PKR {game.attemptCost}/play</span>
+        )}
+        {!game.entryFee && !game.attemptCost && effectiveLive && (
+          <span className="absolute top-3 right-3 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full" style={{ background: 'rgba(0,255,136,0.12)', color: 'var(--neon-green)', border: '1px solid rgba(0,255,136,0.25)' }}>FREE</span>
         )}
         {!effectiveLive && (
           <span className="absolute top-3 right-3 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full" style={{ background: 'rgba(255,45,120,0.15)', color: '#ff5c8a', border: '1px solid rgba(255,45,120,0.3)' }}>Not Live</span>
@@ -325,10 +328,10 @@ export default function GameCard({ game, i, isLoggedIn, onPay }) {
           const hasPeriod = pd + ph + pm > 0;
           return (
             <div className="flex-1 flex flex-col items-center justify-center rounded-xl mb-3 px-4 py-5 text-center" style={{ background: 'linear-gradient(135deg, rgba(0,255,136,0.08), rgba(255,217,61,0.06))', border: '1px solid rgba(0,255,136,0.15)' }}>
-              <span style={{ fontSize: 32, lineHeight: 1, marginBottom: 8 }}>💰</span>
-              <span className="text-sm font-bold" style={{ color: '#00ff88' }}>Play &amp; Earn Cash Rewards</span>
-              <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.45)', margin: '6px 0 0' }}>Score points and win real money!</p>
-              {hasPeriod && <RewardPeriodCountdown days={pd} hours={ph} minutes={pm} slug={game.slug} />}
+              <span style={{ fontSize: 34, lineHeight: 1, marginBottom: 10 }}>💰</span>
+              <span className="font-bold" style={{ color: '#00ff88', fontSize: 17 }}>Play &amp; Earn Cash Rewards</span>
+              <p style={{ color: 'rgba(255,255,255,0.5)', margin: '8px 0 0', fontSize: 13.5 }}>Score points and win real money!</p>
+              {hasPeriod && <RewardPeriodCountdown days={pd} hours={ph} minutes={pm} slug={game.slug} anchor={game.periodAnchor} />}
             </div>
           );
         })()}
@@ -361,14 +364,10 @@ export default function GameCard({ game, i, isLoggedIn, onPay }) {
           <div className="btn-neon text-sm w-full text-center" style={{ opacity: 0.4, cursor: 'not-allowed' }}>
             🔒 Not Available
           </div>
-        ) : game.isFree ? (
-          <Link href={`/games/${game.slug}`} className="btn-neon btn-neon-primary text-sm w-full text-center" style={{ textDecoration: 'none' }}>
-            ▶ Play Now
-          </Link>
         ) : (
-          <button onClick={handlePlay} className="btn-neon btn-neon-primary text-sm w-full text-center">
-            🔓 Unlock &amp; Play — PKR {game.price}
-          </button>
+          <Link href={`/games/${game.slug}`} className="btn-neon btn-neon-primary text-sm w-full text-center" style={{ textDecoration: 'none' }}>
+            {game.entryFee > 0 ? `🎟️ Enter — PKR ${game.entryFee}` : game.attemptCost > 0 ? `🎯 Play — PKR ${game.attemptCost}/try` : '▶ Play Now'}
+          </Link>
         )}
       </div>
     </div>

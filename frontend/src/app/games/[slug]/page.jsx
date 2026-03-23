@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import GameInstructions from '@/components/GameInstructions';
+import EntryFeeModal from '@/components/EntryFeeModal';
 
 const GAMES_BASE = process.env.NEXT_PUBLIC_GAMES_BASE_URL || '/games';
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
@@ -17,8 +18,9 @@ export default function GamePage() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [periodEndsAt, setPeriodEndsAt] = useState(null);
+  const [entryStatus, setEntryStatus] = useState(null); // { hasPaid, entryFee, walletBalance }
   const iframeRef = useRef(null);
-  const { isLoggedIn, authFetch, user, fetchBalance } = useAuth();
+  const { isLoggedIn, authFetch, user, fetchBalance, walletBalance } = useAuth();
 
   /* Fetch game metadata */
   useEffect(() => {
@@ -44,6 +46,21 @@ export default function GamePage() {
       } catch { /* ignore */ }
     })();
   }, [game, slug]);
+
+  /* Check entry fee status for paid games */
+  useEffect(() => {
+    if (!game || !isLoggedIn) return;
+    if (!game.entryFee || game.entryFee <= 0) { setEntryStatus({ hasPaid: true, entryFee: 0 }); return; }
+    (async () => {
+      try {
+        const data = await authFetch(`/entries/${slug}/status`);
+        setEntryStatus(data);
+      } catch (err) {
+        console.error('[entry check]', err.message);
+        setEntryStatus({ hasPaid: false, entryFee: game.entryFee });
+      }
+    })();
+  }, [game, slug, isLoggedIn, authFetch]);
 
   /* Lock body scroll while on this page */
   useEffect(() => {
@@ -124,10 +141,18 @@ export default function GamePage() {
         } catch { /* ignore */ }
         return;
       }
+      // SDK "Try Again" button was clicked
+      if (e.data?.type === 'TRY_AGAIN') {
+        if (game?.attemptCost > 0 && game?.gameType === 'rewarding') {
+          setStarted(false);
+          setIsLoaded(false);
+        }
+        return;
+      }
     };
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [isLoggedIn, authFetch, sendLeaderboardToIframe, sendGameConfig, slug]);
+  }, [isLoggedIn, authFetch, sendLeaderboardToIframe, sendGameConfig, slug, game]);
 
   /* Block scrolling keys */
   useEffect(() => {
@@ -167,16 +192,19 @@ export default function GamePage() {
 
     const tick = () => {
       let remaining;
+      const anchorMs = game.periodAnchor ? new Date(game.periodAnchor).getTime() : 0;
       if (periodEndsAt) {
         remaining = Math.max(0, periodEndsAt - Date.now());
         if (remaining <= 0) {
-          // Period expired — cycle: show full period countdown
+          // Period expired — cycle: recalculate from anchor
           setPeriodEndsAt(null);
-          remaining = periodMs - (Date.now() % periodMs);
+          const elapsed = Date.now() - anchorMs;
+          remaining = periodMs - (elapsed % periodMs);
         }
       } else {
-        // No active user period — show cyclic countdown
-        remaining = periodMs - (Date.now() % periodMs);
+        // No active user period — show cyclic countdown from anchor
+        const elapsed = Date.now() - anchorMs;
+        remaining = periodMs - (elapsed % periodMs);
       }
       setPeriodTimeLeft({
         d: Math.floor(remaining / 86400000),
@@ -189,6 +217,26 @@ export default function GamePage() {
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
   }, [game, periodEndsAt]);
+
+  /* Competition countdown ticker — counts down to scheduleEnd for competitive games */
+  const [competitionTimeLeft, setCompetitionTimeLeft] = useState(null);
+  useEffect(() => {
+    if (!game || game.gameType !== 'competitive' || !game.scheduleEnd) { setCompetitionTimeLeft(null); return; }
+    const endMs = new Date(game.scheduleEnd).getTime();
+    const tick = () => {
+      const remaining = Math.max(0, endMs - Date.now());
+      if (remaining <= 0) { setCompetitionTimeLeft(null); return; }
+      setCompetitionTimeLeft({
+        d: Math.floor(remaining / 86400000),
+        h: Math.floor((remaining % 86400000) / 3600000),
+        m: Math.floor((remaining % 3600000) / 60000),
+        s: Math.floor((remaining % 60000) / 1000),
+      });
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [game]);
 
   /* ── Loading / Error states ── */
   if (error) {
@@ -213,7 +261,66 @@ export default function GamePage() {
 
   /* ── Instructions Screen ── */
   if (!started) {
-    return <GameInstructions game={game} onStart={() => setStarted(true)} />;
+    const needsEntry = isLoggedIn && entryStatus && !entryStatus.hasPaid && game.entryFee > 0;
+    const entryLoading = isLoggedIn && game.entryFee > 0 && !entryStatus;
+
+    const handleEntryPaid = async () => {
+      const data = await authFetch(`/entries/${slug}/pay`, { method: 'POST' });
+      if (data?.success) {
+        setEntryStatus({ hasPaid: true, entryFee: game.entryFee, walletBalance: data.balance ?? 0 });
+        fetchBalance();
+      }
+    };
+
+    /* Show loading spinner while checking entry status */
+    if (entryLoading) {
+      return (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: '#0b0b1a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: 40, height: 40, border: '3px solid rgba(0,229,255,0.2)', borderTop: '3px solid #00e5ff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+          <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+        </div>
+      );
+    }
+
+    /* Show entry fee modal BEFORE instructions for paid games */
+    if (needsEntry) {
+      return (
+        <EntryFeeModal
+          entryFee={game.entryFee}
+          walletBalance={walletBalance ?? 0}
+          gameName={game.name}
+          color={game.color}
+          onPay={handleEntryPaid}
+          periodTimeLeft={periodTimeLeft}
+          backHref="/games"
+        />
+      );
+    }
+
+    /* Instructions screen — free game or already paid entry */
+    const hasAttemptCost = isLoggedIn && game.attemptCost > 0 && game.gameType === 'rewarding';
+
+    const handleStartClick = () => {
+      setStarted(true);
+    };
+
+    const handlePayAndPlay = async () => {
+      const data = await authFetch(`/entries/${slug}/pay-attempt`, { method: 'POST' });
+      if (data?.success) {
+        fetchBalance();
+        setStarted(true);
+      }
+    };
+
+    return (
+      <GameInstructions
+        game={game}
+        onStart={handleStartClick}
+        attemptCost={hasAttemptCost ? game.attemptCost : 0}
+        walletBalance={walletBalance ?? 0}
+        onPayAndPlay={hasAttemptCost ? handlePayAndPlay : undefined}
+      />
+    );
   }
 
   /* ── Game Screen ── */
@@ -251,6 +358,17 @@ export default function GamePage() {
             }}>
               <span style={{ fontSize: 9, fontWeight: 600, opacity: 0.85, letterSpacing: '0.3px' }}>Game session ends & your best score freezes in</span>
               {periodTimeLeft.d > 0 ? `${periodTimeLeft.d}d ` : ''}{String(periodTimeLeft.h).padStart(2, '0')}:{String(periodTimeLeft.m).padStart(2, '0')}:{String(periodTimeLeft.s).padStart(2, '0')}
+            </span>
+          )}
+          {competitionTimeLeft && (
+            <span style={{
+              fontSize: 11, fontWeight: 700, color: '#00e5ff', fontVariantNumeric: 'tabular-nums',
+              marginLeft: 6, padding: '2px 8px', borderRadius: 6,
+              background: 'rgba(0,229,255,0.08)', border: '1px solid rgba(0,229,255,0.20)',
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+            }}>
+              <span style={{ fontSize: 9, fontWeight: 600, opacity: 0.85, letterSpacing: '0.3px' }}>🏆 Competition ends in</span>
+              {competitionTimeLeft.d > 0 ? `${competitionTimeLeft.d}d ` : ''}{String(competitionTimeLeft.h).padStart(2, '0')}:{String(competitionTimeLeft.m).padStart(2, '0')}:{String(competitionTimeLeft.s).padStart(2, '0')}
             </span>
           )}
         </div>

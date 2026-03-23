@@ -488,6 +488,10 @@ const GameZone = (() => {
     }
 
     function restart() {
+        // Notify parent so paid games can intercept
+        try {
+            window.parent.postMessage({ type: 'TRY_AGAIN', game: slug }, '*');
+        } catch (e) {}
         _isGameOver = false;
         gameOverResult = null;
         tryAgainBtn = null;

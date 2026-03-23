@@ -24,15 +24,6 @@ const gameSchema = new mongoose.Schema({
     type: String, // relative path within game folder, e.g. "images/background.png"
     default: '',
   },
-  isFree: {
-    type: Boolean,
-    default: true,
-  },
-  price: {
-    type: Number, // in PKR
-    default: 0,
-    min: [0, 'Price cannot be negative'],
-  },
   isLive: {
     type: Boolean,
     default: false,
@@ -135,6 +126,24 @@ const gameSchema = new mongoose.Schema({
     type: Number,
     default: 0,
     min: [0, 'Minutes cannot be negative'],
+  },
+  // Anchor timestamp for period alignment — periods cycle from this point
+  // Set when game is created or when period values change
+  periodAnchor: {
+    type: Date,
+    default: null,
+  },
+  // Entry fee per reward period / contest (0 = free entry)
+  entryFee: {
+    type: Number,
+    default: 0,
+    min: [0, 'Entry fee cannot be negative'],
+  },
+  // Per-attempt cost for paid rewarding games (0 = free attempts)
+  attemptCost: {
+    type: Number,
+    default: 0,
+    min: [0, 'Attempt cost cannot be negative'],
   },
 }, {
   timestamps: true,
