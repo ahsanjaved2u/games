@@ -199,7 +199,7 @@ function DashboardContent() {
                   {users.map((u, i) => (
                     <tr key={u._id} className="transition-colors"
                       style={{ borderBottom: '1px solid color-mix(in srgb, var(--neon-cyan) 5%, transparent)' }}
-                      onMouseEnter={e => e.currentTarget.style.background = 'color-mix(in srgb, var(--neon-cyan) 3%, transparent)'}}
+                      onMouseEnter={e => e.currentTarget.style.background = 'color-mix(in srgb, var(--neon-cyan) 3%, transparent)'}
                       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                     >
                       <td className="px-6 py-4">
