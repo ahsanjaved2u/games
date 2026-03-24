@@ -19,6 +19,7 @@ export default function GamePage() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [periodEndsAt, setPeriodEndsAt] = useState(null);
   const [entryStatus, setEntryStatus] = useState(null); // { hasPaid, entryFee, walletBalance }
+  const [gameWidth, setGameWidth] = useState(0);
   const iframeRef = useRef(null);
   const { isLoggedIn, authFetch, user, fetchBalance, walletBalance } = useAuth();
 
@@ -154,6 +155,22 @@ export default function GamePage() {
     return () => window.removeEventListener('message', handleMessage);
   }, [isLoggedIn, authFetch, sendLeaderboardToIframe, sendGameConfig, slug, game]);
 
+  /* Sync top bar width with in-game HUD width */
+  useEffect(() => {
+    if (!started || !isLoaded) return;
+    const syncWidth = () => {
+      try {
+        const doc = iframeRef.current?.contentDocument || iframeRef.current?.contentWindow?.document;
+        const gc = doc?.getElementById('game-container');
+        if (gc) setGameWidth(gc.offsetWidth);
+      } catch { /* cross-origin fallback: do nothing, bar stays full-width */ }
+    };
+    syncWidth();
+    window.addEventListener('resize', syncWidth);
+    const id = setInterval(syncWidth, 500);
+    return () => { window.removeEventListener('resize', syncWidth); clearInterval(id); };
+  }, [started, isLoaded]);
+
   /* Block scrolling keys */
   useEffect(() => {
     if (!started) return;
@@ -251,7 +268,7 @@ export default function GamePage() {
   if (!game) {
     return (
       <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: '#0b0b1a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ width: 40, height: 40, border: '3px solid rgba(0,229,255,0.2)', borderTop: '3px solid #00e5ff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+        <div style={{ width: 40, height: 40, border: '3px solid color-mix(in srgb, var(--neon-cyan) 20%, transparent)', borderTop: '3px solid var(--neon-cyan)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
         <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
       </div>
     );
@@ -276,7 +293,7 @@ export default function GamePage() {
     if (entryLoading) {
       return (
         <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: '#0b0b1a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ width: 40, height: 40, border: '3px solid rgba(0,229,255,0.2)', borderTop: '3px solid #00e5ff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+          <div style={{ width: 40, height: 40, border: '3px solid color-mix(in srgb, var(--neon-cyan) 20%, transparent)', borderTop: '3px solid var(--neon-cyan)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
           <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
         </div>
       );
@@ -328,69 +345,71 @@ export default function GamePage() {
     <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: '#0b0b1a', display: 'flex', flexDirection: 'column' }}>
       {/* Top bar */}
       <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '8px 14px',
-        background: 'linear-gradient(135deg, #0d0d22 0%, #161638 40%, #1a1040 70%, #0d0d22 100%)',
-        borderBottom: '1px solid rgba(0,229,255,0.2)', minHeight: 46, flexShrink: 0,
-        position: 'relative', overflow: 'hidden',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        height: 36, flexShrink: 0, background: '#0b0b1a',
       }}>
-        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 1, background: `linear-gradient(90deg, transparent, ${game.color || '#00e5ff'}80 30%, rgba(168,85,247,0.5) 70%, transparent)` }} />
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '0 10px', width: gameWidth > 0 ? gameWidth : '100%', maxWidth: '100%',
+        background: 'linear-gradient(135deg, #0d0d22 0%, #161638 50%, #0d0d22 100%)',
+        height: 36,
+        position: 'relative', overflow: 'hidden',
+        borderLeft: gameWidth > 0 ? '2px solid rgba(0, 255, 255, 0.25)' : 'none',
+        borderRight: gameWidth > 0 ? '2px solid rgba(0, 255, 255, 0.25)' : 'none',
+        borderTop: gameWidth > 0 ? '2px solid rgba(0, 255, 255, 0.25)' : 'none',
+        borderBottom: gameWidth > 0 ? 'none' : '1px solid rgba(0,229,255,0.15)',
+        borderRadius: gameWidth > 0 ? '12px 12px 0 0' : 0,
+      }}>
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 1, background: `linear-gradient(90deg, transparent, ${game.color || '#00e5ff'}60 30%, rgba(168,85,247,0.4) 70%, transparent)` }} />
 
-        <Link href="/games" style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: 13, fontWeight: 600, padding: '6px 12px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', transition: 'all 0.2s' }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
-          Back
+        <Link href="/games" style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--text-secondary)', textDecoration: 'none', fontSize: 12, fontWeight: 600, padding: '4px 8px', borderRadius: 6, background: 'var(--input-bg)', border: '1px solid var(--subtle-border)', transition: 'all 0.2s', flexShrink: 0 }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
+          <span className="hidden sm:inline">Back</span>
         </Link>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 18, filter: `drop-shadow(0 0 6px ${game.color || '#00e5ff'}90)` }}>🎮</span>
-          <span style={{
-            fontSize: 15, fontWeight: 800, letterSpacing: '1px',
-            background: `linear-gradient(90deg, ${game.color || '#00e5ff'}, #a855f7, ${game.color || '#00e5ff'})`,
-            backgroundSize: '200% 100%', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-            animation: 'titleShimmer 3s linear infinite',
-          }}>{game.name}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center', flex: 1, minWidth: 0 }}>
           {periodTimeLeft && (
             <span style={{
               fontSize: 11, fontWeight: 700, color: '#ffd93d', fontVariantNumeric: 'tabular-nums',
-              marginLeft: 6, padding: '2px 8px', borderRadius: 6,
-              background: 'rgba(255,217,61,0.10)', border: '1px solid rgba(255,217,61,0.25)',
-              display: 'inline-flex', alignItems: 'center', gap: 4,
+              padding: '2px 10px', borderRadius: 20,
+              background: 'rgba(255,217,61,0.08)', border: '1px solid rgba(255,217,61,0.18)',
+              display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap',
             }}>
-              <span style={{ fontSize: 9, fontWeight: 600, opacity: 0.85, letterSpacing: '0.3px' }}>Game session ends & your best score freezes in</span>
+              <span style={{ fontSize: 10, opacity: 0.7 }}>⏱</span>
+              <span style={{ fontSize: 10, fontWeight: 600, opacity: 0.8 }}>Session ends & best score freezes in</span>
               {periodTimeLeft.d > 0 ? `${periodTimeLeft.d}d ` : ''}{String(periodTimeLeft.h).padStart(2, '0')}:{String(periodTimeLeft.m).padStart(2, '0')}:{String(periodTimeLeft.s).padStart(2, '0')}
             </span>
           )}
           {competitionTimeLeft && (
             <span style={{
-              fontSize: 11, fontWeight: 700, color: '#00e5ff', fontVariantNumeric: 'tabular-nums',
-              marginLeft: 6, padding: '2px 8px', borderRadius: 6,
-              background: 'rgba(0,229,255,0.08)', border: '1px solid rgba(0,229,255,0.20)',
-              display: 'inline-flex', alignItems: 'center', gap: 4,
+              fontSize: 11, fontWeight: 700, color: 'var(--neon-cyan)', fontVariantNumeric: 'tabular-nums',
+              padding: '2px 10px', borderRadius: 20,
+              background: 'color-mix(in srgb, var(--neon-cyan) 6%, transparent)', border: '1px solid color-mix(in srgb, var(--neon-cyan) 15%, transparent)',
+              display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap',
             }}>
-              <span style={{ fontSize: 9, fontWeight: 600, opacity: 0.85, letterSpacing: '0.3px' }}>🏆 Competition ends in</span>
+              <span style={{ fontSize: 10, opacity: 0.7 }}>🏆</span>
+              <span style={{ fontSize: 10, fontWeight: 600, opacity: 0.8 }}>Ends in</span>
               {competitionTimeLeft.d > 0 ? `${competitionTimeLeft.d}d ` : ''}{String(competitionTimeLeft.h).padStart(2, '0')}:{String(competitionTimeLeft.m).padStart(2, '0')}:{String(competitionTimeLeft.s).padStart(2, '0')}
             </span>
           )}
         </div>
 
-        <button onClick={toggleFullscreen} style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'rgba(255,255,255,0.7)', fontSize: 13, fontWeight: 600, padding: '6px 12px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', transition: 'all 0.2s' }} title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}>
+        <button onClick={toggleFullscreen} style={{ display: 'flex', alignItems: 'center', color: 'var(--text-secondary)', padding: '4px 8px', borderRadius: 6, background: 'var(--input-bg)', border: '1px solid var(--subtle-border)', cursor: 'pointer', transition: 'all 0.2s', flexShrink: 0 }} title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}>
           {isFullscreen ? (
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
           ) : (
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
           )}
         </button>
+      </div>
       </div>
 
       {/* Loading overlay */}
       {!isLoaded && (
-        <div style={{ position: 'absolute', inset: 0, top: 44, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#0b0b1a', zIndex: 10, gap: 16 }}>
+        <div style={{ position: 'absolute', inset: 0, top: 36, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#0b0b1a', zIndex: 10, gap: 16 }}>
           <div style={{ width: 40, height: 40, border: '3px solid rgba(0,229,255,0.2)', borderTop: `3px solid ${game.color || '#00e5ff'}`, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-          <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14 }}>Loading game...</span>
-          <style>{`
-            @keyframes spin { to { transform: rotate(360deg) } }
-            @keyframes titleShimmer { to { background-position: -200% 0 } }
-          `}</style>
+          <span style={{ color: 'var(--text-secondary)', fontSize: 14 }}>Loading game...</span>
+          <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
         </div>
       )}
 

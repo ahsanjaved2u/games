@@ -7,7 +7,7 @@ import Link from 'next/link';
 
 const inputStyle = {
   width: '100%', padding: '10px 14px', borderRadius: 10, fontSize: 14, color: '#fff',
-  background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', outline: 'none',
+  background: 'var(--input-bg)', border: '1px solid var(--input-border)', outline: 'none',
 };
 
 function WalletManagement() {
@@ -128,9 +128,9 @@ function WalletManagement() {
             <button key={t.key} onClick={() => { setTab(t.key); setViewTxns(null); setShowAction(null); }}
               className="px-4 py-2 rounded-xl text-sm font-semibold transition-all"
               style={{
-                background: tab === t.key ? 'rgba(0,255,136,0.12)' : 'rgba(255,255,255,0.04)',
+                background: tab === t.key ? 'rgba(0,255,136,0.12)' : 'var(--subtle-overlay)',
                 color: tab === t.key ? '#00ff88' : 'var(--text-muted)',
-                border: `1px solid ${tab === t.key ? 'rgba(0,255,136,0.25)' : 'rgba(255,255,255,0.08)'}`,
+                border: `1px solid ${tab === t.key ? 'rgba(0,255,136,0.25)' : 'var(--subtle-border)'}`,
               }}>{t.label}</button>
           ))}
         </div>
@@ -176,7 +176,7 @@ function WalletManagement() {
                 {viewTxns.txns.map(txn => {
                   const cfg = typeConfig[txn.type] || typeConfig.credit;
                   return (
-                    <div key={txn._id} className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ background: 'rgba(255,255,255,0.03)' }}>
+                    <div key={txn._id} className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ background: 'var(--subtle-overlay)' }}>
                       <span style={{ fontSize: 16 }}>{cfg.icon}</span>
                       <span className="flex-1 text-xs" style={{ color: 'var(--text-secondary)' }}>{txn.description || txn.type}</span>
                       <span className="text-[10px] uppercase" style={{ color: 'var(--text-muted)' }}>{txn.status}</span>
@@ -205,7 +205,7 @@ function WalletManagement() {
               {wallets.map(w => (
                 <div key={w._id} className="glass-card px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-3">
                   <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: 'linear-gradient(135deg, #00e5ff, #a855f7)' }}>
+                    <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: 'var(--accent-gradient, linear-gradient(135deg, var(--neon-cyan), var(--neon-purple)))' }}>
                       <span className="text-xs font-bold text-white">{w.user?.name?.charAt(0).toUpperCase()}</span>
                     </div>
                     <div className="min-w-0">
@@ -270,7 +270,7 @@ function WalletManagement() {
                   </div>
                   {/* Payment Details */}
                   {pm.method && (
-                    <div className="px-3 py-2.5 rounded-lg flex flex-wrap gap-x-6 gap-y-1 text-xs" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                    <div className="px-3 py-2.5 rounded-lg flex flex-wrap gap-x-6 gap-y-1 text-xs" style={{ background: 'var(--subtle-overlay)', border: '1px solid var(--subtle-border)' }}>
                       <span className="font-semibold" style={{ color: 'var(--neon-cyan)' }}>{methodLabels[pm.method] || pm.method}</span>
                       {pm.bankName && <span style={{ color: 'var(--text-secondary)' }}><span style={{ color: 'var(--text-muted)' }}>Bank:</span> {pm.bankName}</span>}
                       {pm.accountTitle && <span style={{ color: 'var(--text-secondary)' }}><span style={{ color: 'var(--text-muted)' }}>Title:</span> {pm.accountTitle}</span>}
@@ -304,7 +304,7 @@ function WalletManagement() {
               </div>
               <div className="flex gap-3 justify-center">
                 <button onClick={() => setConfirmAction(null)}
-                  className="text-xs font-semibold px-5 py-2.5 rounded-lg" style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--text-muted)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                  className="text-xs font-semibold px-5 py-2.5 rounded-lg" style={{ background: 'var(--subtle-border)', color: 'var(--text-muted)', border: '1px solid var(--input-border)' }}>
                   Cancel
                 </button>
                 <button onClick={() => handleWithdrawalAction(confirmAction.id, confirmAction.status)}

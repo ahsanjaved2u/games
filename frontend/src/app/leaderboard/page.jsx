@@ -69,7 +69,7 @@ function AdminSummaryView({ rows, loading }) {
   const endedCount = rows.filter(r => r.isEnded).length;
 
   const filterBtn = (key, label) => ({
-    background: typeFilter === key ? 'rgba(0,229,255,0.14)' : 'rgba(255,255,255,0.04)',
+    background: typeFilter === key ? 'rgba(0,229,255,0.14)' : 'var(--subtle-overlay)',
     border: typeFilter === key ? '1px solid rgba(0,229,255,0.35)' : '1px solid rgba(255,255,255,0.12)',
     color: typeFilter === key ? 'var(--neon-cyan)' : 'var(--text-secondary)',
   });
@@ -110,7 +110,7 @@ function AdminSummaryView({ rows, loading }) {
           placeholder="Search game..."
           className="w-full text-sm rounded-lg px-3 py-2 outline-none"
           style={{
-            background: 'rgba(255,255,255,0.04)',
+            background: 'var(--subtle-overlay)',
             border: '1px solid rgba(255,255,255,0.12)',
             color: 'var(--text-primary)',
           }}
@@ -127,7 +127,7 @@ function AdminSummaryView({ rows, loading }) {
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1200px]">
             <thead>
-              <tr style={{ background: 'rgba(255,255,255,0.02)' }}>
+              <tr style={{ background: 'var(--subtle-overlay)' }}>
                 <th className="text-left text-[10px] uppercase tracking-wider px-4 py-2 sticky left-0 z-10" style={{ color: 'var(--text-muted)', background: 'var(--bg-card)' }}>
                   Game / Contest
                 </th>
@@ -141,7 +141,7 @@ function AdminSummaryView({ rows, loading }) {
             <tbody>
               {filteredRows.map((row) => {
                 return (
-                  <tr key={`${row.game}-${row.contestId || ''}-${row.periodStart || ''}`} style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                  <tr key={`${row.game}-${row.contestId || ''}-${row.periodStart || ''}`} style={{ borderTop: '1px solid var(--subtle-border)' }}>
                     <td className="px-4 py-3 sticky left-0 z-10" style={{ background: 'var(--bg-card)' }}>
                       <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
                         {row.gameName || row.game}
@@ -224,7 +224,7 @@ function SummaryView({ summaryData, loading, isLoggedIn, user, games }) {
       const gameInfo = games.find(g => g.id === slug) || {
         id: slug,
         title: slug,
-        color: '#00e5ff',
+        color: 'var(--neon-cyan)',
         emoji: '🎮',
       };
 
@@ -271,7 +271,7 @@ function SummaryView({ summaryData, loading, isLoggedIn, user, games }) {
   const visibleEntries = filteredEntries.slice(0, visibleCount);
 
   const filterButtonStyle = (key) => ({
-    background: statusFilter === key ? 'rgba(0,229,255,0.14)' : 'rgba(255,255,255,0.04)',
+    background: statusFilter === key ? 'rgba(0,229,255,0.14)' : 'var(--subtle-overlay)',
     border: statusFilter === key ? '1px solid rgba(0,229,255,0.35)' : '1px solid rgba(255,255,255,0.12)',
     color: statusFilter === key ? 'var(--neon-cyan)' : 'var(--text-secondary)',
   });
@@ -281,7 +281,7 @@ function SummaryView({ summaryData, loading, isLoggedIn, user, games }) {
       {/* Greeting */}
       <div className="flex items-center gap-3 mb-2">
         <div className="w-11 h-11 rounded-full flex items-center justify-center text-base font-bold" style={{
-          background: 'linear-gradient(135deg, #00e5ff, #a855f7)', color: '#fff',
+          background: 'var(--accent-gradient, linear-gradient(135deg, var(--neon-cyan), var(--neon-purple)))', color: '#fff',
         }}>
           {user?.name?.charAt(0).toUpperCase()}
         </div>
@@ -296,7 +296,7 @@ function SummaryView({ summaryData, loading, isLoggedIn, user, games }) {
       </div>
 
       <div className="glass-card overflow-hidden">
-        <div className="px-4 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.02)' }}>
+        <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--subtle-border)', background: 'var(--subtle-overlay)' }}>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3 text-center">
             <div className="rounded-lg py-2" style={{ background: 'rgba(0,229,255,0.08)', border: '1px solid rgba(0,229,255,0.2)' }}>
               <p className="text-lg font-extrabold" style={{ color: 'var(--neon-cyan)' }}>{summaryEntries.length}</p>
@@ -310,7 +310,7 @@ function SummaryView({ summaryData, loading, isLoggedIn, user, games }) {
               <p className="text-lg font-extrabold" style={{ color: '#ff5c8a' }}>{endedCount}</p>
               <p className="text-[10px] uppercase" style={{ color: 'var(--text-muted)' }}>Ended</p>
             </div>
-            <div className="rounded-lg py-2" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)' }}>
+            <div className="rounded-lg py-2" style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)' }}>
               <p className="text-lg font-extrabold" style={{ color: 'var(--text-primary)' }}>{standardCount}</p>
               <p className="text-[10px] uppercase" style={{ color: 'var(--text-muted)' }}>Standard / Rewarding</p>
             </div>
@@ -330,7 +330,7 @@ function SummaryView({ summaryData, loading, isLoggedIn, user, games }) {
             placeholder="Search game..."
             className="w-full text-sm rounded-lg px-3 py-2 outline-none"
             style={{
-              background: 'rgba(255,255,255,0.04)',
+              background: 'var(--subtle-overlay)',
               border: '1px solid rgba(255,255,255,0.12)',
               color: 'var(--text-primary)',
             }}
@@ -340,7 +340,7 @@ function SummaryView({ summaryData, loading, isLoggedIn, user, games }) {
         <div className="hidden sm:grid px-4 py-2 text-[10px] uppercase tracking-wider font-bold" style={{
           gridTemplateColumns: '1.4fr 1fr 0.7fr 0.7fr 0.6fr',
           color: 'var(--text-muted)',
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
+          borderBottom: '1px solid var(--subtle-border)',
           background: 'rgba(255,255,255,0.015)',
         }}>
           <span>Game / Contest</span>
@@ -379,7 +379,7 @@ function SummaryView({ summaryData, loading, isLoggedIn, user, games }) {
                     </div>
                     <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full" style={{
                       color: statusColor,
-                      background: (isContestEntry || isPeriodEntry) ? (isLive ? 'rgba(34,197,94,0.15)' : 'rgba(255,92,138,0.15)') : 'rgba(255,255,255,0.08)',
+                      background: (isContestEntry || isPeriodEntry) ? (isLive ? 'rgba(34,197,94,0.15)' : 'rgba(255,92,138,0.15)') : 'var(--subtle-border)',
                       border: (isContestEntry || isPeriodEntry) ? (isLive ? '1px solid rgba(34,197,94,0.35)' : '1px solid rgba(255,92,138,0.35)') : '1px solid rgba(255,255,255,0.2)',
                     }}>{status}</span>
                   </div>
@@ -412,7 +412,7 @@ function SummaryView({ summaryData, loading, isLoggedIn, user, games }) {
                   <div>
                     <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full" style={{
                       color: statusColor,
-                      background: (isContestEntry || isPeriodEntry) ? (isLive ? 'rgba(34,197,94,0.15)' : 'rgba(255,92,138,0.15)') : 'rgba(255,255,255,0.08)',
+                      background: (isContestEntry || isPeriodEntry) ? (isLive ? 'rgba(34,197,94,0.15)' : 'rgba(255,92,138,0.15)') : 'var(--subtle-border)',
                       border: (isContestEntry || isPeriodEntry) ? (isLive ? '1px solid rgba(34,197,94,0.35)' : '1px solid rgba(255,92,138,0.35)') : '1px solid rgba(255,255,255,0.2)',
                     }}>{status}</span>
                   </div>
@@ -427,7 +427,7 @@ function SummaryView({ summaryData, loading, isLoggedIn, user, games }) {
         )}
 
         {filteredEntries.length > visibleCount && (
-          <div className="px-4 py-3 text-center" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="px-4 py-3 text-center" style={{ borderTop: '1px solid var(--subtle-border)' }}>
             <button
               className="text-xs font-semibold px-3 py-2 rounded-lg"
               style={{
@@ -555,7 +555,7 @@ function GameView({ game, isLoggedIn, authFetch, user }) {
 
         {/* Contest tabs — compact scrollable chips (competitive only) */}
         {isCompetitive && contests.length > 1 && (
-          <div className="flex gap-1.5 px-3 py-2 overflow-x-auto border-b" style={{ borderColor: 'rgba(255,255,255,0.06)', scrollbarWidth: 'none' }}>
+          <div className="flex gap-1.5 px-3 py-2 overflow-x-auto border-b" style={{ borderColor: 'var(--subtle-border)', scrollbarWidth: 'none' }}>
             {contests.map(c => {
               const isActive = c.contestId === selectedContest;
               const sColor = c.isLive ? '#22c55e' : c.isEnded ? '#ff5c8a' : '#f59e0b';
@@ -565,8 +565,8 @@ function GameView({ game, isLoggedIn, authFetch, user }) {
                   onClick={() => setSelectedContest(c.contestId)}
                   className="flex items-center gap-1.5 px-2.5 py-1 rounded-full whitespace-nowrap transition-all text-[11px] font-semibold flex-shrink-0"
                   style={{
-                    background: isActive ? `${game.color}20` : 'rgba(255,255,255,0.04)',
-                    border: `1px solid ${isActive ? game.color + '50' : 'rgba(255,255,255,0.08)'}`,
+                    background: isActive ? `${game.color}20` : 'var(--subtle-overlay)',
+                    border: `1px solid ${isActive ? game.color + '50' : 'var(--subtle-border)'}`,
                     color: isActive ? game.color : 'var(--text-muted)',
                   }}
                 >
@@ -580,7 +580,7 @@ function GameView({ game, isLoggedIn, authFetch, user }) {
 
         {/* Reward period tabs — compact scrollable chips (rewarding only) */}
         {isRewarding && rewardPeriods.length > 0 && (
-          <div className="flex gap-1.5 px-3 py-2 overflow-x-auto border-b" style={{ borderColor: 'rgba(255,255,255,0.06)', scrollbarWidth: 'none' }}>
+          <div className="flex gap-1.5 px-3 py-2 overflow-x-auto border-b" style={{ borderColor: 'var(--subtle-border)', scrollbarWidth: 'none' }}>
             {rewardPeriods.map((p, idx) => {
               const isSelected = p.periodStart === selectedPeriod;
               const sColor = p.isActive ? '#00ff88' : '#ff5c8a';
@@ -591,8 +591,8 @@ function GameView({ game, isLoggedIn, authFetch, user }) {
                   onClick={() => setSelectedPeriod(p.periodStart)}
                   className="flex items-center gap-1.5 px-2.5 py-1 rounded-full whitespace-nowrap transition-all text-[11px] font-semibold flex-shrink-0"
                   style={{
-                    background: isSelected ? `${game.color}20` : 'rgba(255,255,255,0.04)',
-                    border: `1px solid ${isSelected ? game.color + '50' : 'rgba(255,255,255,0.08)'}`,
+                    background: isSelected ? `${game.color}20` : 'var(--subtle-overlay)',
+                    border: `1px solid ${isSelected ? game.color + '50' : 'var(--subtle-border)'}`,
                     color: isSelected ? game.color : 'var(--text-muted)',
                   }}
                 >
@@ -672,13 +672,13 @@ function GameView({ game, isLoggedIn, authFetch, user }) {
                   background: isMe ? `${game.color}0a` : entry.rank <= 3 ? badge.bg : 'transparent',
                   transition: 'background 0.15s',
                 }}
-                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'var(--subtle-overlay)'; }}
                 onMouseLeave={e => { e.currentTarget.style.background = isMe ? `${game.color}0a` : entry.rank <= 3 ? badge.bg : 'transparent'; }}
               >
                 <span className="text-sm font-bold" style={{ color: badge.color }}>{badge.label}</span>
                 <div className="flex items-center gap-2 min-w-0">
                   <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0" style={{
-                    background: entry.rank <= 3 ? `linear-gradient(135deg, ${badge.color}, ${game.color})` : 'rgba(255,255,255,0.08)',
+                    background: entry.rank <= 3 ? `linear-gradient(135deg, ${badge.color}, ${game.color})` : 'var(--subtle-border)',
                     color: '#fff',
                   }}>
                     {entry.name?.charAt(0).toUpperCase()}
@@ -1080,8 +1080,8 @@ export default function LeaderboardPage() {
 
   return (
     <div className="bg-grid relative" style={{ overflowX: 'hidden', minHeight: 'calc(100vh - 64px)' }}>
-      <div className="glow-orb" style={{ width: '28vw', height: '28vw', maxWidth: 350, maxHeight: 350, background: '#00e5ff', top: '0%', right: '8%' }} />
-      <div className="glow-orb" style={{ width: '22vw', height: '22vw', maxWidth: 260, maxHeight: 260, background: '#a855f7', bottom: '8%', left: '5%', animationDelay: '4s' }} />
+      <div className="glow-orb" style={{ width: '28vw', height: '28vw', maxWidth: 350, maxHeight: 350, background: 'var(--neon-cyan)', top: '0%', right: '8%' }} />
+      <div className="glow-orb" style={{ width: '22vw', height: '22vw', maxWidth: 260, maxHeight: 260, background: 'var(--neon-purple)', bottom: '8%', left: '5%', animationDelay: '4s' }} />
 
       <div className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-12 sm:pt-8 sm:pb-16">
 
@@ -1096,7 +1096,7 @@ export default function LeaderboardPage() {
             <button
               onClick={() => setDropdownOpen(!dropdownOpen)}
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200"
-              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', color: 'var(--text-primary)', minWidth: 170 }}
+              style={{ background: 'var(--input-bg)', border: '1px solid rgba(255,255,255,0.12)', color: 'var(--text-primary)', minWidth: 170 }}
             >
               <span>{activeOption.emoji}</span>
               <span className="flex-1 text-left truncate">{activeOption.label}</span>
@@ -1109,7 +1109,7 @@ export default function LeaderboardPage() {
             {dropdownOpen && (
               <div className="absolute right-0 mt-2 w-52 py-1.5 rounded-xl shadow-2xl animate-fade-in-up" style={{
                 zIndex: 9999, background: 'var(--bg-card, #141428)',
-                border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(16px)',
+                border: '1px solid var(--input-border)', backdropFilter: 'blur(16px)',
               }}>
                 {options.map((opt) => (
                   <button
@@ -1120,7 +1120,7 @@ export default function LeaderboardPage() {
                       color: selected === opt.id ? 'var(--neon-cyan)' : 'var(--text-secondary)',
                       background: selected === opt.id ? 'rgba(0,229,255,0.08)' : 'transparent',
                     }}
-                    onMouseEnter={e => { if (selected !== opt.id) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
+                    onMouseEnter={e => { if (selected !== opt.id) e.currentTarget.style.background = 'var(--subtle-overlay)'; }}
                     onMouseLeave={e => { if (selected !== opt.id) e.currentTarget.style.background = 'transparent'; }}
                   >
                     <span>{opt.emoji}</span>
@@ -1152,8 +1152,8 @@ export default function LeaderboardPage() {
       <style>{`
         .loader {
           width: 22px; height: 22px;
-          border: 2px solid rgba(0,229,255,0.2);
-          border-top: 2px solid #00e5ff;
+          border: 2px solid color-mix(in srgb, var(--neon-cyan) 20%, transparent);
+          border-top: 2px solid var(--neon-cyan);
           border-radius: 50%;
           animation: spin 0.8s linear infinite;
         }

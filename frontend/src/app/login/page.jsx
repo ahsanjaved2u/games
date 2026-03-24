@@ -36,8 +36,8 @@ export default function LoginPage() {
   return (
     <div className="bg-grid relative min-h-screen flex items-center justify-center px-4" style={{ overflow: 'hidden' }}>
       {/* Background orbs */}
-      <div className="glow-orb" style={{ width: '30vw', height: '30vw', maxWidth: 350, maxHeight: 350, background: '#00e5ff', top: '10%', left: '15%' }} />
-      <div className="glow-orb" style={{ width: '25vw', height: '25vw', maxWidth: 300, maxHeight: 300, background: '#a855f7', bottom: '15%', right: '10%', animationDelay: '5s' }} />
+      <div className="glow-orb" style={{ width: '30vw', height: '30vw', maxWidth: 350, maxHeight: 350, background: 'var(--neon-cyan)', top: '10%', left: '15%' }} />
+      <div className="glow-orb" style={{ width: '25vw', height: '25vw', maxWidth: 300, maxHeight: 300, background: 'var(--neon-purple)', bottom: '15%', right: '10%', animationDelay: '5s' }} />
 
       <div className="glass-card p-8 sm:p-10 w-full relative z-10 animate-fade-in-up" style={{ maxWidth: 448 }}>
         {/* Header */}

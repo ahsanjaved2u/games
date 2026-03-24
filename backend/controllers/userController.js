@@ -3,6 +3,11 @@ const Game = require('../models/Game');
 const GameScore = require('../models/GameScore');
 const Wallet = require('../models/Wallet');
 const Transaction = require('../models/Transaction');
+const crypto = require('crypto');
+const { sendVerificationCode } = require('../utils/mailer');
+
+// Generate a 6-digit verification code
+const generateCode = () => crypto.randomInt(100000, 999999).toString();
 
 // @desc    Register a new user
 // @route   POST /api/users/register
@@ -18,13 +23,72 @@ exports.register = async (req, res, next) => {
         }
 
         const user = await User.create({ name, email, password });
+
+        // Generate verification code and send email
+        const code = generateCode();
+        user.verificationCode = code;
+        user.verificationCodeExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+        await user.save({ validateBeforeSave: false });
+        sendVerificationCode(email, name, code).catch(err => console.error('[verify-email]', err.message));
+
         const token = user.getSignedJwtToken();
 
         res.status(201).json({
             success: true,
             token,
-            user: { id: user._id, name: user.name, email: user.email, role: user.role },
+            user: { id: user._id, name: user.name, email: user.email, role: user.role, emailVerified: false },
         });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// @desc    Verify email with 6-digit code
+// @route   POST /api/users/verify-email
+// @access  Private
+exports.verifyEmail = async (req, res, next) => {
+    try {
+        const { code } = req.body;
+        if (!code) return res.status(400).json({ success: false, message: 'Verification code is required' });
+
+        const user = await User.findById(req.user.id).select('+verificationCode +verificationCodeExpires');
+        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+        if (user.emailVerified) return res.json({ success: true, message: 'Email already verified' });
+
+        if (!user.verificationCode || user.verificationCode !== code.toString()) {
+            return res.status(400).json({ success: false, message: 'Invalid verification code' });
+        }
+        if (user.verificationCodeExpires < new Date()) {
+            return res.status(400).json({ success: false, message: 'Code expired. Please request a new one.' });
+        }
+
+        user.emailVerified = true;
+        user.verificationCode = undefined;
+        user.verificationCodeExpires = undefined;
+        await user.save({ validateBeforeSave: false });
+
+        res.json({ success: true, message: 'Email verified successfully' });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// @desc    Resend verification code
+// @route   POST /api/users/resend-code
+// @access  Private
+exports.resendCode = async (req, res, next) => {
+    try {
+        const user = await User.findById(req.user.id);
+        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+        if (user.emailVerified) return res.json({ success: true, message: 'Email already verified' });
+
+        const code = generateCode();
+        user.verificationCode = code;
+        user.verificationCodeExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+        await user.save({ validateBeforeSave: false });
+
+        await sendVerificationCode(user.email, user.name, code);
+        res.json({ success: true, message: 'Verification code sent' });
     } catch (error) {
         next(error);
     }
@@ -60,7 +124,7 @@ exports.login = async (req, res, next) => {
         res.status(200).json({
             success: true,
             token,
-            user: { id: user._id, name: user.name, email: user.email, role: user.role },
+            user: { id: user._id, name: user.name, email: user.email, role: user.role, emailVerified: user.emailVerified },
         });
     } catch (error) {
         next(error);

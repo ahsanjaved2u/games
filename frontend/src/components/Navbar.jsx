@@ -114,8 +114,8 @@ export default function Navbar() {
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50" style={{
-      background: 'rgba(10, 11, 26, 0.92)',
-      borderBottom: '1px solid rgba(0, 229, 255, 0.1)',
+      background: 'color-mix(in srgb, var(--bg-primary) 92%, transparent)',
+      borderBottom: '1px solid var(--border-color)',
       backdropFilter: 'blur(16px)',
     }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -127,7 +127,7 @@ export default function Navbar() {
               <GamepadIcon />
             </span>
             <span className="text-xl font-bold tracking-tight" style={{
-              background: 'linear-gradient(135deg, #00e5ff, #a855f7)',
+              background: 'var(--accent-gradient, linear-gradient(135deg, var(--neon-cyan), var(--neon-purple)))',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
             }}>
@@ -146,7 +146,7 @@ export default function Navbar() {
                 }}
                 onMouseEnter={e => {
                   e.currentTarget.style.color = 'var(--neon-cyan)';
-                  e.currentTarget.style.background = 'rgba(0, 229, 255, 0.08)';
+                  e.currentTarget.style.background = 'color-mix(in srgb, var(--neon-cyan) 8%, transparent)';
                 }}
                 onMouseLeave={e => {
                   e.currentTarget.style.color = 'var(--text-secondary)';
@@ -198,17 +198,26 @@ export default function Navbar() {
                   onClick={() => setUserDropdown(!userDropdown)}
                   className="flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all duration-200"
                   style={{
-                    border: '1px solid rgba(0, 229, 255, 0.2)',
-                    background: 'rgba(0, 229, 255, 0.05)',
+                    border: '1px solid color-mix(in srgb, var(--neon-cyan) 20%, transparent)',
+                    background: 'color-mix(in srgb, var(--neon-cyan) 5%, transparent)',
                     color: 'var(--text-primary)',
                   }}
                 >
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{
-                    background: 'linear-gradient(135deg, #00e5ff, #a855f7)',
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center relative" style={{
+                    background: 'var(--accent-gradient, linear-gradient(135deg, var(--neon-cyan), var(--neon-purple)))',
                   }}>
                     <span className="text-xs font-bold text-white">
                       {user?.name?.charAt(0).toUpperCase()}
                     </span>
+                    {!user?.emailVerified && (
+                      <span style={{
+                        position: 'absolute', top: -2, right: -2,
+                        width: 10, height: 10, borderRadius: '50%',
+                        background: '#ffd93d',
+                        border: '2px solid rgba(10,11,26,0.9)',
+                        boxShadow: '0 0 6px rgba(255,217,61,0.5)',
+                      }} title="Email not verified" />
+                    )}
                   </div>
                   <span className="text-sm font-medium">{user?.name}</span>
                   <span className={`transition-transform duration-200 ${userDropdown ? 'rotate-180' : ''}`}>
@@ -231,9 +240,19 @@ export default function Navbar() {
                         💰 Wallet
                       </Link>
                     )}
+                    {!user?.emailVerified && (
+                      <Link href="/verify-email" onClick={() => setUserDropdown(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm transition-colors"
+                        style={{ color: '#ffd93d', textDecoration: 'none' }}
+                        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,217,61,0.08)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+                      >
+                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#ffd93d', boxShadow: '0 0 6px rgba(255,217,61,0.5)', flexShrink: 0 }} />
+                        Verify Email
+                      </Link>
+                    )}
                     <Link href="/profile" onClick={() => setUserDropdown(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm transition-colors"
                       style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}
-                      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,229,255,0.08)'; e.currentTarget.style.color = 'var(--neon-cyan)'; }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'color-mix(in srgb, var(--neon-cyan) 8%, transparent)'; e.currentTarget.style.color = 'var(--neon-cyan)'; }}
                       onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
                     >
                       <UserIcon /> Profile
@@ -241,7 +260,7 @@ export default function Navbar() {
                     {isAdmin && (
                       <Link href="/dashboard" onClick={() => setUserDropdown(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm transition-colors"
                         style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}
-                        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(168,85,247,0.08)'; e.currentTarget.style.color = 'var(--neon-purple)'; }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'color-mix(in srgb, var(--neon-purple) 8%, transparent)'; e.currentTarget.style.color = 'var(--neon-purple)'; }}
                         onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
                       >
                         🛡️ Dashboard
@@ -249,12 +268,12 @@ export default function Navbar() {
                     )}
                     <Link href="/settings" onClick={() => setUserDropdown(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm transition-colors"
                       style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}
-                      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,229,255,0.08)'; e.currentTarget.style.color = 'var(--neon-cyan)'; }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'color-mix(in srgb, var(--neon-cyan) 8%, transparent)'; e.currentTarget.style.color = 'var(--neon-cyan)'; }}
                       onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
                     >
                       ⚙️ Settings
                     </Link>
-                    <div style={{ borderTop: '1px solid rgba(0,229,255,0.1)', margin: '4px 0' }} />
+                    <div style={{ borderTop: '1px solid color-mix(in srgb, var(--neon-cyan) 10%, transparent)', margin: '4px 0' }} />
                     <button onClick={logout} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors text-left"
                       style={{ color: 'var(--neon-pink)' }}
                       onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,45,120,0.08)'; }}
@@ -293,7 +312,7 @@ export default function Navbar() {
       {mobileOpen && (
         <div className="md:hidden animate-fade-in-up" style={{
           background: 'var(--bg-secondary)',
-          borderTop: '1px solid rgba(0, 229, 255, 0.1)',
+          borderTop: '1px solid var(--border-color)',
         }}>
           <div className="px-4 py-4 space-y-1">
             {navLinks.map(link => (
@@ -306,7 +325,7 @@ export default function Navbar() {
                 }}
                 onMouseEnter={e => {
                   e.currentTarget.style.color = 'var(--neon-cyan)';
-                  e.currentTarget.style.background = 'rgba(0, 229, 255, 0.08)';
+                  e.currentTarget.style.background = 'color-mix(in srgb, var(--neon-cyan) 8%, transparent)';
                 }}
                 onMouseLeave={e => {
                   e.currentTarget.style.color = 'var(--text-secondary)';
@@ -317,21 +336,41 @@ export default function Navbar() {
               </Link>
             ))}
 
-            <div style={{ borderTop: '1px solid rgba(0, 229, 255, 0.08)', margin: '12px 0' }} />
+            <div style={{ borderTop: '1px solid color-mix(in srgb, var(--neon-cyan) 8%, transparent)', margin: '12px 0' }} />
 
             {isLoggedIn ? (
               <div className="space-y-1">
                 <div className="flex items-center gap-3 px-4 py-3">
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{
-                    background: 'linear-gradient(135deg, #00e5ff, #a855f7)',
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center relative" style={{
+                    background: 'var(--accent-gradient, linear-gradient(135deg, var(--neon-cyan), var(--neon-purple)))',
                   }}>
                     <span className="text-sm font-bold text-white">{user?.name?.charAt(0).toUpperCase()}</span>
+                    {!user?.emailVerified && (
+                      <span style={{
+                        position: 'absolute', top: -1, right: -1,
+                        width: 10, height: 10, borderRadius: '50%',
+                        background: '#ffd93d',
+                        border: '2px solid rgba(10,11,26,0.9)',
+                        boxShadow: '0 0 6px rgba(255,217,61,0.5)',
+                      }} />
+                    )}
                   </div>
                   <div>
                     <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{user?.name}</p>
                     <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{user?.role === 'admin' ? 'Administrator' : 'Player'}</p>
                   </div>
                 </div>
+                {!user?.emailVerified && (
+                  <Link href="/verify-email" onClick={() => setMobileOpen(false)}
+                    className="flex items-center gap-2 mx-4 px-3 py-2 rounded-xl text-xs font-semibold"
+                    style={{
+                      background: 'rgba(255,217,61,0.08)', border: '1px solid rgba(255,217,61,0.2)',
+                      color: '#ffd93d', textDecoration: 'none',
+                    }}>
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#ffd93d', boxShadow: '0 0 6px rgba(255,217,61,0.5)', flexShrink: 0 }} />
+                    Verify your email to claim rewards
+                  </Link>
+                )}
                 {isAdmin ? (
                   <Link
                     href="/dashboard/claimable"
@@ -361,6 +400,12 @@ export default function Navbar() {
                     🛡️ Dashboard
                   </Link>
                 )}
+                <Link href="/settings" onClick={() => setMobileOpen(false)}
+                  className="block px-4 py-3 rounded-xl text-base font-medium transition-all"
+                  style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}
+                >
+                  ⚙️ Settings
+                </Link>
                 <button onClick={() => { logout(); setMobileOpen(false); }}
                   className="w-full text-left px-4 py-3 rounded-xl text-base font-medium transition-all"
                   style={{ color: 'var(--neon-pink)' }}

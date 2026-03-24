@@ -45,7 +45,7 @@ export default function EntryFeeModal({
       <div style={{
         width: '100%', maxWidth: 440, position: 'relative',
         background: 'linear-gradient(145deg, #14142e 0%, #1c1050 50%, #14142e 100%)',
-        border: '1px solid rgba(255,255,255,0.08)',
+        border: '1px solid var(--subtle-border)',
         borderRadius: 24, overflow: 'hidden',
         animation: 'entrySlideUp 0.35s ease-out',
         boxShadow: `0 24px 80px rgba(0,0,0,0.6), 0 0 60px ${color}10`,
@@ -70,7 +70,7 @@ export default function EntryFeeModal({
           <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#fff', letterSpacing: '-0.3px' }}>
             Ready to Compete?
           </h2>
-          <p style={{ margin: '6px 0 0', fontSize: 13, color: 'rgba(255,255,255,0.4)' }}>{gameName}</p>
+          <p style={{ margin: '6px 0 0', fontSize: 13, color: 'var(--text-muted)' }}>{gameName}</p>
         </div>
 
         {/* Body */}
@@ -80,14 +80,14 @@ export default function EntryFeeModal({
           <div style={{
             textAlign: 'center', padding: '18px 16px', marginBottom: 16,
             background: 'rgba(255,255,255,0.025)', borderRadius: 16,
-            border: '1px solid rgba(255,255,255,0.06)',
+            border: '1px solid var(--subtle-border)',
             position: 'relative', overflow: 'hidden',
           }}>
             <div style={{
               position: 'absolute', inset: 0, opacity: 0.04,
               background: `radial-gradient(circle at 50% 100%, ${color}, transparent 70%)`,
             }} />
-            <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '1.5px' }}>
+            <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1.5px' }}>
               Contest Entry Fee
             </p>
             <p style={{ margin: '6px 0 0', fontSize: 36, fontWeight: 900, color: '#ffd93d', lineHeight: 1 }}>
@@ -103,7 +103,7 @@ export default function EntryFeeModal({
               background: 'rgba(168,85,247,0.06)', border: '1px solid rgba(168,85,247,0.12)',
             }}>
               <span style={{ fontSize: 14 }}>⏱️</span>
-              <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>Session ends in</span>
+              <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Session ends in</span>
               <span style={{ fontSize: 13, fontWeight: 800, color: '#c084fc', fontVariantNumeric: 'tabular-nums' }}>{timeStr}</span>
             </div>
           )}
@@ -116,7 +116,7 @@ export default function EntryFeeModal({
             border: `1px solid ${canAfford ? 'rgba(0,255,136,0.12)' : 'rgba(255,45,120,0.12)'}`,
             marginBottom: 20,
           }}>
-            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', fontWeight: 600 }}>💰 Wallet Balance</span>
+            <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>💰 Wallet Balance</span>
             <span style={{ fontSize: 15, fontWeight: 800, color: canAfford ? '#00ff88' : '#ff5c8a' }}>
               PKR {Number(walletBalance).toLocaleString()}
             </span>
@@ -127,9 +127,9 @@ export default function EntryFeeModal({
               {/* Description */}
               <div style={{
                 padding: '14px 16px', marginBottom: 20, borderRadius: 12,
-                background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)',
+                background: 'var(--subtle-overlay)', border: '1px solid rgba(255,255,255,0.04)',
               }}>
-                <p style={{ margin: 0, fontSize: 13, color: 'rgba(255,255,255,0.5)', lineHeight: 1.7, textAlign: 'center' }}>
+                <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.7, textAlign: 'center' }}>
                   <strong style={{ color: '#ffd93d' }}>PKR {Number(entryFee).toLocaleString()}</strong> will be deducted
                   from your wallet. Once paid, enjoy <strong style={{ color: '#fff' }}>unlimited plays</strong> for the
                   entire session — no extra charges, compete as many times as you like!
@@ -143,7 +143,7 @@ export default function EntryFeeModal({
                   width: '100%', padding: '15px 0', borderRadius: 14,
                   fontSize: 15, fontWeight: 800, color: '#fff', cursor: paying ? 'wait' : 'pointer',
                   background: paying
-                    ? 'rgba(255,255,255,0.08)'
+                    ? 'var(--subtle-border)'
                     : `linear-gradient(135deg, ${color} 0%, #a855f7 100%)`,
                   border: 'none',
                   boxShadow: paying ? 'none' : `0 4px 24px ${color}35, 0 0 40px ${color}15`,
@@ -164,7 +164,7 @@ export default function EntryFeeModal({
                 <p style={{ margin: 0, fontSize: 13, color: '#ff5c8a', fontWeight: 700, marginBottom: 4 }}>
                   You need PKR {Number(entryFee - walletBalance).toLocaleString()} more to enter
                 </p>
-                <p style={{ margin: 0, fontSize: 12, color: 'rgba(255,255,255,0.35)', lineHeight: 1.5 }}>
+                <p style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}>
                   Top up your wallet to join this contest and start competing!
                 </p>
               </div>
@@ -186,9 +186,9 @@ export default function EntryFeeModal({
             href={backHref}
             style={{
               display: 'block', width: '100%', padding: '13px 0', borderRadius: 14,
-              fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.45)', cursor: 'pointer',
-              background: 'rgba(255,255,255,0.03)',
-              border: '1px solid rgba(255,255,255,0.06)',
+              fontSize: 13, fontWeight: 700, color: 'var(--text-muted)', cursor: 'pointer',
+              background: 'var(--subtle-overlay)',
+              border: '1px solid var(--subtle-border)',
               transition: 'all 0.2s', textAlign: 'center', textDecoration: 'none',
             }}
           >

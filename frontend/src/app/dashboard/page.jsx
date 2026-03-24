@@ -74,17 +74,17 @@ function DashboardContent() {
   }, []);
 
   const statCards = stats ? [
-    { label: 'Total Requests', value: stats.totalRequests.toLocaleString(), icon: <StatsIcon />, color: '#00e5ff' },
+    { label: 'Total Requests', value: stats.totalRequests.toLocaleString(), icon: <StatsIcon />, color: 'var(--neon-cyan)' },
     { label: 'Today\'s Requests', value: stats.todayRequests.toLocaleString(), icon: <StatsIcon />, color: '#00ff88' },
-    { label: 'Unique Visitors (7d)', value: stats.uniqueVisitorsThisWeek.toLocaleString(), icon: <UsersIcon />, color: '#a855f7' },
+    { label: 'Unique Visitors (7d)', value: stats.uniqueVisitorsThisWeek.toLocaleString(), icon: <UsersIcon />, color: 'var(--neon-purple)' },
     { label: 'Active Users (7d)', value: stats.activeUsersThisWeek.toLocaleString(), icon: <UsersIcon />, color: '#ffd93d' },
   ] : [];
 
   return (
     <div className="bg-grid relative min-h-screen" style={{ overflow: 'hidden' }}>
       {/* Background */}
-      <div className="glow-orb" style={{ width: '30vw', height: '30vw', maxWidth: 400, maxHeight: 400, background: '#a855f7', top: '5%', right: '5%' }} />
-      <div className="glow-orb" style={{ width: '28vw', height: '28vw', maxWidth: 350, maxHeight: 350, background: '#00e5ff', bottom: '10%', left: '5%', animationDelay: '7s' }} />
+      <div className="glow-orb" style={{ width: '30vw', height: '30vw', maxWidth: 400, maxHeight: 400, background: 'var(--neon-purple)', top: '5%', right: '5%' }} />
+      <div className="glow-orb" style={{ width: '28vw', height: '28vw', maxWidth: 350, maxHeight: 350, background: 'var(--neon-cyan)', bottom: '10%', left: '5%', animationDelay: '7s' }} />
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
@@ -93,8 +93,8 @@ function DashboardContent() {
           <div>
             <div className="flex items-center gap-3 mb-2">
               <div className="p-2 rounded-xl" style={{
-                background: 'linear-gradient(135deg, rgba(168,85,247,0.15), rgba(0,229,255,0.15))',
-                border: '1px solid rgba(168,85,247,0.2)',
+                background: 'linear-gradient(135deg, color-mix(in srgb, var(--neon-purple) 15%, transparent), color-mix(in srgb, var(--neon-cyan) 15%, transparent))',
+                border: '1px solid color-mix(in srgb, var(--neon-purple) 20%, transparent)',
               }}>
                 <ShieldIcon />
               </div>
@@ -198,8 +198,8 @@ function DashboardContent() {
                 <tbody>
                   {users.map((u, i) => (
                     <tr key={u._id} className="transition-colors"
-                      style={{ borderBottom: '1px solid rgba(0,229,255,0.05)' }}
-                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,229,255,0.03)'}
+                      style={{ borderBottom: '1px solid color-mix(in srgb, var(--neon-cyan) 5%, transparent)' }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'color-mix(in srgb, var(--neon-cyan) 3%, transparent)'}}
                       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                     >
                       <td className="px-6 py-4">
@@ -207,7 +207,7 @@ function DashboardContent() {
                           <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white" style={{
                             background: u.role === 'admin'
                               ? 'linear-gradient(135deg, #a855f7, #ff2d78)'
-                              : 'linear-gradient(135deg, #00e5ff, #6c5ce7)',
+                              : 'var(--accent-gradient, linear-gradient(135deg, var(--neon-cyan), var(--neon-purple)))',
                           }}>
                             {u.name?.charAt(0).toUpperCase()}
                           </div>
@@ -217,9 +217,9 @@ function DashboardContent() {
                       <td className="px-6 py-4 text-sm" style={{ color: 'var(--text-secondary)' }}>{u.email}</td>
                       <td className="px-6 py-4">
                         <span className="text-[11px] font-bold uppercase px-2.5 py-1 rounded-full" style={{
-                          background: u.role === 'admin' ? 'rgba(168,85,247,0.15)' : 'rgba(0,229,255,0.1)',
+                          background: u.role === 'admin' ? 'rgba(168,85,247,0.15)' : 'color-mix(in srgb, var(--neon-cyan) 10%, transparent)',
                           color: u.role === 'admin' ? 'var(--neon-purple)' : 'var(--neon-cyan)',
-                          border: `1px solid ${u.role === 'admin' ? 'rgba(168,85,247,0.3)' : 'rgba(0,229,255,0.2)'}`,
+                          border: `1px solid ${u.role === 'admin' ? 'rgba(168,85,247,0.3)' : 'color-mix(in srgb, var(--neon-cyan) 20%, transparent)'}`,
                         }}>
                           {u.role}
                         </span>
@@ -251,7 +251,7 @@ function DashboardContent() {
                         <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0" style={{
                           background: u.role === 'admin'
                             ? 'linear-gradient(135deg, #a855f7, #ff2d78)'
-                            : 'linear-gradient(135deg, #00e5ff, #6c5ce7)',
+                            : 'var(--accent-gradient, linear-gradient(135deg, var(--neon-cyan), var(--neon-purple)))',
                         }}>
                           {u.name?.charAt(0).toUpperCase()}
                         </div>

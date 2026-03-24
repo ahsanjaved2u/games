@@ -22,7 +22,7 @@ export default function PaymentModal({ game, onClose, onSuccess }) {
   const inputStyle = {
     width: '100%', padding: '12px 14px', borderRadius: 10,
     fontSize: 14, color: '#fff',
-    background: 'rgba(255,255,255,0.06)',
+    background: 'var(--subtle-border)',
     border: '1px solid rgba(255,255,255,0.12)',
     outline: 'none',
   };
@@ -49,12 +49,12 @@ export default function PaymentModal({ game, onClose, onSuccess }) {
         overflow: 'hidden',
       }}>
         {/* Header */}
-        <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+        <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid var(--subtle-border)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <h2 style={{ fontSize: 18, fontWeight: 800, color: '#fff', margin: 0 }}>Unlock Game</h2>
-            <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', fontSize: 20, cursor: 'pointer', lineHeight: 1 }}>✕</button>
+            <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 20, cursor: 'pointer', lineHeight: 1 }}>✕</button>
           </div>
-          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', margin: '6px 0 0' }}>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '6px 0 0' }}>
             {game.name} — <span style={{ color: '#ffd93d', fontWeight: 700 }}>PKR {game.entryFee}</span>
           </p>
         </div>
@@ -69,27 +69,27 @@ export default function PaymentModal({ game, onClose, onSuccess }) {
           {tab === 'card' ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div>
-                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.4)', marginBottom: 4 }}>CARD NUMBER</label>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>CARD NUMBER</label>
                 <input style={inputStyle} placeholder="4242 4242 4242 4242" value={cardNum} onChange={e => setCardNum(e.target.value)} maxLength={19} required />
               </div>
               <div style={{ display: 'flex', gap: 12 }}>
                 <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.4)', marginBottom: 4 }}>EXPIRY</label>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>EXPIRY</label>
                   <input style={inputStyle} placeholder="MM/YY" value={expiry} onChange={e => setExpiry(e.target.value)} maxLength={5} required />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.4)', marginBottom: 4 }}>CVV</label>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>CVV</label>
                   <input style={inputStyle} placeholder="123" value={cvv} onChange={e => setCvv(e.target.value)} maxLength={4} type="password" required />
                 </div>
               </div>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', margin: 0 }}>
+              <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
                 Enter your points redemption code to unlock this game.
               </p>
               <div>
-                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.4)', marginBottom: 4 }}>REDEMPTION CODE</label>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>REDEMPTION CODE</label>
                 <input style={inputStyle} placeholder="XXXX-XXXX-XXXX" value={pointsCode} onChange={e => setPointsCode(e.target.value)} required />
               </div>
             </div>
@@ -98,7 +98,7 @@ export default function PaymentModal({ game, onClose, onSuccess }) {
           <button type="submit" disabled={processing} style={{
             width: '100%', marginTop: 18, padding: '14px 24px', borderRadius: 12,
             fontSize: 15, fontWeight: 800, color: '#fff', cursor: processing ? 'wait' : 'pointer',
-            background: processing ? 'rgba(0,229,255,0.15)' : 'linear-gradient(135deg, #00e5ff 0%, #a855f7 100%)',
+            background: processing ? 'rgba(0,229,255,0.15)' : 'var(--accent-gradient, linear-gradient(135deg, var(--neon-cyan), var(--neon-purple)))',
             border: 'none', boxShadow: '0 0 20px rgba(0,229,255,0.2)',
             transition: 'all 0.2s', opacity: processing ? 0.7 : 1,
           }}>

@@ -66,17 +66,17 @@ export default function Home() {
     <div className="bg-grid relative" style={{ overflow: 'hidden' }}>
 
       {/* Glow orbs — subtle background */}
-      <div className="glow-orb" style={{ width: '30vw', height: '30vw', maxWidth: 400, maxHeight: 400, background: '#00e5ff', top: '0%', left: '5%' }} />
-      <div className="glow-orb" style={{ width: '25vw', height: '25vw', maxWidth: 300, maxHeight: 300, background: '#a855f7', bottom: '10%', right: '5%', animationDelay: '5s' }} />
+      <div className="glow-orb" style={{ width: '30vw', height: '30vw', maxWidth: 400, maxHeight: 400, background: 'var(--neon-cyan)', top: '0%', left: '5%' }} />
+      <div className="glow-orb" style={{ width: '25vw', height: '25vw', maxWidth: 300, maxHeight: 300, background: 'var(--neon-purple)', bottom: '10%', right: '5%', animationDelay: '5s' }} />
 
       <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
 
         {/* ── Minimal Sliding Hero ── */}
         <div className="mb-3 sm:mb-4 animate-fade-in-up">
           <div className="max-w-3xl mx-auto rounded-2xl overflow-hidden" style={{
-            border: '1px solid rgba(0,229,255,0.22)',
-            background: 'linear-gradient(135deg, rgba(8,16,35,0.9), rgba(16,11,36,0.86))',
-            boxShadow: '0 0 40px rgba(0,229,255,0.08), inset 0 1px 0 rgba(255,255,255,0.04)',
+                  border: '1px solid var(--border-color)',
+            background: 'linear-gradient(135deg, color-mix(in srgb, var(--bg-primary) 90%, transparent), color-mix(in srgb, var(--bg-secondary) 86%, transparent))',
+            boxShadow: '0 0 40px color-mix(in srgb, var(--neon-cyan) 8%, transparent), inset 0 1px 0 rgba(255,255,255,0.04)',
           }}>
             <div style={{
               display: 'flex',
@@ -85,7 +85,7 @@ export default function Home() {
               transition: 'transform 700ms cubic-bezier(0.22, 1, 0.36, 1)',
             }}>
               <div className="shrink-0 px-6 sm:px-10 py-6 sm:py-7 text-center" style={{ width: '33.333333%' }}>
-                <p className="text-[11px] uppercase tracking-[0.12em] mb-3" style={{ color: 'rgba(0,229,255,0.8)' }}>
+                <p className="text-[11px] uppercase tracking-[0.12em] mb-3" style={{ color: 'var(--neon-cyan)', opacity: 0.8 }}>
                   Welcome
                 </p>
                 <h1 className="text-3xl sm:text-5xl font-extrabold leading-tight">
@@ -94,7 +94,7 @@ export default function Home() {
               </div>
 
               <div className="shrink-0 px-6 sm:px-10 py-6 sm:py-7 text-center" style={{ width: '33.333333%' }}>
-                <p className="text-[12px] uppercase tracking-[0.12em] mb-2" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                <p className="text-[12px] uppercase tracking-[0.12em] mb-2" style={{ color: 'var(--text-secondary)' }}>
                   Live Snapshot
                 </p>
                 <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
@@ -104,14 +104,14 @@ export default function Home() {
                   <div className="px-4 py-2 rounded-full text-sm sm:text-[15px] font-semibold" style={{ border: '1px solid rgba(255,217,61,0.26)', color: '#ffd93d', background: 'rgba(255,217,61,0.08)' }}>
                     Competitive: {competitiveCount}
                   </div>
-                  <div className="px-4 py-2 rounded-full text-sm sm:text-[15px] font-semibold" style={{ border: '1px solid rgba(0,229,255,0.26)', color: '#00e5ff', background: 'rgba(0,229,255,0.08)' }}>
+                  <div className="px-4 py-2 rounded-full text-sm sm:text-[15px] font-semibold" style={{ border: '1px solid rgba(0,229,255,0.26)', color: 'var(--neon-cyan)', background: 'rgba(0,229,255,0.08)' }}>
                     Rewarding: {rewardingCount}
                   </div>
                 </div>
               </div>
 
               <div className="shrink-0 px-6 sm:px-10 py-6 sm:py-7 text-center" style={{ width: '33.333333%' }}>
-                <p className="text-[11px] uppercase tracking-[0.12em] mb-3" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                <p className="text-[11px] uppercase tracking-[0.12em] mb-3" style={{ color: 'var(--text-secondary)' }}>
                   Coming Next
                 </p>
                 <h2 className="text-xl sm:text-3xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>

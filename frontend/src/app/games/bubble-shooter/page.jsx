@@ -132,7 +132,7 @@ export default function BubbleShooterPage() {
 
         <div style={{ position: 'relative', zIndex: 2, flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '14px 20px 16px', WebkitOverflowScrolling: 'touch' }}>
           <div style={{ width: '100%', maxWidth: 480, marginBottom: 10 }}>
-            <Link href="/games" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'rgba(255,255,255,0.55)', textDecoration: 'none', fontSize: 13, fontWeight: 600, padding: '6px 14px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <Link href="/games" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--text-secondary)', textDecoration: 'none', fontSize: 13, fontWeight: 600, padding: '6px 14px', borderRadius: 8, background: 'var(--subtle-border)', border: '1px solid var(--subtle-border)' }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
               Back
             </Link>
@@ -140,16 +140,16 @@ export default function BubbleShooterPage() {
           <div style={{ textAlign: 'center', marginBottom: 16 }}>
             <span style={{ fontSize: 38, display: 'block', marginBottom: 4, filter: 'drop-shadow(0 0 18px rgba(0,229,255,0.5))' }}>🫧</span>
             <h1 style={{ fontSize: 26, fontWeight: 800, color: '#fff', margin: '0 0 3px', textShadow: '0 0 20px rgba(0,229,255,0.35)' }}>{game.name}</h1>
-            {game.description && <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', margin: 0 }}>{game.description}</p>}
+            {game.description && <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0 }}>{game.description}</p>}
           </div>
           {instructions.length > 0 && (
             <div style={{ width: '100%', maxWidth: 500, display: 'flex', flexDirection: 'column', gap: 8 }}>
               {instructions.map((item, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '10px 16px', borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', backdropFilter: 'blur(6px)', animation: `fadeSlideIn 0.35s ease-out ${i * 0.07}s both` }}>
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '10px 16px', borderRadius: 12, background: 'var(--subtle-overlay)', border: '1px solid var(--subtle-border)', backdropFilter: 'blur(6px)', animation: `fadeSlideIn 0.35s ease-out ${i * 0.07}s both` }}>
                   <span style={{ fontSize: 26, lineHeight: 1, flexShrink: 0, filter: 'drop-shadow(0 0 8px rgba(0,229,255,0.3))' }}>{item.icon}</span>
                   <div>
                     <h3 style={{ fontSize: 14.5, fontWeight: 700, color: '#fff', margin: '0 0 2px' }}>{item.title}</h3>
-                    <p style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.5)', margin: 0, lineHeight: 1.4 }}>{item.text}</p>
+                    <p style={{ fontSize: 12.5, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.4 }}>{item.text}</p>
                   </div>
                 </div>
               ))}
@@ -159,7 +159,7 @@ export default function BubbleShooterPage() {
             marginTop: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
             width: '100%', maxWidth: 500, padding: '15px 24px', borderRadius: 14,
             fontSize: 17, fontWeight: 800, letterSpacing: '0.5px', color: '#fff', cursor: 'pointer',
-            background: 'linear-gradient(135deg, #00e5ff 0%, #00b0ff 50%, #a855f7 100%)', border: 'none',
+            background: 'var(--accent-gradient, linear-gradient(135deg, var(--neon-cyan), var(--neon-purple)))', border: 'none',
             boxShadow: '0 0 30px rgba(0,229,255,0.25), 0 4px 20px rgba(0,0,0,0.4)',
             transition: 'transform 0.15s, box-shadow 0.2s',
           }} onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.03)'; }} onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}>
@@ -180,7 +180,7 @@ export default function BubbleShooterPage() {
         borderBottom: '1px solid rgba(0,229,255,0.2)', minHeight: 46, flexShrink: 0, position: 'relative', overflow: 'hidden',
       }}>
         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 1, background: 'linear-gradient(90deg, transparent, rgba(0,229,255,0.5) 30%, rgba(168,85,247,0.5) 70%, transparent)' }} />
-        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: 13, fontWeight: 600, padding: '6px 12px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>
+        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-primary)', textDecoration: 'none', fontSize: 13, fontWeight: 600, padding: '6px 12px', borderRadius: 8, background: 'var(--subtle-border)', border: '1px solid var(--input-border)' }}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
           Back
         </Link>
@@ -188,11 +188,11 @@ export default function BubbleShooterPage() {
           <span style={{ fontSize: 18, filter: 'drop-shadow(0 0 6px rgba(0,229,255,0.6))' }}>🫧</span>
           <span style={{
             fontSize: 15, fontWeight: 800, letterSpacing: '1px',
-            background: 'linear-gradient(90deg, #00e5ff, #a855f7, #00e5ff)', backgroundSize: '200% 100%',
+            background: 'linear-gradient(90deg, var(--neon-cyan), var(--neon-purple), var(--neon-cyan))', backgroundSize: '200% 100%',
             WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', animation: 'titleShimmer 3s linear infinite',
           }}>{game.name}</span>
         </div>
-        <button onClick={toggleFullscreen} style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'rgba(255,255,255,0.7)', fontSize: 13, fontWeight: 600, padding: '6px 12px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer' }} title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}>
+        <button onClick={toggleFullscreen} style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--text-primary)', fontSize: 13, fontWeight: 600, padding: '6px 12px', borderRadius: 8, background: 'var(--subtle-border)', border: '1px solid var(--input-border)', cursor: 'pointer' }} title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}>
           {isFullscreen ? (
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
           ) : (
@@ -203,7 +203,7 @@ export default function BubbleShooterPage() {
       {!isLoaded && (
         <div style={{ position: 'absolute', inset: 0, top: 44, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#0b0b1a', zIndex: 10, gap: 16 }}>
           <div style={{ width: 40, height: 40, border: '3px solid rgba(0,229,255,0.2)', borderTop: '3px solid #00e5ff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-          <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14 }}>Loading game...</span>
+          <span style={{ color: 'var(--text-secondary)', fontSize: 14 }}>Loading game...</span>
           <style>{`@keyframes spin { to { transform: rotate(360deg) } } @keyframes titleShimmer { to { background-position: -200% 0 } }`}</style>
         </div>
       )}

@@ -11,8 +11,8 @@ export default function AboutPage() {
   return (
     <div className="bg-grid relative" style={{ overflow: 'hidden', minHeight: 'calc(100vh - 64px)' }}>
       {/* Glow orbs */}
-      <div className="glow-orb" style={{ width: '28vw', height: '28vw', maxWidth: 380, maxHeight: 380, background: '#00e5ff', top: '-5%', right: '10%' }} />
-      <div className="glow-orb" style={{ width: '22vw', height: '22vw', maxWidth: 280, maxHeight: 280, background: '#a855f7', bottom: '5%', left: '5%', animationDelay: '4s' }} />
+      <div className="glow-orb" style={{ width: '28vw', height: '28vw', maxWidth: 380, maxHeight: 380, background: 'var(--neon-cyan)', top: '-5%', right: '10%' }} />
+      <div className="glow-orb" style={{ width: '22vw', height: '22vw', maxWidth: 280, maxHeight: 280, background: 'var(--neon-purple)', bottom: '5%', left: '5%', animationDelay: '4s' }} />
 
       <div className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pt-2 pb-12 sm:pt-4 sm:pb-20">
 
@@ -28,7 +28,7 @@ export default function AboutPage() {
           <h1 className="text-3xl sm:text-4xl font-extrabold leading-tight mb-4" style={{ color: 'var(--text-primary)' }}>
             Welcome to{' '}
             <span style={{
-              background: 'linear-gradient(135deg, #00e5ff, #a855f7)',
+              background: 'var(--accent-gradient, linear-gradient(135deg, var(--neon-cyan), var(--neon-purple)))',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
             }}>

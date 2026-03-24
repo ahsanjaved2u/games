@@ -6,7 +6,7 @@ export default function Footer() {
   return (
     <footer style={{
       background: 'var(--bg-secondary)',
-      borderTop: '1px solid rgba(0, 229, 255, 0.08)',
+      borderTop: '1px solid var(--border-color)',
     }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -14,7 +14,7 @@ export default function Footer() {
           {/* Brand */}
           <div className="sm:col-span-2 lg:col-span-1">
             <h3 className="text-lg font-bold mb-3" style={{
-              background: 'linear-gradient(135deg, #00e5ff, #a855f7)',
+              background: 'var(--accent-gradient, linear-gradient(135deg, var(--neon-cyan), var(--neon-purple)))',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
             }}>
@@ -91,7 +91,7 @@ export default function Footer() {
 
         {/* Bottom bar */}
         <div className="mt-10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3" style={{
-          borderTop: '1px solid rgba(0, 229, 255, 0.06)',
+          borderTop: '1px solid color-mix(in srgb, var(--neon-cyan) 6%, transparent)',
         }}>
           <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
             © {new Date().getFullYear()} GameZone. All rights reserved.

@@ -82,7 +82,7 @@ function LogsContent() {
 
   return (
     <div className="bg-grid relative min-h-screen" style={{ overflow: 'hidden' }}>
-      <div className="glow-orb" style={{ width: '28vw', height: '28vw', maxWidth: 350, maxHeight: 350, background: '#00e5ff', top: '8%', left: '10%' }} />
+      <div className="glow-orb" style={{ width: '28vw', height: '28vw', maxWidth: 350, maxHeight: 350, background: 'var(--neon-cyan)', top: '8%', left: '10%' }} />
       <div className="glow-orb" style={{ width: '25vw', height: '25vw', maxWidth: 300, maxHeight: 300, background: '#ff2d78', bottom: '10%', right: '8%', animationDelay: '6s' }} />
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

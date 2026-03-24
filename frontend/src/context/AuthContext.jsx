@@ -113,6 +113,14 @@ export function AuthProvider({ children }) {
 
   const isAdmin = user?.role === 'admin';
 
+  const updateUser = (updates) => {
+    setUser(prev => {
+      const merged = { ...prev, ...updates };
+      localStorage.setItem('gz_user', JSON.stringify(merged));
+      return merged;
+    });
+  };
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -126,6 +134,7 @@ export function AuthProvider({ children }) {
       login,
       logout,
       authFetch,
+      updateUser,
     }}>
       {children}
     </AuthContext.Provider>

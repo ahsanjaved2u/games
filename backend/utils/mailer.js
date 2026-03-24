@@ -141,8 +141,33 @@ const sendWithdrawalRejectedToPlayer = async (playerEmail, playerName, amount) =
   });
 };
 
+// ── 4. Email verification code ──────────────────────────────────
+const sendVerificationCode = async (playerEmail, playerName, code) => {
+  const siteUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+  const verifyLink = `${siteUrl}/verify-email?code=${code}`;
+  await send({
+    to: playerEmail,
+    subject: `🔐 Your Verification Code — ${code}`,
+    html: shell(`
+      <div class="hdr"><h1>🔐 Email Verification</h1></div>
+      <div class="bdy">
+        <p>Hi <strong>${playerName}</strong>,</p>
+        <p>Use this code to verify your email:</p>
+        <div class="amt">${code}</div>
+        <p style="margin:18px 0">
+          <a href="${verifyLink}" style="display:inline-block;padding:12px 28px;border-radius:10px;background:linear-gradient(135deg,#00e5ff,#a855f7);color:#fff;font-weight:700;font-size:14px;text-decoration:none;letter-spacing:.5px">✅ Verify My Email</a>
+        </p>
+        <p style="font-size:13px;color:rgba(255,255,255,.5)">
+          This code expires in <strong>7 days</strong>. If you didn't sign up, ignore this email.
+        </p>
+      </div>
+      <div class="ftr">GameZone · ${ts()}</div>`),
+  });
+};
+
 module.exports = {
   sendWithdrawalRequestToAdmin,
   sendWithdrawalApprovedToPlayer,
   sendWithdrawalRejectedToPlayer,
+  sendVerificationCode,
 };

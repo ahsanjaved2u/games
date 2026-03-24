@@ -43,6 +43,18 @@ const userSchema = new mongoose.Schema({
         type: String,
         default: null,
     },
+    emailVerified: {
+        type: Boolean,
+        default: false,
+    },
+    verificationCode: {
+        type: String,
+        select: false,
+    },
+    verificationCodeExpires: {
+        type: Date,
+        select: false,
+    },
 }, {
     timestamps: true,
 });

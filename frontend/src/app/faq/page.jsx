@@ -252,7 +252,7 @@ function AccordionItem({ question, answer, isOpen, onClick, index }) {
   return (
     <div
       style={{
-        borderBottom: '1px solid rgba(0, 229, 255, 0.06)',
+        borderBottom: '1px solid color-mix(in srgb, var(--neon-cyan) 6%, transparent)',
       }}
     >
       <button
@@ -260,10 +260,10 @@ function AccordionItem({ question, answer, isOpen, onClick, index }) {
         className="w-full flex items-center justify-between gap-4 text-left py-4 px-5 transition-all duration-200"
         style={{
           color: isOpen ? 'var(--neon-cyan)' : 'var(--text-primary)',
-          background: isOpen ? 'rgba(0, 229, 255, 0.03)' : 'transparent',
+          background: isOpen ? 'color-mix(in srgb, var(--neon-cyan) 3%, transparent)' : 'transparent',
         }}
         onMouseEnter={e => {
-          if (!isOpen) e.currentTarget.style.background = 'rgba(0, 229, 255, 0.02)';
+          if (!isOpen) e.currentTarget.style.background = 'color-mix(in srgb, var(--neon-cyan) 2%, transparent)';
         }}
         onMouseLeave={e => {
           if (!isOpen) e.currentTarget.style.background = 'transparent';
@@ -273,7 +273,7 @@ function AccordionItem({ question, answer, isOpen, onClick, index }) {
         <span
           className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center transition-all duration-300"
           style={{
-            background: isOpen ? 'rgba(0, 229, 255, 0.15)' : 'rgba(255,255,255,0.05)',
+            background: isOpen ? 'color-mix(in srgb, var(--neon-cyan) 15%, transparent)' : 'var(--input-bg)',
             transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
             color: isOpen ? 'var(--neon-cyan)' : 'var(--text-muted)',
             fontSize: 12,
@@ -326,10 +326,10 @@ function SectionChip({ title, icon, isActive, onClick }) {
       onClick={onClick}
       className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all duration-200 whitespace-nowrap"
       style={{
-        background: isActive ? 'rgba(0, 229, 255, 0.12)' : 'rgba(255,255,255,0.03)',
-        border: `1px solid ${isActive ? 'rgba(0, 229, 255, 0.3)' : 'rgba(255,255,255,0.06)'}`,
+        background: isActive ? 'color-mix(in srgb, var(--neon-cyan) 12%, transparent)' : 'var(--subtle-overlay)',
+        border: `1px solid ${isActive ? 'color-mix(in srgb, var(--neon-cyan) 30%, transparent)' : 'var(--subtle-border)'}`,
         color: isActive ? 'var(--neon-cyan)' : 'var(--text-muted)',
-        boxShadow: isActive ? '0 0 12px rgba(0, 229, 255, 0.1)' : 'none',
+        boxShadow: isActive ? '0 0 12px color-mix(in srgb, var(--neon-cyan) 10%, transparent)' : 'none',
       }}
     >
       <span>{icon}</span>
@@ -358,7 +358,7 @@ export default function FAQPage() {
           <h1
             className="text-3xl sm:text-4xl font-bold"
             style={{
-              background: 'linear-gradient(135deg, #00e5ff, #a855f7)',
+              background: 'var(--accent-gradient, linear-gradient(135deg, var(--neon-cyan), var(--neon-purple)))',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
             }}
@@ -413,7 +413,7 @@ export default function FAQPage() {
               className="rounded-2xl overflow-hidden"
               style={{
                 background: 'var(--bg-secondary)',
-                border: '1px solid rgba(0, 229, 255, 0.07)',
+                border: '1px solid color-mix(in srgb, var(--neon-cyan) 7%, transparent)',
               }}
             >
               {section.questions.map((item, qIdx) => (
@@ -434,8 +434,8 @@ export default function FAQPage() {
         <div
           className="mt-12 rounded-2xl p-6 sm:p-8 text-center"
           style={{
-            background: 'linear-gradient(135deg, rgba(0,229,255,0.06), rgba(168,85,247,0.06))',
-            border: '1px solid rgba(0, 229, 255, 0.1)',
+            background: 'linear-gradient(135deg, color-mix(in srgb, var(--neon-cyan) 6%, transparent), color-mix(in srgb, var(--neon-purple) 6%, transparent))',
+            border: '1px solid color-mix(in srgb, var(--neon-cyan) 10%, transparent)',
           }}
         >
           <h3 className="text-lg font-bold mb-2" style={{ color: 'var(--text-primary)' }}>
@@ -449,17 +449,17 @@ export default function FAQPage() {
               href="/about"
               className="px-5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200"
               style={{
-                background: 'rgba(0, 229, 255, 0.1)',
-                border: '1px solid rgba(0, 229, 255, 0.25)',
+                background: 'color-mix(in srgb, var(--neon-cyan) 10%, transparent)',
+                border: '1px solid color-mix(in srgb, var(--neon-cyan) 25%, transparent)',
                 color: 'var(--neon-cyan)',
                 textDecoration: 'none',
               }}
               onMouseEnter={e => {
-                e.currentTarget.style.background = 'rgba(0, 229, 255, 0.18)';
-                e.currentTarget.style.boxShadow = '0 0 16px rgba(0, 229, 255, 0.15)';
+                e.currentTarget.style.background = 'color-mix(in srgb, var(--neon-cyan) 18%, transparent)';
+                e.currentTarget.style.boxShadow = '0 0 16px color-mix(in srgb, var(--neon-cyan) 15%, transparent)';
               }}
               onMouseLeave={e => {
-                e.currentTarget.style.background = 'rgba(0, 229, 255, 0.1)';
+                e.currentTarget.style.background = 'color-mix(in srgb, var(--neon-cyan) 10%, transparent)';
                 e.currentTarget.style.boxShadow = 'none';
               }}
             >
@@ -469,12 +469,12 @@ export default function FAQPage() {
               href="/games"
               className="px-5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200"
               style={{
-                background: 'linear-gradient(135deg, #00e5ff, #a855f7)',
+                background: 'var(--accent-gradient, linear-gradient(135deg, var(--neon-cyan), var(--neon-purple)))',
                 color: '#fff',
                 textDecoration: 'none',
               }}
               onMouseEnter={e => {
-                e.currentTarget.style.boxShadow = '0 0 20px rgba(0, 229, 255, 0.3)';
+                e.currentTarget.style.boxShadow = '0 0 20px color-mix(in srgb, var(--neon-cyan) 30%, transparent)';
                 e.currentTarget.style.transform = 'translateY(-1px)';
               }}
               onMouseLeave={e => {

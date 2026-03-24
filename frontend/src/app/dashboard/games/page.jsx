@@ -52,15 +52,15 @@ const SectionHeader = ({ icon, title, subtitle }) => (
       <span className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{title}</span>
     </div>
     {subtitle && <p className="text-[10px]" style={{ color: 'var(--text-muted)', marginLeft: 23 }}>{subtitle}</p>}
-    <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', marginTop: 8 }} />
+    <div style={{ height: 1, background: 'var(--subtle-border)', marginTop: 8 }} />
   </div>
 );
 
 const inputStyle = {
     width: '100%', padding: '10px 14px', borderRadius: 10,
     fontSize: 14, color: '#fff',
-    background: 'rgba(255,255,255,0.05)',
-    border: '1px solid rgba(255,255,255,0.1)',
+    background: 'var(--input-bg)',
+    border: '1px solid var(--input-border)',
     outline: 'none', transition: 'border-color 0.2s',
   };
 
@@ -289,8 +289,8 @@ function GamesManagement() {
 
   return (
     <div className="bg-grid relative min-h-screen" style={{ overflow: 'hidden' }}>
-      <div className="glow-orb" style={{ width: '30vw', height: '30vw', maxWidth: 400, maxHeight: 400, background: '#a855f7', top: '5%', right: '5%' }} />
-      <div className="glow-orb" style={{ width: '28vw', height: '28vw', maxWidth: 350, maxHeight: 350, background: '#00e5ff', bottom: '10%', left: '5%', animationDelay: '7s' }} />
+      <div className="glow-orb" style={{ width: '30vw', height: '30vw', maxWidth: 400, maxHeight: 400, background: 'var(--neon-purple)', top: '5%', right: '5%' }} />
+      <div className="glow-orb" style={{ width: '28vw', height: '28vw', maxWidth: 350, maxHeight: 350, background: 'var(--neon-cyan)', bottom: '10%', left: '5%', animationDelay: '7s' }} />
 
       {/* ── Custom Confirm Modal ── */}
       {confirmModal.open && (

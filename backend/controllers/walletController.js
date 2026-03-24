@@ -104,6 +104,12 @@ const requestWithdrawal = async (req, res) => {
     if (!amount || amount <= 0) return res.status(400).json({ message: 'Invalid amount' });
     if (!paymentMethod || !paymentMethod.method) return res.status(400).json({ message: 'Payment method is required' });
 
+    // Block unverified users from withdrawing
+    const user = await User.findById(req.user._id);
+    if (!user.emailVerified) {
+      return res.status(403).json({ message: 'Please verify your email before requesting a withdrawal.', emailNotVerified: true });
+    }
+
     const wallet = await getOrCreateWallet(req.user._id);
     if (wallet.balance < amount) return res.status(400).json({ message: 'Insufficient balance' });
 

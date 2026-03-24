@@ -11,6 +11,7 @@ export default function SignupPage() {
   const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '' });
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [signedUp, setSignedUp] = useState(false);
 
   // Redirect if already logged in
   useEffect(() => {
@@ -35,7 +36,7 @@ export default function SignupPage() {
     setSubmitting(true);
     try {
       await signup(form.name, form.email, form.password);
-      router.push('/');
+      setSignedUp(true);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -46,8 +47,52 @@ export default function SignupPage() {
   return (
     <div className="bg-grid relative min-h-screen flex items-center justify-center px-4 pb-10">
       {/* Background orbs */}
-      <div className="glow-orb" style={{ width: '30vw', height: '30vw', maxWidth: 350, maxHeight: 350, background: '#a855f7', top: '10%', right: '15%' }} />
-      <div className="glow-orb" style={{ width: '25vw', height: '25vw', maxWidth: 300, maxHeight: 300, background: '#00e5ff', bottom: '15%', left: '10%', animationDelay: '5s' }} />
+      <div className="glow-orb" style={{ width: '30vw', height: '30vw', maxWidth: 350, maxHeight: 350, background: 'var(--neon-purple)', top: '10%', right: '15%' }} />
+      <div className="glow-orb" style={{ width: '25vw', height: '25vw', maxWidth: 300, maxHeight: 300, background: 'var(--neon-cyan)', bottom: '15%', left: '10%', animationDelay: '5s' }} />
+
+      {signedUp ? (
+        <div className="glass-card p-8 sm:p-10 w-full relative z-10 animate-fade-in-up text-center" style={{ maxWidth: 448 }}>
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4" style={{
+            background: 'linear-gradient(135deg, rgba(0,255,136,0.15), rgba(0,229,255,0.15))',
+            border: '1px solid rgba(0,255,136,0.2)',
+          }}>
+            <span className="text-3xl">📧</span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-bold mb-3" style={{ color: 'var(--text-primary)' }}>
+            Check Your Email
+          </h1>
+          <p className="text-sm mb-4" style={{ color: 'var(--text-muted)', lineHeight: 1.7 }}>
+            A verification code has been sent to <strong style={{ color: 'var(--neon-cyan)' }}>{form.email}</strong>. Verify your email before claiming any rewards.
+          </p>
+          {(() => {
+            const domain = form.email?.split('@')[1]?.toLowerCase();
+            const mailLinks = {
+              'gmail.com': { url: 'https://mail.google.com', label: 'Open Gmail' },
+              'yahoo.com': { url: 'https://mail.yahoo.com', label: 'Open Yahoo Mail' },
+              'yahoo.co.uk': { url: 'https://mail.yahoo.com', label: 'Open Yahoo Mail' },
+              'outlook.com': { url: 'https://outlook.live.com', label: 'Open Outlook' },
+              'hotmail.com': { url: 'https://outlook.live.com', label: 'Open Outlook' },
+              'live.com': { url: 'https://outlook.live.com', label: 'Open Outlook' },
+            };
+            const ml = mailLinks[domain];
+            return ml ? (
+              <a href={ml.url} target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold mb-5 transition-all"
+                style={{ background: 'rgba(0,229,255,0.08)', border: '1px solid rgba(0,229,255,0.2)', color: 'var(--neon-cyan)', textDecoration: 'none' }}>
+                📧 {ml.label} ↗
+              </a>
+            ) : null;
+          })()}
+          <div className="flex gap-3 justify-center">
+            <button onClick={() => router.push('/verify-email')} className="btn-neon btn-neon-primary px-6 py-2.5 text-sm">
+              Enter Code
+            </button>
+            <button onClick={() => router.push('/')} className="btn-neon px-6 py-2.5 text-sm" style={{ border: '1px solid var(--input-border)', color: 'var(--text-muted)' }}>
+              Later
+            </button>
+          </div>
+        </div>
+      ) : (
 
       <div className="glass-card p-8 sm:p-10 w-full relative z-10 animate-fade-in-up" style={{ maxWidth: 448 }}>
         {/* Header */}
@@ -188,6 +233,8 @@ export default function SignupPage() {
           </Link>
         </p>
       </div>
+
+      )}
     </div>
   );
 }

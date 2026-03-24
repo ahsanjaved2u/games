@@ -57,7 +57,7 @@ function CompetitiveSchedule({ scheduleStart, scheduleEnd, prizesDistributed }) 
           <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#ff5c8a' }}>Competition Ended</span>
         </div>
         <div style={{ padding: '0 12px 10px' }}>
-          <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', margin: 0 }}>🔜 Next round coming soon. Stay tuned!</p>
+          <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: 0 }}>🔜 Next round coming soon. Stay tuned!</p>
         </div>
       </div>
     );
@@ -77,7 +77,7 @@ function CompetitiveSchedule({ scheduleStart, scheduleEnd, prizesDistributed }) 
       <div style={{ fontSize: 19, fontWeight: 800, lineHeight: 1, color: cfg.color, fontVariantNumeric: 'tabular-nums', textShadow: `0 0 14px ${cfg.color}90` }}>
         {String(val).padStart(2, '0')}
       </div>
-      <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{unit}</div>
+      <div style={{ fontSize: 9, color: 'var(--text-muted)', marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{unit}</div>
     </div>
   );
   const sep = <span style={{ fontSize: 15, fontWeight: 700, color: cfg.color, opacity: 0.5, alignSelf: 'flex-start', marginTop: 1 }}>:</span>;
@@ -85,9 +85,9 @@ function CompetitiveSchedule({ scheduleStart, scheduleEnd, prizesDistributed }) 
   return (
     <div style={{ borderRadius: 10, overflow: 'hidden', marginBottom: 10, border: `1px solid ${cfg.color}22` }}>
       <div style={{ background: `${cfg.color}0a`, borderBottom: `1px solid ${cfg.color}18`, padding: '6px 10px', display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '3px 8px', alignItems: 'center' }}>
-        <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.65)', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap', fontWeight: 600 }}>📅 Start</span>
+        <span style={{ fontSize: 9, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap', fontWeight: 600 }}>📅 Start</span>
         <span style={{ fontSize: 10, color: cfg.color, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fmtDate(startDate)}</span>
-        <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.65)', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap', fontWeight: 600 }}>🏁 End</span>
+        <span style={{ fontSize: 9, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap', fontWeight: 600 }}>🏁 End</span>
         <span style={{ fontSize: 10, color: cfg.color, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fmtDate(endDate)}</span>
       </div>
       <div style={{ padding: '8px 10px 8px' }}>
@@ -106,7 +106,7 @@ function CompetitiveSchedule({ scheduleStart, scheduleEnd, prizesDistributed }) 
           </div>
         )}
         {phase === 'ended' && (
-          <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 3 }}>Prizes have been distributed. Stay tuned for the next round!</p>
+          <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>Prizes have been distributed. Stay tuned for the next round!</p>
         )}
       </div>
     </div>
@@ -146,8 +146,8 @@ function RewardingSchedulePanel({ scheduleStart, isLive, conversionRate }) {
             <span className="animate-pulse" style={{ width: 6, height: 6, borderRadius: '50%', background: 'rgba(0,255,136,0.85)', display: 'inline-block', boxShadow: '0 0 7px rgba(0,255,136,0.85)' }} />
             <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#00ff88' }}>Rewards Live</span>
           </div>
-          <p style={{ margin: 0, fontSize: 11, color: 'rgba(255,255,255,0.7)' }}>Play now and turn your score into cash rewards.</p>
-          <p style={{ margin: '3px 0 0', fontSize: 10, color: 'rgba(255,255,255,0.45)' }}>{rateText}</p>
+          <p style={{ margin: 0, fontSize: 11, color: 'var(--text-primary)' }}>Play now and turn your score into cash rewards.</p>
+          <p style={{ margin: '3px 0 0', fontSize: 10, color: 'var(--text-muted)' }}>{rateText}</p>
         </div>
       </div>
     );
@@ -158,7 +158,7 @@ function RewardingSchedulePanel({ scheduleStart, isLive, conversionRate }) {
       <div style={{ fontSize: 19, fontWeight: 800, lineHeight: 1, color: '#ffd93d', fontVariantNumeric: 'tabular-nums', textShadow: '0 0 14px rgba(255,217,61,0.56)' }}>
         {String(val).padStart(2, '0')}
       </div>
-      <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{unit}</div>
+      <div style={{ fontSize: 9, color: 'var(--text-muted)', marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{unit}</div>
     </div>
   );
   const sep = <span style={{ fontSize: 15, fontWeight: 700, color: '#ffd93d', opacity: 0.5, alignSelf: 'flex-start', marginTop: 1 }}>:</span>;
@@ -330,7 +330,7 @@ export default function GameCard({ game, i, isLoggedIn }) {
             <div className="flex-1 flex flex-col items-center justify-center rounded-xl mb-3 px-4 py-5 text-center" style={{ background: 'linear-gradient(135deg, rgba(0,255,136,0.08), rgba(255,217,61,0.06))', border: '1px solid rgba(0,255,136,0.15)' }}>
               <span style={{ fontSize: 34, lineHeight: 1, marginBottom: 10 }}>💰</span>
               <span className="font-bold" style={{ color: '#00ff88', fontSize: 17 }}>Play &amp; Earn Cash Rewards</span>
-              <p style={{ color: 'rgba(255,255,255,0.5)', margin: '8px 0 0', fontSize: 13.5 }}>Score points and win real money!</p>
+              <p style={{ color: 'var(--text-secondary)', margin: '8px 0 0', fontSize: 13.5 }}>Score points and win real money!</p>
               {hasPeriod && <RewardPeriodCountdown days={pd} hours={ph} minutes={pm} slug={game.slug} anchor={game.periodAnchor} />}
             </div>
           );
@@ -345,9 +345,9 @@ export default function GameCard({ game, i, isLoggedIn }) {
             <div className="flex flex-wrap gap-x-3 gap-y-0.5 ml-6">
               {game.prizes.slice(0, 3).map((p, j) => {
                 const icons = ['🥇', '🥈', '🥉'];
-                return <span key={j} className="text-[10px]" style={{ color: 'rgba(255,255,255,0.5)' }}>{icons[j]} PKR {p.toLocaleString()}</span>;
+                return <span key={j} className="text-[10px]" style={{ color: 'var(--text-secondary)' }}>{icons[j]} PKR {p.toLocaleString()}</span>;
               })}
-              {game.prizes.length > 3 && <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>+{game.prizes.length - 3} more</span>}
+              {game.prizes.length > 3 && <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>+{game.prizes.length - 3} more</span>}
             </div>
           </div>
         )}

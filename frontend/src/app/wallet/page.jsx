@@ -3,10 +3,12 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import TopUpModal from '@/components/TopUpModal';
 
 export default function WalletPage() {
-  const { authFetch, isLoggedIn, walletBalance, fetchBalance } = useAuth();
+  const { authFetch, isLoggedIn, walletBalance, fetchBalance, user } = useAuth();
+  const router = useRouter();
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [withdrawAmount, setWithdrawAmount] = useState('');
@@ -110,7 +112,7 @@ export default function WalletPage() {
   return (
     <div className="bg-grid relative" style={{ overflow: 'hidden', minHeight: 'calc(100vh - 64px)' }}>
       <div className="glow-orb" style={{ width: '30vw', height: '30vw', maxWidth: 400, maxHeight: 400, background: '#00ff88', top: '0%', right: '5%', opacity: 0.4 }} />
-      <div className="glow-orb" style={{ width: '25vw', height: '25vw', maxWidth: 300, maxHeight: 300, background: '#a855f7', bottom: '10%', left: '5%', animationDelay: '5s', opacity: 0.3 }} />
+      <div className="glow-orb" style={{ width: '25vw', height: '25vw', maxWidth: 300, maxHeight: 300, background: 'var(--neon-purple)', bottom: '10%', left: '5%', animationDelay: '5s', opacity: 0.3 }} />
 
       <div className="relative z-10 max-w-2xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
 
@@ -124,7 +126,7 @@ export default function WalletPage() {
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-widest mb-0.5" style={{ color: 'var(--text-muted)' }}>Your Balance</p>
             <p className="text-3xl font-black leading-none" style={{
-              background: 'linear-gradient(135deg, #00ff88, #00e5ff)',
+              background: 'linear-gradient(135deg, #00ff88, var(--neon-cyan))',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               filter: 'drop-shadow(0 0 16px rgba(0,255,136,0.3))',
@@ -133,7 +135,10 @@ export default function WalletPage() {
             </p>
             <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Available for withdrawal</p>
           </div>
-          <button onClick={() => { setShowWithdraw(!showWithdraw); setWithdrawStep(1); setPayMethod(''); setPayDetails({}); setWithdrawAmount(''); setWithdrawNote(''); }} className="btn-neon text-sm shrink-0" style={{
+          <button onClick={() => {
+            if (user && !user.emailVerified) { router.push('/verify-email'); return; }
+            setShowWithdraw(!showWithdraw); setWithdrawStep(1); setPayMethod(''); setPayDetails({}); setWithdrawAmount(''); setWithdrawNote('');
+          }} className="btn-neon text-sm shrink-0" style={{
             background: showWithdraw ? 'rgba(255,217,61,0.12)' : 'rgba(0,255,136,0.08)',
             borderColor: showWithdraw ? 'rgba(255,217,61,0.3)' : 'rgba(0,255,136,0.2)',
             color: showWithdraw ? '#ffd93d' : '#00ff88',
@@ -143,11 +148,30 @@ export default function WalletPage() {
           <button onClick={() => setShowTopUp(true)} className="btn-neon text-sm shrink-0" style={{
             background: 'rgba(0,229,255,0.08)',
             borderColor: 'rgba(0,229,255,0.25)',
-            color: '#00e5ff',
+            color: 'var(--neon-cyan)',
           }}>
             💳 Add Funds
           </button>
         </div>
+
+        {/* ── Email Verification Banner ── */}
+        {user && !user.emailVerified && (
+          <div className="rounded-xl px-4 py-3 mb-4 flex items-center gap-3 animate-fade-in-up" style={{
+            background: 'rgba(255,217,61,0.08)',
+            border: '1px solid rgba(255,217,61,0.2)',
+          }}>
+            <span style={{ fontSize: 20 }}>📧</span>
+            <div className="flex-1">
+              <p className="text-sm font-semibold" style={{ color: '#ffd93d' }}>Verify your email to claim rewards</p>
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Withdrawals require a verified email address.</p>
+            </div>
+            <Link href="/verify-email" className="btn-neon text-xs shrink-0 px-3 py-1.5" style={{
+              background: 'rgba(255,217,61,0.12)', borderColor: 'rgba(255,217,61,0.3)', color: '#ffd93d', textDecoration: 'none',
+            }}>
+              Verify Now
+            </Link>
+          </div>
+        )}
 
         {/* ── Withdraw Form ── */}
         {showWithdraw && (
@@ -171,7 +195,7 @@ export default function WalletPage() {
                         required
                         style={{
                           width: '100%', padding: '10px 14px', borderRadius: 10, fontSize: 14, color: '#fff',
-                          background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', outline: 'none',
+                          background: 'var(--input-bg)', border: '1px solid var(--input-border)', outline: 'none',
                         }}
                       />
                     </div>
@@ -206,8 +230,8 @@ export default function WalletPage() {
                       <button type="button" key={m.key} onClick={() => { setPayMethod(m.key); setPayDetails({}); }}
                         className="flex flex-col items-center gap-1 p-3 rounded-xl text-xs font-semibold transition-all"
                         style={{
-                          background: payMethod === m.key ? 'rgba(0,255,136,0.1)' : 'rgba(255,255,255,0.03)',
-                          border: `1.5px solid ${payMethod === m.key ? 'rgba(0,255,136,0.35)' : 'rgba(255,255,255,0.08)'}`,
+                          background: payMethod === m.key ? 'rgba(0,255,136,0.1)' : 'var(--subtle-overlay)',
+                          border: `1.5px solid ${payMethod === m.key ? 'rgba(0,255,136,0.35)' : 'var(--subtle-border)'}`,
                           color: payMethod === m.key ? '#00ff88' : 'var(--text-muted)',
                           transform: payMethod === m.key ? 'scale(1.03)' : 'scale(1)',
                         }}>
@@ -231,7 +255,7 @@ export default function WalletPage() {
                         required
                         style={{
                           width: '100%', padding: '10px 14px', borderRadius: 10, fontSize: 14, color: '#fff',
-                          background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', outline: 'none',
+                          background: 'var(--input-bg)', border: '1px solid var(--input-border)', outline: 'none',
                         }}
                       />
                       <datalist id="pk-banks">
@@ -249,7 +273,7 @@ export default function WalletPage() {
                         required
                         style={{
                           width: '100%', padding: '10px 14px', borderRadius: 10, fontSize: 14, color: '#fff',
-                          background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', outline: 'none',
+                          background: 'var(--input-bg)', border: '1px solid var(--input-border)', outline: 'none',
                         }}
                       />
                     </div>
@@ -262,7 +286,7 @@ export default function WalletPage() {
                         required
                         style={{
                           width: '100%', padding: '10px 14px', borderRadius: 10, fontSize: 14, color: '#fff',
-                          background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', outline: 'none',
+                          background: 'var(--input-bg)', border: '1px solid var(--input-border)', outline: 'none',
                         }}
                       />
                     </div>
@@ -281,7 +305,7 @@ export default function WalletPage() {
                         required
                         style={{
                           width: '100%', padding: '10px 14px', borderRadius: 10, fontSize: 14, color: '#fff',
-                          background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', outline: 'none',
+                          background: 'var(--input-bg)', border: '1px solid var(--input-border)', outline: 'none',
                         }}
                       />
                     </div>
@@ -294,7 +318,7 @@ export default function WalletPage() {
                         required
                         style={{
                           width: '100%', padding: '10px 14px', borderRadius: 10, fontSize: 14, color: '#fff',
-                          background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', outline: 'none',
+                          background: 'var(--input-bg)', border: '1px solid var(--input-border)', outline: 'none',
                         }}
                       />
                     </div>
@@ -311,7 +335,7 @@ export default function WalletPage() {
                       placeholder="Any extra info for admin"
                       style={{
                         width: '100%', padding: '10px 14px', borderRadius: 10, fontSize: 14, color: '#fff',
-                        background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', outline: 'none',
+                        background: 'var(--input-bg)', border: '1px solid var(--input-border)', outline: 'none',
                       }}
                     />
                   </div>

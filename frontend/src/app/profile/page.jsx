@@ -234,7 +234,7 @@ export default function ProfilePage() {
   const [showTopUp, setShowTopUp] = useState(false);
 
   const panelButtonStyle = (active) => ({
-    background: active ? 'rgba(0,229,255,0.14)' : 'rgba(255,255,255,0.04)',
+    background: active ? 'rgba(0,229,255,0.14)' : 'var(--subtle-overlay)',
     border: active ? '1px solid rgba(0,229,255,0.35)' : '1px solid rgba(255,255,255,0.12)',
     color: active ? 'var(--neon-cyan)' : 'var(--text-secondary)',
   });
@@ -538,8 +538,8 @@ export default function ProfilePage() {
 
     return (
       <div className="bg-grid relative" style={{ overflow: 'hidden', minHeight: 'calc(100vh - 64px)' }}>
-        <div className="glow-orb" style={{ width: '28vw', height: '28vw', maxWidth: 340, maxHeight: 340, background: '#a855f7', top: '4%', right: '8%', opacity: 0.24 }} />
-        <div className="glow-orb" style={{ width: '24vw', height: '24vw', maxWidth: 300, maxHeight: 300, background: '#00e5ff', bottom: '8%', left: '6%', opacity: 0.18 }} />
+        <div className="glow-orb" style={{ width: '28vw', height: '28vw', maxWidth: 340, maxHeight: 340, background: 'var(--neon-purple)', top: '4%', right: '8%', opacity: 0.24 }} />
+        <div className="glow-orb" style={{ width: '24vw', height: '24vw', maxWidth: 300, maxHeight: 300, background: 'var(--neon-cyan)', bottom: '8%', left: '6%', opacity: 0.18 }} />
 
         <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-6">
           {loading ? (
@@ -608,8 +608,8 @@ export default function ProfilePage() {
                 <>
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
                     {[
-                      { label: 'Total Games', value: Number(summary.totalGames || 0).toLocaleString(), color: '#00e5ff' },
-                      { label: 'Competitive Games', value: Number(summary.competitiveGames || 0).toLocaleString(), color: '#a855f7' },
+                      { label: 'Total Games', value: Number(summary.totalGames || 0).toLocaleString(), color: 'var(--neon-cyan)' },
+                      { label: 'Competitive Games', value: Number(summary.competitiveGames || 0).toLocaleString(), color: 'var(--neon-purple)' },
                       { label: 'Rewarding Games', value: Number(summary.rewardingGames || 0).toLocaleString(), color: '#22c55e' },
                       { label: 'Live Games', value: Number(summary.liveGames || 0).toLocaleString(), color: '#67e8f9' },
                     ].map((item) => (
@@ -621,9 +621,9 @@ export default function ProfilePage() {
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-4">
-                    <div className="glass-card p-4 animate-fade-in-up lg:col-span-2" style={{ border: '1px solid rgba(0,229,255,0.22)' }}>
+                    <div className="glass-card p-4 animate-fade-in-up lg:col-span-2" style={{ border: '1px solid color-mix(in srgb, var(--neon-cyan) 22%, transparent)' }}>
                       <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Attempts Summary</p>
-                      <p className="text-2xl font-extrabold mt-1" style={{ color: '#00e5ff' }}>
+                      <p className="text-2xl font-extrabold mt-1" style={{ color: 'var(--neon-cyan)' }}>
                         {Number(summary.totalAttempts || 0).toLocaleString()} Total Attempts
                       </p>
                       <p className="text-xs mt-2" style={{ color: 'var(--text-secondary)' }}>
@@ -664,7 +664,7 @@ export default function ProfilePage() {
                     <div className="glass-card p-4 sm:p-5 animate-fade-in-up">
                       <div className="flex items-center justify-between mb-3">
                         <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Top Games By Attempts</h2>
-                        <span className="text-[10px] px-2 py-1 rounded-full" style={{ background: 'rgba(0,229,255,0.1)', color: 'var(--neon-cyan)' }}>
+                        <span className="text-[10px] px-2 py-1 rounded-full" style={{ background: 'color-mix(in srgb, var(--neon-cyan) 10%, transparent)', color: 'var(--neon-cyan)' }}>
                           Top 5
                         </span>
                       </div>
@@ -672,7 +672,7 @@ export default function ProfilePage() {
                       {adminProfile?.topGamesByAttempts?.length ? (
                         <div className="space-y-2">
                           {adminProfile.topGamesByAttempts.map((game) => (
-                            <div key={game.game} className="px-3 py-2 rounded-lg" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                            <div key={game.game} className="px-3 py-2 rounded-lg" style={{ background: 'var(--subtle-overlay)', border: '1px solid var(--subtle-border)' }}>
                               <div className="flex items-center justify-between gap-3">
                                 <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{game.gameName}</p>
                                 <p className="text-xs font-bold shrink-0" style={{ color: 'var(--neon-cyan)' }}>{Number(game.totalAttempts || 0).toLocaleString()}</p>
@@ -699,7 +699,7 @@ export default function ProfilePage() {
                       {adminProfile?.topPlayersByBalance?.length ? (
                         <div className="space-y-2">
                           {adminProfile.topPlayersByBalance.map((player) => (
-                            <div key={player.userId} className="px-3 py-2 rounded-lg" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                            <div key={player.userId} className="px-3 py-2 rounded-lg" style={{ background: 'var(--subtle-overlay)', border: '1px solid var(--subtle-border)' }}>
                               <div className="flex items-center justify-between gap-3">
                                 <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{player.name}</p>
                                 <p className="text-xs font-bold shrink-0" style={{ color: '#ffd93d' }}>{money(player.balanceAmount)}</p>
@@ -717,7 +717,7 @@ export default function ProfilePage() {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {[
                       { label: 'Contests Ending In 24h', value: Number(summary.contestsEnding24h || 0).toLocaleString(), color: '#22c55e' },
-                      { label: 'Games With No Plays (7d)', value: Number(summary.gamesNoPlays7d || 0).toLocaleString(), color: '#a855f7' },
+                      { label: 'Games With No Plays (7d)', value: Number(summary.gamesNoPlays7d || 0).toLocaleString(), color: 'var(--neon-purple)' },
                       { label: 'Prizes Pending Distribution', value: Number(summary.prizesPendingDistribution || 0).toLocaleString(), color: '#ff9f43' },
                     ].map((item) => (
                       <div key={item.label} className="glass-card p-4 animate-fade-in-up" style={{ border: `1px solid ${item.color}25` }}>
@@ -737,8 +737,8 @@ export default function ProfilePage() {
 
   return (
     <div className="bg-grid relative" style={{ overflow: 'hidden', minHeight: 'calc(100vh - 64px)' }}>
-      <div className="glow-orb" style={{ width: '28vw', height: '28vw', maxWidth: 340, maxHeight: 340, background: '#00e5ff', top: '4%', right: '8%', opacity: 0.25 }} />
-      <div className="glow-orb" style={{ width: '24vw', height: '24vw', maxWidth: 300, maxHeight: 300, background: '#a855f7', bottom: '8%', left: '6%', opacity: 0.2 }} />
+      <div className="glow-orb" style={{ width: '28vw', height: '28vw', maxWidth: 340, maxHeight: 340, background: 'var(--neon-cyan)', top: '4%', right: '8%', opacity: 0.25 }} />
+      <div className="glow-orb" style={{ width: '24vw', height: '24vw', maxWidth: 300, maxHeight: 300, background: 'var(--neon-purple)', bottom: '8%', left: '6%', opacity: 0.2 }} />
 
       <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-6">
         {loading ? (
@@ -756,8 +756,9 @@ export default function ProfilePage() {
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div className="flex items-center gap-4 min-w-0">
                   <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-black shrink-0" style={{
-                    background: 'linear-gradient(135deg, rgba(0,229,255,0.25), rgba(168,85,247,0.25))',
-                    border: '1px solid rgba(0,229,255,0.25)',
+                    background: 'var(--accent-gradient, linear-gradient(135deg, var(--neon-cyan), var(--neon-purple)))',
+                    opacity: 0.85,
+                    border: '1px solid var(--border-color)',
                     color: '#fff',
                   }}>
                     {profile.me?.name?.charAt(0)?.toUpperCase() || 'U'}
@@ -819,7 +820,7 @@ export default function ProfilePage() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-3">
                   <div className="glass-card p-4 animate-fade-in-up lg:col-span-2" style={{ border: '1px solid rgba(0,229,255,0.25)' }}>
                     <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Play Summary</p>
-                    <p className="text-2xl font-extrabold mt-1" style={{ color: '#00e5ff' }}>
+                    <p className="text-2xl font-extrabold mt-1" style={{ color: 'var(--neon-cyan)' }}>
                       {profile.totals.totalPlays.toLocaleString()} Total Plays
                     </p>
                     <p className="text-xs mt-2" style={{ color: 'var(--text-secondary)' }}>
@@ -864,7 +865,7 @@ export default function ProfilePage() {
                   ) : (
                     <div className="space-y-2">
                       {displayedGames.map((game) => (
-                        <div key={game.slug} className="px-3 py-2 rounded-lg" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                        <div key={game.slug} className="px-3 py-2 rounded-lg" style={{ background: 'var(--subtle-overlay)', border: '1px solid var(--subtle-border)' }}>
                           <div className="flex items-center justify-between gap-3">
                             <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{game.name}</p>
                             <p className="text-xs font-bold shrink-0" style={{ color: 'var(--neon-cyan)' }}>{game.totalPlays} plays</p>
@@ -914,7 +915,7 @@ export default function ProfilePage() {
                         const sign = isCredit ? '+' : isRedeemed ? '-' : '';
 
                         return (
-                          <div key={txn._id} className="px-3 py-2 rounded-lg" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                          <div key={txn._id} className="px-3 py-2 rounded-lg" style={{ background: 'var(--subtle-overlay)', border: '1px solid var(--subtle-border)' }}>
                             <div className="flex items-center justify-between gap-3">
                               <p className="text-xs truncate" style={{ color: 'var(--text-secondary)' }}>
                                 {txn.description || txn.type}

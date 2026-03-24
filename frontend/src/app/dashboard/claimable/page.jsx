@@ -356,7 +356,7 @@ function ClaimableSummaryContent() {
   return (
     <div className="bg-grid relative min-h-screen" style={{ overflow: 'hidden' }}>
       <div className="glow-orb" style={{ width: '30vw', height: '30vw', maxWidth: 400, maxHeight: 400, background: '#ffd93d', top: '6%', right: '4%', opacity: 0.25 }} />
-      <div className="glow-orb" style={{ width: '22vw', height: '22vw', maxWidth: 260, maxHeight: 260, background: '#00e5ff', bottom: '8%', left: '5%', opacity: 0.2 }} />
+      <div className="glow-orb" style={{ width: '22vw', height: '22vw', maxWidth: 260, maxHeight: 260, background: 'var(--neon-cyan)', bottom: '8%', left: '5%', opacity: 0.2 }} />
 
       <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
@@ -389,7 +389,7 @@ function ClaimableSummaryContent() {
         </div>
 
         <div className="glass-card overflow-hidden">
-          <div className="px-4 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+          <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--subtle-border)' }}>
             <input
               type="text"
               value={searchTerm}
@@ -397,7 +397,7 @@ function ClaimableSummaryContent() {
               placeholder="Search player name or email..."
               className="w-full text-sm rounded-lg px-3 py-2 outline-none"
               style={{
-                background: 'rgba(255,255,255,0.04)',
+                background: 'var(--subtle-overlay)',
                 border: '1px solid rgba(255,255,255,0.12)',
                 color: 'var(--text-primary)',
               }}
@@ -417,7 +417,7 @@ function ClaimableSummaryContent() {
             <div className="overflow-x-auto">
               <table className="w-full min-w-[760px]">
                 <thead>
-                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.02)' }}>
+                  <tr style={{ borderBottom: '1px solid var(--subtle-border)', background: 'var(--subtle-overlay)' }}>
                     <th className="text-left text-[11px] uppercase tracking-wider px-4 py-2" style={{ color: 'var(--text-muted)' }}>Player</th>
                     <th className="text-right text-[11px] uppercase tracking-wider px-4 py-2" style={{ color: 'var(--text-muted)' }}>Won Amount</th>
                     <th className="text-right text-[11px] uppercase tracking-wider px-4 py-2" style={{ color: 'var(--text-muted)' }}>Redeemed / Paid</th>
@@ -435,7 +435,7 @@ function ClaimableSummaryContent() {
                         background: selectedUserId === row.userId ? 'rgba(0,229,255,0.07)' : 'transparent',
                       }}
                       onMouseEnter={(e) => {
-                        if (selectedUserId !== row.userId) e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
+                        if (selectedUserId !== row.userId) e.currentTarget.style.background = 'var(--subtle-overlay)';
                       }}
                       onMouseLeave={(e) => {
                         if (selectedUserId !== row.userId) e.currentTarget.style.background = 'transparent';
@@ -457,7 +457,7 @@ function ClaimableSummaryContent() {
                     </tr>
                   ))}
 
-                  <tr style={{ borderTop: '2px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.03)' }}>
+                  <tr style={{ borderTop: '2px solid rgba(255,255,255,0.12)', background: 'var(--subtle-overlay)' }}>
                     <td className="px-4 py-3 text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Total</td>
                     <td className="px-4 py-3 text-right text-sm font-bold" style={{ color: 'var(--text-secondary)' }}>
                       PKR {parseFloat(Number(summary.totals.wonAmount).toFixed(2)).toLocaleString()}
@@ -495,7 +495,7 @@ function ClaimableSummaryContent() {
               style={{ width: '100%', maxWidth: 1100, maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="px-4 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+              <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--subtle-border)', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
                 <div>
                   <p className="text-[11px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Player Contest Reward Summary</p>
                   <h2 className="text-lg font-bold mt-1" style={{ color: 'var(--text-primary)' }}>
@@ -510,8 +510,8 @@ function ClaimableSummaryContent() {
                   onClick={closeDetailModal}
                   className="text-xs font-semibold px-2.5 py-1.5 rounded-lg"
                   style={{
-                    background: 'rgba(255,255,255,0.06)',
-                    border: '1px solid rgba(255,255,255,0.15)',
+                    background: 'var(--subtle-border)',
+                    border: '1px solid var(--input-border)',
                     color: 'var(--text-secondary)',
                   }}
                 >
@@ -536,7 +536,7 @@ function ClaimableSummaryContent() {
                 <div className="overflow-auto" style={{ maxHeight: 'calc(85vh - 120px)' }}>
                   <table className="w-full min-w-[900px]">
                     <thead>
-                      <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.02)' }}>
+                      <tr style={{ borderBottom: '1px solid var(--subtle-border)', background: 'var(--subtle-overlay)' }}>
                         <th className="text-left text-[11px] uppercase tracking-wider px-4 py-2" style={{ color: 'var(--text-muted)' }}>Game / Contest</th>
                         <th className="text-right text-[11px] uppercase tracking-wider px-4 py-2" style={{ color: 'var(--text-muted)' }}>Rank</th>
                         <th className="text-right text-[11px] uppercase tracking-wider px-4 py-2" style={{ color: 'var(--text-muted)' }}>Won</th>
@@ -577,7 +577,7 @@ function ClaimableSummaryContent() {
                         );
                       })}
 
-                      <tr style={{ borderTop: '2px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.03)' }}>
+                      <tr style={{ borderTop: '2px solid rgba(255,255,255,0.12)', background: 'var(--subtle-overlay)' }}>
                         <td className="px-4 py-3 text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Total</td>
                         <td className="px-4 py-3 text-right text-sm font-bold" style={{ color: 'var(--text-secondary)' }}>-</td>
                         <td className="px-4 py-3 text-right text-sm font-bold" style={{ color: 'var(--text-secondary)' }}>
@@ -597,7 +597,7 @@ function ClaimableSummaryContent() {
               )}
 
               {!detailLoading && !detailError && playerDetail.redeemedUnmappedAmount > 0 && (
-                <div className="px-4 py-3 text-xs" style={{ color: '#ff9f43', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                <div className="px-4 py-3 text-xs" style={{ color: '#ff9f43', borderTop: '1px solid var(--subtle-border)' }}>
                   Note: PKR {Math.round(playerDetail.redeemedUnmappedAmount).toLocaleString()} redeemed amount is beyond contest winnings and cannot be mapped to a specific contest.
                 </div>
               )}

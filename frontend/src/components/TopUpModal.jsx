@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect } from 'react';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
@@ -14,7 +14,7 @@ const CARD_ELEMENT_OPTIONS = {
       fontFamily: 'inherit',
       fontSize: '15px',
       fontWeight: '600',
-      '::placeholder': { color: 'rgba(255,255,255,0.3)' },
+      '::placeholder': { color: 'var(--text-muted)' },
       iconColor: '#00e5ff',
     },
     invalid: { color: '#ff5c8a', iconColor: '#ff5c8a' },
@@ -210,7 +210,7 @@ function TopUpForm({ onClose, onSuccess, neededAmount, color, finalAmount, setFi
       {step === 1 && (
         <div>
           <h2 style={{ margin: '0 0 4px', fontSize: 20, fontWeight: 800, color: '#fff' }}>Add Funds</h2>
-          <p style={{ margin: '0 0 20px', fontSize: 12, color: 'rgba(255,255,255,0.35)' }}>
+          <p style={{ margin: '0 0 20px', fontSize: 12, color: 'var(--text-muted)' }}>
             Choose how much to add to your wallet
           </p>
 
@@ -235,8 +235,8 @@ function TopUpForm({ onClose, onSuccess, neededAmount, color, finalAmount, setFi
                 <button key={p} onClick={() => { setAmount(String(p)); setUseCustom(false); setError(''); }}
                   style={{
                     padding: '12px 6px', borderRadius: 12, cursor: 'pointer',
-                    background: isSelected ? `linear-gradient(135deg, ${color}20, rgba(168,85,247,0.15))` : 'rgba(255,255,255,0.03)',
-                    border: `1px solid ${isSelected ? color : 'rgba(255,255,255,0.07)'}`,
+                    background: isSelected ? `linear-gradient(135deg, ${color}20, rgba(168,85,247,0.15))` : 'var(--subtle-overlay)',
+                    border: `1px solid ${isSelected ? color : 'var(--subtle-border)'}`,
                     color: isSelected ? color : 'rgba(255,255,255,0.75)',
                     fontWeight: 700, fontSize: 14,
                     boxShadow: isSelected ? `0 0 15px ${color}20` : 'none',
@@ -256,9 +256,9 @@ function TopUpForm({ onClose, onSuccess, neededAmount, color, finalAmount, setFi
             <button onClick={() => setUseCustom(true)}
               style={{
                 width: '100%', padding: '11px 14px', borderRadius: 10, cursor: 'pointer', textAlign: 'left',
-                background: useCustom ? 'rgba(0,229,255,0.05)' : 'rgba(255,255,255,0.03)',
-                border: `1px solid ${useCustom ? color : 'rgba(255,255,255,0.07)'}`,
-                color: 'rgba(255,255,255,0.5)', fontSize: 13, fontWeight: 600,
+                background: useCustom ? 'rgba(0,229,255,0.05)' : 'var(--subtle-overlay)',
+                border: `1px solid ${useCustom ? color : 'var(--subtle-border)'}`,
+                color: 'var(--text-secondary)', fontSize: 13, fontWeight: 600,
                 display: 'flex', alignItems: 'center', gap: 8,
               }}>
               <span style={{ fontSize: 14 }}>&#x270F;&#xFE0F;</span> Custom amount
@@ -273,7 +273,7 @@ function TopUpForm({ onClose, onSuccess, neededAmount, color, finalAmount, setFi
                 autoFocus
                 style={{
                   marginTop: 8, width: '100%', padding: '11px 14px', borderRadius: 10, boxSizing: 'border-box',
-                  background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(0,229,255,0.4)',
+                  background: 'var(--input-bg)', border: '1px solid rgba(0,229,255,0.4)',
                   color: '#fff', fontSize: 14, fontWeight: 600, outline: 'none',
                   boxShadow: '0 0 0 3px rgba(0,229,255,0.08)',
                 }}
@@ -298,16 +298,16 @@ function TopUpForm({ onClose, onSuccess, neededAmount, color, finalAmount, setFi
       {step === 2 && (
         <div>
           <button onClick={() => { setStep(1); setError(''); }}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 16, fontSize: 12, color: 'rgba(255,255,255,0.4)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>
+            style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 16, fontSize: 12, color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>
             &#x2190; Back
           </button>
 
           {/* Amount badge */}
           <div style={{
             textAlign: 'center', marginBottom: 20, padding: '14px 16px', borderRadius: 14,
-            background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)',
+            background: 'var(--subtle-overlay)', border: '1px solid var(--subtle-border)',
           }}>
-            <p style={{ margin: 0, fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '1.5px' }}>
+            <p style={{ margin: 0, fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1.5px' }}>
               Top-Up Amount
             </p>
             <p style={{ margin: '4px 0 0', fontSize: 28, fontWeight: 900, color: '#ffd93d', lineHeight: 1 }}>
@@ -318,7 +318,7 @@ function TopUpForm({ onClose, onSuccess, neededAmount, color, finalAmount, setFi
           {/* Saved cards section */}
           {!loadingCards && savedCards.length > 0 && (
             <div style={{ marginBottom: 18 }}>
-              <p style={{ margin: '0 0 8px', fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+              <p style={{ margin: '0 0 8px', fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>
                 Saved Cards
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -330,8 +330,8 @@ function TopUpForm({ onClose, onSuccess, neededAmount, color, finalAmount, setFi
                       style={{
                         display: 'flex', alignItems: 'center', gap: 10,
                         padding: '11px 14px', borderRadius: 12, cursor: 'pointer',
-                        background: isActive ? `rgba(0,229,255,0.06)` : 'rgba(255,255,255,0.02)',
-                        border: `1.5px solid ${isActive ? color : 'rgba(255,255,255,0.06)'}`,
+                        background: isActive ? `rgba(0,229,255,0.06)` : 'var(--subtle-overlay)',
+                        border: `1.5px solid ${isActive ? color : 'var(--subtle-border)'}`,
                         transition: 'all 0.2s',
                       }}
                     >
@@ -350,7 +350,7 @@ function TopUpForm({ onClose, onSuccess, neededAmount, color, finalAmount, setFi
                         &#x2022;&#x2022;&#x2022;&#x2022; {card.last4}
                       </span>
 
-                      <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginLeft: 'auto' }}>
+                      <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 'auto' }}>
                         {String(card.expMonth).padStart(2, '0')}/{String(card.expYear).slice(-2)}
                       </span>
 
@@ -379,8 +379,8 @@ function TopUpForm({ onClose, onSuccess, neededAmount, color, finalAmount, setFi
                   style={{
                     display: 'flex', alignItems: 'center', gap: 10,
                     padding: '11px 14px', borderRadius: 12, cursor: 'pointer',
-                    background: selectedCard === null ? 'rgba(0,229,255,0.06)' : 'rgba(255,255,255,0.02)',
-                    border: `1.5px solid ${selectedCard === null ? color : 'rgba(255,255,255,0.06)'}`,
+                    background: selectedCard === null ? 'rgba(0,229,255,0.06)' : 'var(--subtle-overlay)',
+                    border: `1.5px solid ${selectedCard === null ? color : 'var(--subtle-border)'}`,
                     transition: 'all 0.2s',
                   }}
                 >
@@ -391,7 +391,7 @@ function TopUpForm({ onClose, onSuccess, neededAmount, color, finalAmount, setFi
                   }}>
                     {selectedCard === null && <div style={{ width: 8, height: 8, borderRadius: '50%', background: color }} />}
                   </div>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.6)' }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)' }}>
                     + Use a new card
                   </span>
                 </div>
@@ -406,7 +406,7 @@ function TopUpForm({ onClose, onSuccess, neededAmount, color, finalAmount, setFi
 
               <button onClick={handlePaySaved} disabled={processing} style={{
                 width: '100%', padding: '14px 0', borderRadius: 14,
-                background: processing ? 'rgba(255,255,255,0.08)' : `linear-gradient(135deg, ${color} 0%, #a855f7 100%)`,
+                background: processing ? 'var(--subtle-border)' : `linear-gradient(135deg, ${color} 0%, #a855f7 100%)`,
                 border: 'none', color: '#fff', fontWeight: 800, fontSize: 15, cursor: processing ? 'wait' : 'pointer',
                 boxShadow: processing ? 'none' : `0 4px 24px ${color}30`,
                 transition: 'all 0.2s', opacity: processing ? 0.6 : 1,
@@ -435,7 +435,7 @@ function TopUpForm({ onClose, onSuccess, neededAmount, color, finalAmount, setFi
           {selectedCard === null && (
             <>
               <div style={{ marginBottom: 14 }}>
-                <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 5 }}>
+                <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 5 }}>
                   Cardholder Name
                 </label>
                 <input
@@ -446,8 +446,8 @@ function TopUpForm({ onClose, onSuccess, neededAmount, color, finalAmount, setFi
                   maxLength={26}
                   style={{
                     width: '100%', padding: '12px 14px', borderRadius: 10, boxSizing: 'border-box',
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.08)',
+                    background: 'var(--input-bg)',
+                    border: '1px solid var(--subtle-border)',
                     color: '#fff', fontSize: 14, fontWeight: 600, outline: 'none',
                     transition: 'border-color 0.2s',
                   }}
@@ -456,13 +456,13 @@ function TopUpForm({ onClose, onSuccess, neededAmount, color, finalAmount, setFi
               </div>
 
               <div style={{ marginBottom: 14 }}>
-                <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 5 }}>
+                <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 5 }}>
                   Card Details
                 </label>
                 <div style={{
                   padding: '14px 14px', borderRadius: 10,
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.08)',
+                  background: 'var(--input-bg)',
+                  border: '1px solid var(--subtle-border)',
                   transition: 'border-color 0.2s',
                 }}>
                   <CardElement
@@ -485,7 +485,7 @@ function TopUpForm({ onClose, onSuccess, neededAmount, color, finalAmount, setFi
                   onClick={() => setSaveCard(!saveCard)}
                   style={{
                     width: 18, height: 18, borderRadius: 5, flexShrink: 0,
-                    background: saveCard ? color : 'rgba(255,255,255,0.06)',
+                    background: saveCard ? color : 'var(--subtle-border)',
                     border: `1.5px solid ${saveCard ? color : 'rgba(255,255,255,0.15)'}`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     transition: 'all 0.2s', cursor: 'pointer',
@@ -493,7 +493,7 @@ function TopUpForm({ onClose, onSuccess, neededAmount, color, finalAmount, setFi
                 >
                   {saveCard && <span style={{ color: '#fff', fontSize: 12, fontWeight: 900, lineHeight: 1 }}>&#x2713;</span>}
                 </div>
-                <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>
+                <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600 }}>
                   Save this card for future payments
                 </span>
               </label>
@@ -502,7 +502,7 @@ function TopUpForm({ onClose, onSuccess, neededAmount, color, finalAmount, setFi
 
               <button onClick={handlePayNew} disabled={processing} style={{
                 width: '100%', padding: '14px 0', borderRadius: 14,
-                background: processing ? 'rgba(255,255,255,0.08)' : `linear-gradient(135deg, ${color} 0%, #a855f7 100%)`,
+                background: processing ? 'var(--subtle-border)' : `linear-gradient(135deg, ${color} 0%, #a855f7 100%)`,
                 border: 'none', color: '#fff', fontWeight: 800, fontSize: 15, cursor: processing ? 'wait' : 'pointer',
                 boxShadow: processing ? 'none' : `0 4px 24px ${color}30`,
                 transition: 'all 0.2s', opacity: processing ? 0.6 : 1,
@@ -545,7 +545,7 @@ function TopUpForm({ onClose, onSuccess, neededAmount, color, finalAmount, setFi
           <h2 style={{ margin: '0 0 6px', fontSize: 22, fontWeight: 900, color: '#fff' }}>
             PKR {computedAmount.toLocaleString()} Added!
           </h2>
-          <p style={{ margin: '0 0 24px', fontSize: 13, color: 'rgba(255,255,255,0.4)' }}>
+          <p style={{ margin: '0 0 24px', fontSize: 13, color: 'var(--text-muted)' }}>
             Your wallet has been topped up successfully.
           </p>
           <button onClick={() => { if (onSuccess) onSuccess(computedAmount); onClose(); }} style={{
@@ -580,7 +580,7 @@ export default function TopUpModal({ onClose, onSuccess, neededAmount = 0, color
       <div style={{
         width: '100%', maxWidth: 400, position: 'relative',
         background: 'linear-gradient(145deg, #0e0e24 0%, #12103a 60%, #0e0e24 100%)',
-        border: '1px solid rgba(255,255,255,0.07)',
+        border: '1px solid var(--subtle-border)',
         borderRadius: 24, overflow: 'hidden',
         animation: 'topUpSlideUp 0.3s cubic-bezier(0.34,1.4,0.64,1)',
         boxShadow: '0 30px 100px rgba(0,0,0,0.7), 0 0 60px rgba(0,229,255,0.06)',
@@ -591,9 +591,9 @@ export default function TopUpModal({ onClose, onSuccess, neededAmount = 0, color
         <button onClick={onClose} style={{
           position: 'absolute', top: 14, right: 14,
           width: 28, height: 28, borderRadius: '50%',
-          background: 'rgba(255,255,255,0.06)',
-          border: '1px solid rgba(255,255,255,0.08)',
-          color: 'rgba(255,255,255,0.5)', cursor: 'pointer',
+          background: 'var(--subtle-border)',
+          border: '1px solid var(--subtle-border)',
+          color: 'var(--text-secondary)', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: 14, zIndex: 2, transition: 'all 0.2s',
         }}>&#x2715;</button>
