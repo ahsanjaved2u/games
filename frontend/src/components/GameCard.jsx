@@ -364,6 +364,10 @@ export default function GameCard({ game, i, isLoggedIn }) {
           <div className="btn-neon text-sm w-full text-center" style={{ opacity: 0.4, cursor: 'not-allowed' }}>
             🔒 Not Available
           </div>
+        ) : !isLoggedIn && (game.entryFee > 0 || game.attemptCost > 0) ? (
+          <Link href="/signup" className="btn-neon text-sm w-full text-center" style={{ textDecoration: 'none', opacity: 0.7 }}>
+            🔒 Sign Up to Play
+          </Link>
         ) : (
           <Link href={`/games/${game.slug}`} className="btn-neon btn-neon-primary text-sm w-full text-center" style={{ textDecoration: 'none' }}>
             {game.entryFee > 0 ? `🎟️ Enter — PKR ${game.entryFee}` : game.attemptCost > 0 ? `🎯 Play — PKR ${game.attemptCost}/try` : '▶ Play Now'}

@@ -120,6 +120,9 @@ function DashboardContent() {
             <Link href="/dashboard/wallet" className="btn-neon text-sm" style={{ textDecoration: 'none' }}>
               💰 Wallets
             </Link>
+            <Link href="/dashboard/settings" className="btn-neon text-sm" style={{ textDecoration: 'none' }}>
+              ⚙️ Settings
+            </Link>
             <button onClick={() => { fetchStats(); fetchUsers(); }} className="btn-neon text-sm">
               <RefreshIcon /> Refresh
             </button>

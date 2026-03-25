@@ -14,6 +14,19 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [payGame, setPayGame] = useState(null);
   const [heroSlide, setHeroSlide] = useState(0);
+  const [signupReward, setSignupReward] = useState(0);
+
+  /* Fetch signup reward for CTA */
+  useEffect(() => {
+    if (isLoggedIn) return;
+    (async () => {
+      try {
+        const res = await fetch(`${API}/settings/public`);
+        const data = await res.json();
+        setSignupReward(Number(data.signupReward) || 0);
+      } catch { /* ignore */ }
+    })();
+  }, [isLoggedIn]);
 
   const isCurrentlyLive = (game) => {
     const now = new Date();
@@ -148,7 +161,7 @@ export default function Home() {
           {!isLoggedIn && (
             <div className="text-center mt-2">
               <Link href="/signup" className="btn-neon btn-neon-primary text-sm px-6 py-2.5" style={{ textDecoration: 'none' }}>
-                ✨ Create Free Account
+                ✨ Create Free Account{signupReward > 0 ? ` & Get Rs ${signupReward} Reward` : ''}
               </Link>
             </div>
           )}

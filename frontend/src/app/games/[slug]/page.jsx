@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import GameInstructions from '@/components/GameInstructions';
 import EntryFeeModal from '@/components/EntryFeeModal';
+import SignupRewardModal from '@/components/SignupRewardModal';
 
 const GAMES_BASE = process.env.NEXT_PUBLIC_GAMES_BASE_URL || '/games';
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
@@ -22,6 +23,12 @@ export default function GamePage() {
   const [gameWidth, setGameWidth] = useState(0);
   const iframeRef = useRef(null);
   const { isLoggedIn, authFetch, user, fetchBalance, walletBalance } = useAuth();
+
+  /* Signup reward modal states (for guests) */
+  const [showSignupModal, setShowSignupModal] = useState(false);
+  const [signupModalContext, setSignupModalContext] = useState('in-game');
+  const [signupReward, setSignupReward] = useState(0);
+  const inGamePromptShown = useRef(false);
 
   /* Fetch game metadata */
   useEffect(() => {
@@ -68,6 +75,31 @@ export default function GamePage() {
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = ''; };
   }, []);
+
+  /* Fetch signup reward for guest prompt */
+  useEffect(() => {
+    if (isLoggedIn) return;
+    (async () => {
+      try {
+        const res = await fetch(`${API}/settings/public`);
+        const data = await res.json();
+        setSignupReward(Number(data.signupReward) || 0);
+      } catch { /* ignore */ }
+    })();
+  }, [isLoggedIn]);
+
+  /* Show signup modal once during gameplay for guests (after 30s) */
+  useEffect(() => {
+    if (isLoggedIn || !started || inGamePromptShown.current) return;
+    const timer = setTimeout(() => {
+      if (!inGamePromptShown.current) {
+        inGamePromptShown.current = true;
+        setSignupModalContext('in-game');
+        setShowSignupModal(true);
+      }
+    }, 30000);
+    return () => clearTimeout(timer);
+  }, [isLoggedIn, started]);
 
   /* Fetch leaderboard and send to iframe */
   const sendLeaderboardToIframe = useCallback(async () => {
@@ -123,7 +155,12 @@ export default function GamePage() {
         return;
       }
       if (e.data?.type === 'GAME_OVER') {
-        if (!isLoggedIn) return;
+        if (!isLoggedIn) {
+          // Show signup modal on game over for guests
+          setSignupModalContext('game-over');
+          setShowSignupModal(true);
+          return;
+        }
         try {
           const result = await authFetch('/scores', {
             method: 'POST',
@@ -424,6 +461,16 @@ export default function GamePage() {
         title={game.name}
         tabIndex={0}
       />
+
+      {/* Signup reward modal for guests */}
+      {!isLoggedIn && (
+        <SignupRewardModal
+          show={showSignupModal}
+          rewardAmount={signupReward}
+          onClose={() => { setShowSignupModal(false); setTimeout(() => iframeRef.current?.focus(), 100); }}
+          context={signupModalContext}
+        />
+      )}
     </div>
   );
 }

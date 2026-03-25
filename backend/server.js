@@ -14,6 +14,7 @@ const scoreRoutes = require('./routes/scoreRoutes');
 const gameRoutes = require('./routes/gameRoutes');
 const walletRoutes = require('./routes/walletRoutes');
 const entryRoutes = require('./routes/entryRoutes');
+const settingsRoutes = require('./routes/settingsRoutes');
 const stripeRoutes = require('./stripe/stripeRoutes');
 
 // Competitive prize cron
@@ -46,6 +47,7 @@ app.use('/api/scores', scoreRoutes);
 app.use('/api/games', gameRoutes);
 app.use('/api/wallet', walletRoutes);
 app.use('/api/entries', entryRoutes);
+app.use('/api/settings', settingsRoutes);
 app.use('/api/stripe', stripeRoutes);
 
 // Health check

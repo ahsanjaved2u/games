@@ -3,6 +3,7 @@ const Game = require('../models/Game');
 const GameScore = require('../models/GameScore');
 const Wallet = require('../models/Wallet');
 const Transaction = require('../models/Transaction');
+const AppSettings = require('../models/AppSettings');
 const crypto = require('crypto');
 const { sendVerificationCode } = require('../utils/mailer');
 
@@ -31,12 +32,35 @@ exports.register = async (req, res, next) => {
         await user.save({ validateBeforeSave: false });
         sendVerificationCode(email, name, code).catch(err => console.error('[verify-email]', err.message));
 
+        // Credit signup reward if configured
+        let signupRewardAmount = 0;
+        try {
+            const reward = await AppSettings.getSetting('signupReward', 0);
+            signupRewardAmount = Number(reward) || 0;
+            if (signupRewardAmount > 0) {
+                let wallet = await Wallet.findOne({ user: user._id });
+                if (!wallet) wallet = await Wallet.create({ user: user._id, balance: 0 });
+                wallet.balance = parseFloat((wallet.balance + signupRewardAmount).toFixed(2));
+                await wallet.save();
+                await Transaction.create({
+                    user: user._id,
+                    type: 'credit',
+                    amount: signupRewardAmount,
+                    description: 'Signup reward',
+                    status: 'completed',
+                });
+            }
+        } catch (err) {
+            console.error('[signup-reward]', err.message);
+        }
+
         const token = user.getSignedJwtToken();
 
         res.status(201).json({
             success: true,
             token,
             user: { id: user._id, name: user.name, email: user.email, role: user.role, emailVerified: false },
+            signupReward: signupRewardAmount,
         });
     } catch (error) {
         next(error);
