@@ -55,6 +55,22 @@ app.get('/api/health', (req, res) => {
     res.status(200).json({ success: true, message: 'Server is running' });
 });
 
+// ── Contact form endpoint ──
+const { sendContactEmail } = require('./utils/mailer');
+app.post('/api/contact', async (req, res) => {
+    const { name, email, subject, message } = req.body;
+    if (!name || !email || !subject || !message) {
+        return res.status(400).json({ success: false, message: 'All fields are required' });
+    }
+    try {
+        await sendContactEmail(name, email, subject, message);
+        res.json({ success: true, message: 'Message sent successfully' });
+    } catch (err) {
+        console.error('[contact]', err.message);
+        res.status(500).json({ success: false, message: 'Failed to send message' });
+    }
+});
+
 // ── Error Handler (must be last) ──
 app.use(errorHandler);
 

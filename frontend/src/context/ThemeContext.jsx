@@ -336,7 +336,7 @@ export const THEMES = [
   },
 ];
 
-const STORAGE_KEY = 'gamezone-theme';
+const STORAGE_KEY = 'gamevesta-theme';
 const ThemeContext = createContext();
 
 export function ThemeProvider({ children }) {

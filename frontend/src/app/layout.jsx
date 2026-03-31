@@ -18,13 +18,64 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "GameZone — Play. Compete. Win.",
-  description: "Your ultimate gaming destination. Play browser games, compete with friends, and climb the leaderboards.",
+  metadataBase: new URL('https://gamevesta.com'),
+  title: {
+    default: 'GameVesta — Play. Compete. Win.',
+    template: '%s | GameVesta',
+  },
+  description: 'GameVesta is a skill-based browser gaming platform. Play free and paid HTML5 games, earn real cash rewards, and compete with players for prize pools — all in PKR.',
+  keywords: ['browser games', 'skill games', 'earn money playing games', 'online gaming Pakistan', 'compete win cash', 'GameVesta', 'gamevesta.com', 'real money games PKR'],
+  authors: [{ name: 'GameVesta', url: 'https://gamevesta.com' }],
+  creator: 'GameVesta',
+  publisher: 'GameVesta',
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true },
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    url: 'https://gamevesta.com',
+    siteName: 'GameVesta',
+    title: 'GameVesta — Play. Compete. Win.',
+    description: 'Skill-based browser gaming platform. Earn real cash rewards by playing HTML5 games and competing in prize pools.',
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'GameVesta — Play. Compete. Win.' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'GameVesta — Play. Compete. Win.',
+    description: 'Skill-based browser gaming platform. Earn real cash rewards by playing HTML5 games.',
+    images: ['/og-image.png'],
+    creator: '@gamevesta',
+  },
+  alternates: {
+    canonical: 'https://gamevesta.com',
+  },
+};
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: 'GameVesta',
+  url: 'https://gamevesta.com',
+  description: 'Skill-based browser gaming platform where players earn real cash rewards in PKR.',
+  potentialAction: {
+    '@type': 'SearchAction',
+    target: 'https://gamevesta.com/games?q={search_term_string}',
+    'query-input': 'required name=search_term_string',
+  },
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <ThemeProvider>
           <AuthProvider>

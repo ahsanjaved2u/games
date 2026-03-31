@@ -1,10 +1,12 @@
 'use client';
 
+import Link from 'next/link';
+
 const features = [
-  { icon: '🎮', title: 'Free to Play', text: 'All games are completely free — no ads, no paywalls.' },
-  { icon: '⚡', title: 'Instant Fun', text: 'No downloads needed. Just open your browser and play.' },
-  { icon: '📱', title: 'Mobile Friendly', text: 'Optimized for both desktop and mobile devices.' },
-  { icon: '🏆', title: 'Compete & Climb', text: 'Track your scores and rise up the leaderboard.' },
+  { icon: '🧠', title: 'Build Logical Thinking', text: 'Our games are designed to sharpen your problem-solving skills, boost critical thinking, and train your brain — one level at a time.' },
+  { icon: '🏆', title: 'Competitive Environment', text: 'Compete with real players, climb leaderboards, and push yourself to improve. A healthy competitive spirit drives growth.' },
+  { icon: '💰', title: 'Earn While You Play', text: 'Turn your gaming skills into real earnings. Play smart, score high, and get financially rewarded for your talent.' },
+  { icon: '📱', title: 'Play Anywhere', text: 'No downloads, no installs. Just open your browser on any device and start playing instantly.' },
 ];
 
 export default function AboutPage() {
@@ -32,13 +34,13 @@ export default function AboutPage() {
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
             }}>
-              GameZone
+              GameVesta
             </span>
           </h1>
 
           <p className="text-sm sm:text-base leading-relaxed" style={{ color: 'var(--text-muted)', maxWidth: 520, margin: '0 auto' }}>
-            A neon-powered arcade built for quick fun. We craft lightweight browser games
-            you can enjoy anywhere — no installs, no sign-up required.
+            A skill-based gaming platform where strategy meets reward. Sharpen your mind,
+            compete with real players, and earn real money — all from your browser.
           </p>
         </div>
 
@@ -78,9 +80,9 @@ export default function AboutPage() {
             Our Mission
           </h2>
           <p className="text-sm leading-relaxed mb-6" style={{ color: 'var(--text-muted)', maxWidth: 500, margin: '0 auto 24px' }}>
-            We believe gaming should be simple and accessible. GameZone is a passion project
-            focused on delivering quick, satisfying experiences wrapped in a slick neon aesthetic.
-            New games are always in the works — stay tuned!
+            At GameVesta, we're on a mission to make gaming meaningful. We build an ecosystem
+            where players develop logical thinking, thrive in a competitive environment, and
+            earn financial rewards — all through skill-based browser games that anyone can access.
           </p>
 
           <div className="flex items-center justify-center gap-3 flex-wrap">
@@ -89,23 +91,50 @@ export default function AboutPage() {
               color: 'var(--neon-cyan)',
               border: '1px solid rgba(0,229,255,0.2)',
             }}>
-              HTML5 Canvas
+              Skill-Based Gaming
             </span>
             <span className="text-xs font-medium px-3 py-1.5 rounded-full" style={{
               background: 'rgba(168,85,247,0.08)',
               color: 'var(--neon-purple)',
               border: '1px solid rgba(168,85,247,0.2)',
             }}>
-              Next.js
+              Real Rewards
             </span>
             <span className="text-xs font-medium px-3 py-1.5 rounded-full" style={{
               background: 'rgba(0,255,136,0.08)',
               color: 'var(--neon-green)',
               border: '1px solid rgba(0,255,136,0.2)',
             }}>
-              Open Source
+              Community Driven
             </span>
           </div>
+        </div>
+
+        {/* Contact CTA */}
+        <div className="mt-10 text-center animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
+          <div style={{ height: 1, background: 'linear-gradient(90deg, transparent, rgba(0,229,255,0.18), transparent)', marginBottom: 32 }} />
+          <p className="text-sm mb-3" style={{ color: 'var(--text-muted)' }}>
+            Want to learn more or partner with us?
+          </p>
+          <Link
+            href="/contact"
+            className="inline-block px-6 py-2.5 rounded-xl text-sm font-medium transition-all duration-200"
+            style={{
+              background: 'var(--accent-gradient, linear-gradient(135deg, var(--neon-cyan), var(--neon-purple)))',
+              color: '#fff',
+              textDecoration: 'none',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.boxShadow = '0 0 20px color-mix(in srgb, var(--neon-cyan) 30%, transparent)';
+              e.currentTarget.style.transform = 'translateY(-1px)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.boxShadow = 'none';
+              e.currentTarget.style.transform = 'translateY(0)';
+            }}
+          >
+            ✉️ Get in Touch
+          </Link>
         </div>
       </div>
     </div>

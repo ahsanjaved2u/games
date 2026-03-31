@@ -43,6 +43,7 @@ const navLinks = [
   { label: 'Leaderboard', href: '/leaderboard' },
   { label: 'FAQ', href: '/faq' },
   { label: 'About', href: '/about' },
+  { label: 'Contact', href: '/contact' },
 ];
 
 export default function Navbar() {
@@ -131,7 +132,7 @@ export default function Navbar() {
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
             }}>
-              GameZone
+              GameVesta
             </span>
           </Link>
 

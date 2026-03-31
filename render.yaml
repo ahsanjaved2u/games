@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: gamezone-backend
+    name: gamevesta-backend
     runtime: node
     rootDir: backend
     buildCommand: npm install

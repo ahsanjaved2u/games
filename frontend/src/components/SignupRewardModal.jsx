@@ -105,7 +105,7 @@ export default function SignupRewardModal({ show, rewardAmount = 0, onClose, con
             textAlign: 'center', fontSize: 20, fontWeight: 800,
             color: 'var(--text-primary)', marginBottom: 6, lineHeight: 1.3,
           }}>
-            {hasReward ? 'Sign Up & Get Rewarded!' : 'Join GameZone!'}
+            {hasReward ? 'Sign Up & Get Rewarded!' : 'Join GameVesta!'}
           </h2>
 
           {hasReward && (

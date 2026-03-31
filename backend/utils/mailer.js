@@ -17,7 +17,7 @@ const transporter = nodemailer.createTransport({
 });
 
 const from = () =>
-  `"${process.env.EMAIL_FROM_NAME || 'GameZone'}" <${process.env.EMAIL_USER}>`;
+  `"${process.env.EMAIL_FROM_NAME || 'GameVesta'}" <${process.env.EMAIL_USER}>`;
 
 const send = async ({ to, subject, html }) => {
   if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) return;
@@ -98,7 +98,7 @@ const sendWithdrawalRequestToAdmin = async (player, amount, paymentMethod, note)
         </div>
         <p class="small">Log in to Admin Dashboard → Wallet Management to approve or reject.</p>
       </div>
-      <div class="ftr">GameZone Admin · ${ts()}</div>`),
+      <div class="ftr">GameVesta Admin · ${ts()}</div>`),
   });
 };
 
@@ -117,7 +117,7 @@ const sendWithdrawalApprovedToPlayer = async (playerEmail, playerName, amount) =
           Allow 1–2 business days for the amount to reflect in your account.
         </p>
       </div>
-      <div class="ftr">GameZone · ${ts()}</div>`),
+      <div class="ftr">GameVesta · ${ts()}</div>`),
   });
 };
 
@@ -137,7 +137,7 @@ const sendWithdrawalRejectedToPlayer = async (playerEmail, playerName, amount) =
           You can submit a new request at any time.
         </p>
       </div>
-      <div class="ftr">GameZone · ${ts()}</div>`),
+      <div class="ftr">GameVesta · ${ts()}</div>`),
   });
 };
 
@@ -161,7 +161,31 @@ const sendVerificationCode = async (playerEmail, playerName, code) => {
           This code expires in <strong>7 days</strong>. If you didn't sign up, ignore this email.
         </p>
       </div>
-      <div class="ftr">GameZone · ${ts()}</div>`),
+      <div class="ftr">GameVesta · ${ts()}</div>`),
+  });
+};
+
+// ── 5. Contact form → email admin ───────────────────────────────
+const sendContactEmail = async (name, email, subject, message) => {
+  const to = process.env.ADMIN_EMAIL;
+  if (!to) return;
+  await send({
+    to,
+    subject: `📩 Contact: ${subject}`,
+    html: shell(`
+      <div class="hdr"><h1>📩 New Contact Message</h1></div>
+      <div class="bdy">
+        <div class="card">
+          <table style="border-collapse:collapse;width:100%">
+            ${row('Name', name)}
+            ${row('Email', email)}
+            ${row('Subject', subject)}
+          </table>
+        </div>
+        <div class="card" style="white-space:pre-wrap">${message.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+        <p class="small">Reply directly to <strong style="color:#00e5ff">${email}</strong></p>
+      </div>
+      <div class="ftr">GameVesta · ${ts()}</div>`),
   });
 };
 
@@ -170,4 +194,5 @@ module.exports = {
   sendWithdrawalApprovedToPlayer,
   sendWithdrawalRejectedToPlayer,
   sendVerificationCode,
+  sendContactEmail,
 };

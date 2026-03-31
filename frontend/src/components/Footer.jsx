@@ -18,7 +18,7 @@ export default function Footer() {
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
             }}>
-              🎮 GameZone
+              🎮 GameVesta
             </h3>
             <p className="text-sm leading-relaxed" style={{ color: 'var(--text-muted)' }}>
               Your ultimate gaming destination. Play, compete, and climb the leaderboards.
@@ -52,7 +52,7 @@ export default function Footer() {
               Support
             </h4>
             <ul className="space-y-2">
-              {[{ label: 'Contact', href: '#' }, { label: 'FAQ', href: '/faq' }, { label: 'Privacy Policy', href: '#' }, { label: 'Terms', href: '#' }].map(item => (
+              {[{ label: 'Contact', href: '/contact' }, { label: 'FAQ', href: '/faq' }, { label: 'Privacy Policy', href: '#' }, { label: 'Terms', href: '#' }].map(item => (
                 <li key={item.label}>
                   <Link href={item.href}
                     className="text-sm transition-colors"
@@ -94,7 +94,7 @@ export default function Footer() {
           borderTop: '1px solid color-mix(in srgb, var(--neon-cyan) 6%, transparent)',
         }}>
           <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-            © {new Date().getFullYear()} GameZone. All rights reserved.
+            © {new Date().getFullYear()} GameVesta. All rights reserved.
           </p>
           <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
             Built with ❤️ for gamers

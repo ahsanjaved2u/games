@@ -95,7 +95,7 @@ export default function SettingsPage() {
           <h1 className="text-2xl sm:text-3xl font-extrabold" style={{ color: 'var(--text-primary)' }}>
             ⚙️ Settings
           </h1>
-          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>Personalize your GameZone experience</p>
+          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>Personalize your GameVesta experience</p>
         </div>
 
         <div className="space-y-4">

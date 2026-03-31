@@ -10,8 +10,8 @@ const faqSections = [
     icon: '🚀',
     questions: [
       {
-        q: 'What is GameZone?',
-        a: 'GameZone is a real-money gaming platform where you can play browser-based HTML5 games, earn cash rewards, and compete with other players for prize pools — all in PKR (Pakistani Rupees).',
+        q: 'What is GameVesta?',
+        a: 'GameVesta is a real-money gaming platform where you can play browser-based HTML5 games, earn cash rewards, and compete with other players for prize pools — all in PKR (Pakistani Rupees).',
       },
       {
         q: 'How do I create an account?',
@@ -23,7 +23,7 @@ const faqSections = [
       },
       {
         q: 'What devices can I play on?',
-        a: 'GameZone works on any modern browser — desktop, laptop, tablet, or mobile phone. Games are fully responsive and support both mouse/keyboard and touch controls.',
+        a: 'GameVesta works on any modern browser — desktop, laptop, tablet, or mobile phone. Games are fully responsive and support both mouse/keyboard and touch controls.',
       },
       {
         q: 'I forgot my password. What do I do?',
@@ -241,7 +241,7 @@ const faqSections = [
       },
       {
         q: 'Who do I contact for support?',
-        a: 'Reach out to the platform administrator via the contact information provided on the About page or through the email address listed in your withdrawal notifications.',
+        a: 'Reach out to us at support@gamevesta.com or visit our Contact page for assistance.',
       },
     ],
   },
@@ -441,12 +441,21 @@ export default function FAQPage() {
           <h3 className="text-lg font-bold mb-2" style={{ color: 'var(--text-primary)' }}>
             Still have questions?
           </h3>
-          <p className="text-sm mb-5" style={{ color: 'var(--text-muted)' }}>
-            Can't find what you're looking for? We're here to help.
+          <p className="text-sm mb-2" style={{ color: 'var(--text-muted)' }}>
+            Can't find what you're looking for? Reach out to us directly — we're happy to help.
           </p>
+          <a
+            href="mailto:support@gamevesta.com"
+            className="inline-block text-sm font-semibold mb-5 transition-colors duration-200"
+            style={{ color: 'var(--neon-cyan)', textDecoration: 'none' }}
+            onMouseEnter={e => { e.currentTarget.style.textDecoration = 'underline'; }}
+            onMouseLeave={e => { e.currentTarget.style.textDecoration = 'none'; }}
+          >
+            📧 support@gamevesta.com
+          </a>
           <div className="flex items-center justify-center gap-3 flex-wrap">
             <Link
-              href="/about"
+              href="/contact"
               className="px-5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200"
               style={{
                 background: 'color-mix(in srgb, var(--neon-cyan) 10%, transparent)',
@@ -463,7 +472,7 @@ export default function FAQPage() {
                 e.currentTarget.style.boxShadow = 'none';
               }}
             >
-              📖 About Us
+              ✉️ Contact Us
             </Link>
             <Link
               href="/games"
