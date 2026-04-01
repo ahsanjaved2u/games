@@ -67,13 +67,36 @@ const jsonLd = {
   },
 };
 
+const orgJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: 'GameVesta',
+  url: 'https://gamevesta.com',
+  logo: 'https://gamevesta.com/og-image.png',
+  description: 'GameVesta is a skill-based browser gaming platform. Play HTML5 games, earn real PKR cash rewards, and compete in prize pools.',
+  sameAs: [],
+  contactPoint: {
+    '@type': 'ContactPoint',
+    contactType: 'customer support',
+    url: 'https://gamevesta.com/contact',
+  },
+};
+
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <head>
+        <meta name="theme-color" content="#0a0b1a" />
+        <link rel="manifest" href="/manifest.json" />
+        <link rel="preconnect" href={process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'} />
+        <link rel="apple-touch-icon" href="/og-image.png" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
         />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>

@@ -1,0 +1,19 @@
+{
+  "name": "GameVesta",
+  "short_name": "GameVesta",
+  "description": "Skill-based browser gaming platform. Play, compete, and earn real cash rewards in PKR.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0b1a",
+  "theme_color": "#0a0b1a",
+  "orientation": "any",
+  "categories": ["games", "entertainment"],
+  "icons": [
+    {
+      "src": "/og-image.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
