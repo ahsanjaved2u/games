@@ -87,6 +87,7 @@ export default function RootLayout({ children }) {
     <html lang="en">
       <head>
         <meta name="theme-color" content="#0a0b1a" />
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <link rel="manifest" href="/manifest.json" />
         <link rel="dns-prefetch" href="https://games-3puq.onrender.com" />
         <link rel="preconnect" href="https://games-3puq.onrender.com" crossOrigin="anonymous" />
