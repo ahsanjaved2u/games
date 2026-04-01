@@ -80,7 +80,7 @@ export default function RootLayout({ children }) {
         <ThemeProvider>
           <AuthProvider>
             <Navbar />
-            <main className="pt-16 min-h-screen">
+            <main className="pt-12 min-h-screen">
               {children}
             </main>
             <Footer />

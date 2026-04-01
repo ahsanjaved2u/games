@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 
 // ── Icons (inline SVG to avoid extra deps) ──
@@ -51,7 +52,14 @@ export default function Navbar() {
   const [userDropdown, setUserDropdown] = useState(false);
   const [claimableTotal, setClaimableTotal] = useState(0);
   const dropdownRef = useRef(null);
+  const pathname = usePathname();
   const { user, isLoggedIn, isAdmin, logout, loading, walletBalance, authFetch } = useAuth();
+
+  // Close dropdowns on route change
+  useEffect(() => {
+    setUserDropdown(false);
+    setMobileOpen(false);
+  }, [pathname]);
 
   const fetchAdminClaimableTotal = async () => {
     if (!isLoggedIn || !isAdmin) {
@@ -119,8 +127,8 @@ export default function Navbar() {
       borderBottom: '1px solid var(--border-color)',
       backdropFilter: 'blur(16px)',
     }}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6">
+        <div className="flex items-center justify-between h-12">
 
           {/* ── Logo ── */}
           <Link href="/" className="flex items-center gap-2 group" style={{ textDecoration: 'none' }}>
@@ -137,10 +145,10 @@ export default function Navbar() {
           </Link>
 
           {/* ── Desktop Nav Links ── */}
-          <div className="hidden md:flex items-center gap-1">
+          <div className="hidden md:flex items-center gap-0.5">
             {navLinks.map(link => (
               <Link key={link.href} href={link.href}
-                className="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
+                className="px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200"
                 style={{
                   color: 'var(--text-secondary)',
                   textDecoration: 'none',
@@ -160,7 +168,7 @@ export default function Navbar() {
           </div>
 
           {/* ── Right side: Auth buttons or User dropdown ── */}
-          <div className="hidden md:flex items-center gap-3">
+          <div className="hidden md:flex items-center gap-2">
             {isLoggedIn ? (
               <>
                 {/* Wallet / Claimable Badge */}
@@ -315,11 +323,11 @@ export default function Navbar() {
           background: 'var(--bg-secondary)',
           borderTop: '1px solid var(--border-color)',
         }}>
-          <div className="px-4 py-4 space-y-1">
+          <div className="px-3 py-2 space-y-0.5">
             {navLinks.map(link => (
               <Link key={link.href} href={link.href}
                 onClick={() => setMobileOpen(false)}
-                className="block px-4 py-3 rounded-xl text-base font-medium transition-all"
+                className="block px-3 py-2 rounded-xl text-base font-medium transition-all"
                 style={{
                   color: 'var(--text-secondary)',
                   textDecoration: 'none',

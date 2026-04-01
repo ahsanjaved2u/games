@@ -9,17 +9,13 @@ export default function Footer() {
       borderTop: '1px solid var(--border-color)',
     }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-3 gap-4 justify-items-center text-center">
 
           {/* Brand */}
-          <div className="sm:col-span-2 lg:col-span-1">
-            <h3 className="text-lg font-bold mb-3" style={{
-              background: 'var(--accent-gradient, linear-gradient(135deg, var(--neon-cyan), var(--neon-purple)))',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-            }}>
+          <div>
+            <h4 className="text-sm font-semibold mb-3 uppercase tracking-wider" style={{ color: 'var(--neon-cyan)', fontSize: '11px' }}>
               🎮 GameVesta
-            </h3>
+            </h4>
             <p className="text-sm leading-relaxed" style={{ color: 'var(--text-muted)' }}>
               Your ultimate gaming destination. Play, compete, and climb the leaderboards.
             </p>
@@ -28,31 +24,10 @@ export default function Footer() {
           {/* Quick Links */}
           <div>
             <h4 className="text-sm font-semibold mb-3 uppercase tracking-wider" style={{ color: 'var(--neon-cyan)', fontSize: '11px' }}>
-              Quick Links
+              🔗 Quick Links
             </h4>
             <ul className="space-y-2">
-              {['Home', 'Games', 'Leaderboard', 'About'].map(item => (
-                <li key={item}>
-                  <Link href={`/${item === 'Home' ? '' : item.toLowerCase()}`}
-                    className="text-sm transition-colors"
-                    style={{ color: 'var(--text-muted)', textDecoration: 'none' }}
-                    onMouseEnter={e => { e.currentTarget.style.color = 'var(--neon-cyan)'; }}
-                    onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; }}
-                  >
-                    {item}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Support */}
-          <div>
-            <h4 className="text-sm font-semibold mb-3 uppercase tracking-wider" style={{ color: 'var(--neon-cyan)', fontSize: '11px' }}>
-              Support
-            </h4>
-            <ul className="space-y-2">
-              {[{ label: 'Contact', href: '/contact' }, { label: 'FAQ', href: '/faq' }, { label: 'Privacy Policy', href: '#' }, { label: 'Terms', href: '#' }].map(item => (
+              {[{ label: 'Home', href: '/' }, { label: 'Games', href: '/games' }, { label: 'Leaderboard', href: '/leaderboard' }, { label: 'About', href: '/about' }].map(item => (
                 <li key={item.label}>
                   <Link href={item.href}
                     className="text-sm transition-colors"
@@ -67,26 +42,27 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Connect */}
+          {/* Support */}
           <div>
             <h4 className="text-sm font-semibold mb-3 uppercase tracking-wider" style={{ color: 'var(--neon-cyan)', fontSize: '11px' }}>
-              Connect
+              🛟 Support
             </h4>
             <ul className="space-y-2">
-              {['Discord', 'Twitter', 'GitHub', 'YouTube'].map(item => (
-                <li key={item}>
-                  <Link href="#"
+              {[{ label: 'Contact', href: '/contact' }, { label: 'FAQ', href: '/faq' }, { label: 'Privacy Policy', href: '/privacy-policy' }, { label: 'Terms', href: '/terms' }].map(item => (
+                <li key={item.label}>
+                  <Link href={item.href}
                     className="text-sm transition-colors"
                     style={{ color: 'var(--text-muted)', textDecoration: 'none' }}
                     onMouseEnter={e => { e.currentTarget.style.color = 'var(--neon-cyan)'; }}
                     onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; }}
                   >
-                    {item}
+                    {item.label}
                   </Link>
                 </li>
               ))}
             </ul>
           </div>
+
         </div>
 
         {/* Bottom bar */}
