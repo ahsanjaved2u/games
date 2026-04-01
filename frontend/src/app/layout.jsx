@@ -88,7 +88,8 @@ export default function RootLayout({ children }) {
       <head>
         <meta name="theme-color" content="#0a0b1a" />
         <link rel="manifest" href="/manifest.json" />
-        <link rel="preconnect" href={process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'} />
+        <link rel="dns-prefetch" href="https://games-3puq.onrender.com" />
+        <link rel="preconnect" href="https://games-3puq.onrender.com" crossOrigin="anonymous" />
         <link rel="apple-touch-icon" href="/og-image.png" />
         <script
           type="application/ld+json"

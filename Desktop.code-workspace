@@ -3,5 +3,13 @@
 		{
 			"path": ".."
 		}
-	]
+	],
+	"settings": {
+		"files.exclude": {
+			"**/node_modules": true
+		},
+		"search.exclude": {
+			"**/node_modules": true
+		}
+	}
 }

@@ -43,11 +43,13 @@ export function AuthProvider({ children }) {
     } catch { /* ignore */ }
   }, [token]);
 
-  // Fetch balance when token is available, then poll every 30s
+  // Fetch balance when token is available, then poll every 30s (only when tab visible)
   useEffect(() => {
     if (!token) return;
     fetchBalance();
-    const id = setInterval(fetchBalance, 30000);
+    const id = setInterval(() => {
+      if (document.visibilityState === 'visible') fetchBalance();
+    }, 30000);
     return () => clearInterval(id);
   }, [token, fetchBalance]);
 

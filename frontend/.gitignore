@@ -38,4 +38,7 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
+
+# Game files — served from Cloudflare R2, not committed to git
+/public/games/*/
 next-env.d.ts

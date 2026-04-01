@@ -1,6 +1,8 @@
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 const Game = require('../models/Game');
+const { uploadToR2, deleteR2Folder } = require('../config/r2');
 
 // Resolve the directory where game files are stored
 // Default: ../frontend/public/games  (local dev)
@@ -15,17 +17,6 @@ const GAMES_DIR = process.env.GAMES_UPLOAD_DIR
 // ────────────────────────────────────────
 const getGames = async (req, res) => {
   try {
-    // Auto-publish / unpublish competitive games based on schedule
-    const now = new Date();
-    await Game.updateMany(
-      { gameType: 'competitive', scheduleStart: { $lte: now }, scheduleEnd: { $gt: now }, isLive: false, prizesDistributed: { $ne: true }, manualUnpublish: { $ne: true } },
-      { $set: { isLive: true } }
-    );
-    await Game.updateMany(
-      { gameType: 'competitive', scheduleEnd: { $lte: now }, isLive: true },
-      { $set: { isLive: false } }
-    );
-
     const games = await Game.find()
       .select('-instructions')
       .sort({ createdAt: -1 });
@@ -205,8 +196,22 @@ const deleteGame = async (req, res) => {
     const game = await Game.findById(req.params.id);
     if (!game) return res.status(404).json({ message: 'Game not found' });
 
+    // Delete game files from R2
+    if (game.gamePath) {
+      console.log(`[deleteGame] Deleting R2 folder: ${game.gamePath}/`);
+      try {
+        await deleteR2Folder(`${game.gamePath}/`);
+        console.log(`[deleteGame] R2 cleanup successful for: ${game.gamePath}`);
+      } catch (err) {
+        console.error('[deleteGame] R2 cleanup failed:', err.message);
+        // Still delete DB record even if R2 cleanup fails
+      }
+    } else {
+      console.warn('[deleteGame] No gamePath set — skipping R2 cleanup');
+    }
+
     await game.deleteOne();
-    res.json({ message: 'Game deleted' });
+    res.json({ message: 'Game deleted', r2Cleaned: !!game.gamePath });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -246,36 +251,52 @@ const uploadGameFiles = async (req, res) => {
 
     const AdmZip = require('adm-zip');
     const zip = new AdmZip(req.file.buffer);
-    const destDir = path.join(GAMES_DIR, game.gamePath);
 
-    // Create directory if it doesn't exist
-    fs.mkdirSync(destDir, { recursive: true });
+    // Extract to a temporary directory
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'game-'));
+    zip.extractAllTo(tmpDir, true);
 
-    // Extract ZIP contents
-    zip.extractAllTo(destDir, true);
-
-    // Check if index.html exists (it might be in a subfolder)
-    const indexExists = fs.existsSync(path.join(destDir, 'index.html'));
-    if (!indexExists) {
-      // Check one level deep for index.html (in case ZIP has a root folder)
-      const entries = fs.readdirSync(destDir);
+    // Determine root: if index.html is inside a subfolder, use that subfolder as root
+    let gameRoot = tmpDir;
+    if (!fs.existsSync(path.join(tmpDir, 'index.html'))) {
+      const entries = fs.readdirSync(tmpDir);
       for (const entry of entries) {
-        const subPath = path.join(destDir, entry);
-        if (fs.statSync(subPath).isDirectory()) {
-          if (fs.existsSync(path.join(subPath, 'index.html'))) {
-            // Move contents up one level
-            const subEntries = fs.readdirSync(subPath);
-            for (const se of subEntries) {
-              fs.renameSync(path.join(subPath, se), path.join(destDir, se));
-            }
-            fs.rmdirSync(subPath);
-            break;
-          }
+        const subPath = path.join(tmpDir, entry);
+        if (fs.statSync(subPath).isDirectory() && fs.existsSync(path.join(subPath, 'index.html'))) {
+          gameRoot = subPath;
+          break;
         }
       }
     }
 
-    res.json({ message: 'Game files uploaded and extracted', gamePath: game.gamePath });
+    // Delete old files on R2 for this game path
+    await deleteR2Folder(`${game.gamePath}/`);
+
+    // Recursively upload all files to R2
+    const uploadDir = async (dir, prefix) => {
+      const items = fs.readdirSync(dir);
+      for (const item of items) {
+        const fullPath = path.join(dir, item);
+        const key = prefix ? `${prefix}/${item}` : item;
+        if (fs.statSync(fullPath).isDirectory()) {
+          await uploadDir(fullPath, key);
+        } else {
+          await uploadToR2(`${game.gamePath}/${key}`, fs.readFileSync(fullPath));
+        }
+      }
+    };
+    await uploadDir(gameRoot, '');
+
+    // Also upload the SDK so games can reference /sdk/gamezone-sdk.js from R2
+    const sdkPath = path.resolve(__dirname, '../../frontend/public/sdk/gamezone-sdk.js');
+    if (fs.existsSync(sdkPath)) {
+      await uploadToR2('sdk/gamezone-sdk.js', fs.readFileSync(sdkPath));
+    }
+
+    // Clean up temp directory
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+
+    res.json({ message: 'Game files uploaded to R2', gamePath: game.gamePath });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

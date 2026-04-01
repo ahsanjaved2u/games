@@ -293,7 +293,7 @@ export default function GameCard({ game, i, isLoggedIn }) {
       <div className="relative h-40 sm:h-48 flex items-center justify-center overflow-hidden" style={{ borderBottom: `1px solid ${(game.color || '#00e5ff')}15` }}>
         {thumb ? (
           <>
-            <Image src={thumb} alt={game.name} fill className="object-cover" sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" priority />
+            <Image src={thumb} alt={game.name} fill className="object-cover" sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" priority={i < 3} loading={i < 3 ? 'eager' : 'lazy'} />
             <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(11,11,26,0.95) 0%, rgba(11,11,26,0.3) 40%, transparent 100%)' }} />
           </>
         ) : (

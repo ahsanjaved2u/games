@@ -151,5 +151,6 @@ const gameSchema = new mongoose.Schema({
 
 // Index for quick lookups (slug already indexed via unique:true)
 gameSchema.index({ isLive: 1 });
+gameSchema.index({ gameType: 1, isLive: 1, scheduleStart: 1, scheduleEnd: 1 });
 
 module.exports = mongoose.model('Game', gameSchema);

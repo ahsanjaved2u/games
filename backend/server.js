@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const compression = require('compression');
 const morgan = require('morgan');
 require('dotenv').config();
 
@@ -28,6 +29,7 @@ connectDB();
 const app = express();
 
 // ── Core Middleware ──
+app.use(compression());
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

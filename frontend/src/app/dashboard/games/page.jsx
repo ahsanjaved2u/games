@@ -75,7 +75,7 @@ const selectStyle = {
   };
 
 const emptyForm = {
-  name: '', slug: '', description: '', thumbnail: '',
+  name: '', slug: '', description: '', thumbnail: 'images/background.png',
   isLive: false, gamePath: '',
   tag: '', color: '#00e5ff', gameType: 'rewarding',
   isFree: true,

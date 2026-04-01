@@ -64,7 +64,9 @@ export default function Home() {
 
   useEffect(() => {
     fetchGames();
-    const interval = setInterval(fetchGames, 30_000);
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') fetchGames();
+    }, 30_000);
     return () => clearInterval(interval);
   }, []);
 

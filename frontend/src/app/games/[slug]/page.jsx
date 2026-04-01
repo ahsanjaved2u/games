@@ -204,8 +204,22 @@ export default function GamePage() {
     };
     syncWidth();
     window.addEventListener('resize', syncWidth);
-    const id = setInterval(syncWidth, 500);
-    return () => { window.removeEventListener('resize', syncWidth); clearInterval(id); };
+
+    // Use ResizeObserver if we can access the iframe document (same-origin)
+    let ro;
+    try {
+      const doc = iframeRef.current?.contentDocument || iframeRef.current?.contentWindow?.document;
+      const gc = doc?.getElementById('game-container');
+      if (gc) {
+        ro = new ResizeObserver(() => syncWidth());
+        ro.observe(gc);
+      }
+    } catch { /* cross-origin: rely on window resize only */ }
+
+    return () => {
+      window.removeEventListener('resize', syncWidth);
+      if (ro) ro.disconnect();
+    };
   }, [started, isLoaded]);
 
   /* Block scrolling keys */
