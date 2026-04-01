@@ -253,3 +253,60 @@ body {
 [data-theme-mode="light"] ::-webkit-scrollbar-track {
   background: var(--bg-secondary);
 }
+
+/* ── Toast animation ── */
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(40px) scale(0.95); }
+  to { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+/* ── Skeleton pulse ── */
+@keyframes skeletonPulse {
+  0%, 100% { background-color: color-mix(in srgb, var(--neon-cyan) 4%, var(--bg-card)); }
+  50% { background-color: color-mix(in srgb, var(--neon-cyan) 8%, var(--bg-secondary)); }
+}
+.skeleton-pulse {
+  animation: skeletonPulse 1.5s ease-in-out infinite;
+}
+
+/* ── Live badge glow pulse ── */
+@keyframes livePulse {
+  0%, 100% { box-shadow: 0 0 4px currentColor; }
+  50% { box-shadow: 0 0 12px currentColor, 0 0 24px currentColor; }
+}
+.live-glow {
+  animation: livePulse 2s ease-in-out infinite;
+}
+
+/* ── Card thumbnail shimmer on hover ── */
+.card-thumb-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.06) 50%, transparent 60%);
+  background-size: 200% 100%;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.group:hover .card-thumb-shimmer::after {
+  opacity: 1;
+  animation: shimmer 1.5s ease-in-out;
+}
+
+/* ── Page transition fade ── */
+@keyframes pageEnter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.page-transition {
+  animation: pageEnter 0.35s ease-out;
+}
+
+/* ── Light mode additions ── */
+[data-theme-mode="light"] .skeleton-pulse {
+  animation-name: skeletonPulseLight;
+}
+@keyframes skeletonPulseLight {
+  0%, 100% { background-color: rgba(0,0,0,0.04); }
+  50% { background-color: rgba(0,0,0,0.08); }
+}

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from "next/link";
 import PaymentModal from '@/components/PaymentModal';
 import GameCard from '@/components/GameCard';
+import GameCardSkeleton from '@/components/GameCardSkeleton';
 import { useAuth } from "@/context/AuthContext";
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
@@ -171,9 +172,7 @@ export default function Home() {
 
         {/* ── Games Grid ── */}
         {loading ? (
-          <div className="text-center py-16">
-            <div className="w-10 h-10 border-2 border-t-transparent rounded-full animate-spin mx-auto mb-3" style={{ borderColor: 'rgba(0,229,255,0.3)', borderTopColor: 'transparent' }} />
-          </div>
+          <GameCardSkeleton count={6} />
         ) : games.length === 0 ? (
           <div className="text-center py-16">
             <p className="text-lg" style={{ color: 'var(--text-muted)' }}>No games available yet.</p>

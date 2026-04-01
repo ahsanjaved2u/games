@@ -6,6 +6,8 @@ import FirstVisitPrompt from "@/components/FirstVisitPrompt";
 import SignupBanner from "@/components/SignupBanner";
 import { AuthProvider } from "@/context/AuthContext";
 import { ThemeProvider } from "@/context/ThemeContext";
+import { ToastProvider } from "@/components/Toast";
+import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -104,13 +106,16 @@ export default function RootLayout({ children }) {
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <ThemeProvider>
           <AuthProvider>
-            <Navbar />
-            <main className="pt-12 min-h-screen">
-              {children}
-            </main>
-            <Footer />
-            <FirstVisitPrompt />
-            <SignupBanner />
+            <ToastProvider>
+              <Navbar />
+              <main className="pt-12 min-h-screen page-transition">
+                {children}
+              </main>
+              <Footer />
+              <FirstVisitPrompt />
+              <SignupBanner />
+              <PWAInstallPrompt />
+            </ToastProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>

@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import ShareMenu from '@/components/ShareMenu';
 
 // ── Icons (inline SVG to avoid extra deps) ──
 const GamepadIcon = () => (
@@ -169,6 +170,7 @@ export default function Navbar() {
 
           {/* ── Right side: Auth buttons or User dropdown ── */}
           <div className="hidden md:flex items-center gap-2">
+            <ShareMenu />
             {isLoggedIn ? (
               <>
                 {/* Wallet / Claimable Badge */}
@@ -344,6 +346,10 @@ export default function Navbar() {
                 {link.label}
               </Link>
             ))}
+
+            <div className="px-3 pt-1">
+              <ShareMenu />
+            </div>
 
             <div style={{ borderTop: '1px solid color-mix(in srgb, var(--neon-cyan) 8%, transparent)', margin: '12px 0' }} />
 

@@ -7,6 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import GameInstructions from '@/components/GameInstructions';
 import EntryFeeModal from '@/components/EntryFeeModal';
 import SignupRewardModal from '@/components/SignupRewardModal';
+import Confetti from '@/components/Confetti';
 
 const GAMES_BASE = process.env.NEXT_PUBLIC_GAMES_BASE_URL || '/games';
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
@@ -28,6 +29,7 @@ export default function GamePage() {
   const [showSignupModal, setShowSignupModal] = useState(false);
   const [signupModalContext, setSignupModalContext] = useState('in-game');
   const [signupReward, setSignupReward] = useState(0);
+  const [showConfetti, setShowConfetti] = useState(false);
   const inGamePromptShown = useRef(false);
 
   /* Fetch game metadata */
@@ -172,7 +174,11 @@ export default function GamePage() {
             }),
           });
           // Refresh wallet balance whenever the backend credited a reward
-          if (result?.walletCredited) fetchBalance();
+          if (result?.walletCredited) {
+            fetchBalance();
+            setShowConfetti(true);
+            setTimeout(() => setShowConfetti(false), 3500);
+          }
           // Update period countdown from response
           if (result?.periodEndsAt) setPeriodEndsAt(new Date(result.periodEndsAt));
           sendLeaderboardToIframe();
@@ -485,6 +491,8 @@ export default function GamePage() {
           context={signupModalContext}
         />
       )}
+
+      <Confetti active={showConfetti} />
     </div>
   );
 }

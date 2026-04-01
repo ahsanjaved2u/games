@@ -794,6 +794,41 @@ export default function ProfilePage() {
               </div>
             </div>
 
+            {/* Achievement Badges */}
+            {(() => {
+              const t = profile?.totals || {};
+              const badges = [];
+              if (t.totalPlays >= 1) badges.push({ icon: '🎮', label: 'First Play', desc: 'Played your first game' });
+              if (t.totalPlays >= 10) badges.push({ icon: '🔥', label: 'Getting Warmed Up', desc: '10 games played' });
+              if (t.totalPlays >= 50) badges.push({ icon: '⚡', label: 'Power Player', desc: '50 games played' });
+              if (t.totalPlays >= 100) badges.push({ icon: '💎', label: 'Diamond Gamer', desc: '100 games played' });
+              if (t.wonAmount >= 1) badges.push({ icon: '💰', label: 'First Earnings', desc: 'Earned your first reward' });
+              if (t.wonAmount >= 100) badges.push({ icon: '🤑', label: 'Money Maker', desc: 'Earned PKR 100+' });
+              if (t.wonAmount >= 1000) badges.push({ icon: '🏦', label: 'High Roller', desc: 'Earned PKR 1,000+' });
+              if (t.contestsPlayed >= 1) badges.push({ icon: '🏆', label: 'Competitor', desc: 'Entered a competition' });
+              if (t.contestsPlayed >= 5) badges.push({ icon: '👑', label: 'Arena Champion', desc: '5 competitions entered' });
+              if (t.uniqueGames >= 3) badges.push({ icon: '🎯', label: 'Explorer', desc: 'Played 3+ different games' });
+              if (badges.length === 0) return null;
+              return (
+                <div className="glass-card p-4 sm:p-5 mb-4 animate-fade-in-up">
+                  <h2 className="text-sm font-bold mb-3" style={{ color: 'var(--text-primary)' }}>🏅 Achievements</h2>
+                  <div className="flex flex-wrap gap-2">
+                    {badges.map(b => (
+                      <div key={b.label} className="flex items-center gap-2 px-3 py-2 rounded-xl" style={{
+                        background: 'var(--subtle-overlay)', border: '1px solid var(--subtle-border)',
+                      }} title={b.desc}>
+                        <span style={{ fontSize: 18 }}>{b.icon}</span>
+                        <div>
+                          <p className="text-xs font-bold" style={{ color: 'var(--text-primary)' }}>{b.label}</p>
+                          <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{b.desc}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             <div className="glass-card p-2 mb-4 animate-fade-in-up">
               <div className="flex flex-wrap gap-2">
                 <button
