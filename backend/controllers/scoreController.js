@@ -3,6 +3,7 @@ const Game = require('../models/Game');
 const User = require('../models/User');
 const GameEntry = require('../models/GameEntry');
 const { autoCreditScore, creditRewardingGame } = require('./walletController');
+const { creditReferralBonus } = require('./referralController');
 
 // @desc    Save a game score
 // @route   POST /api/scores
@@ -129,6 +130,7 @@ const saveScore = async (req, res) => {
     // One transaction per player + game + schedule period (upsert to best score).
     // Competitive games handle payouts separately via the prize-distribution flow.
     let walletCredited = false;
+    let actualEarnedDelta = 0;
     try {
       if (gameDoc && gameDoc.gameType === 'rewarding' && gameDoc.conversionRate > 0) {
         const rate = Number(gameDoc.conversionRate);
@@ -144,18 +146,29 @@ const saveScore = async (req, res) => {
         }
 
         if (earnedPkr > 0) {
-          await creditRewardingGame(
+          const prevBalance = (await require('../models/Wallet').findOne({ user: req.user._id }))?.balance || 0;
+          const newBalance = await creditRewardingGame(
             req.user._id,
             gameDoc.name || game,
             earnedPkr,
             scheduleId
           );
-          walletCredited = true;
+          actualEarnedDelta = parseFloat((newBalance - prevBalance).toFixed(2));
+          walletCredited = actualEarnedDelta > 0;
         }
       }
     } catch (walletErr) {
       // Don't fail the score save if wallet credit fails
       console.error('Wallet auto-credit error:', walletErr.message);
+    }
+
+    // Credit referral bonus ONLY on the actual delta earned (not the full score)
+    if (walletCredited && actualEarnedDelta > 0) {
+      try {
+        await creditReferralBonus(req.user._id, gameDoc.name || game, actualEarnedDelta);
+      } catch (refErr) {
+        console.error('Referral bonus error:', refErr.message);
+      }
     }
 
     // Calculate rank: count users whose best score is higher (contest/period-aware)

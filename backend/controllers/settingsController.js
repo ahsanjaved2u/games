@@ -3,8 +3,21 @@ const AppSettings = require('../models/AppSettings');
 // GET /api/settings/public — anyone can read public settings (signup reward, etc.)
 exports.getPublicSettings = async (req, res, next) => {
   try {
-    const signupReward = await AppSettings.getSetting('signupReward', 0);
-    res.json({ success: true, signupReward: Number(signupReward) });
+    const [signupReward, referralBonusPercent, referralDurationDays, maxReferralsPerUser, referralIPRestriction] = await Promise.all([
+      AppSettings.getSetting('signupReward', 0),
+      AppSettings.getSetting('referralBonusPercent', 10),
+      AppSettings.getSetting('referralDurationDays', 30),
+      AppSettings.getSetting('maxReferralsPerUser', 50),
+      AppSettings.getSetting('referralIPRestriction', true),
+    ]);
+    res.json({
+      success: true,
+      signupReward: Number(signupReward),
+      referralBonusPercent: Number(referralBonusPercent),
+      referralDurationDays: Number(referralDurationDays),
+      maxReferralsPerUser: Number(maxReferralsPerUser),
+      referralIPRestriction: String(referralIPRestriction) === 'true',
+    });
   } catch (error) {
     next(error);
   }
@@ -25,7 +38,7 @@ exports.getAllSettings = async (req, res, next) => {
 // PUT /api/settings — admin updates settings
 exports.updateSettings = async (req, res, next) => {
   try {
-    const { signupReward } = req.body;
+    const { signupReward, referralBonusPercent, referralDurationDays, maxReferralsPerUser, referralIPRestriction } = req.body;
 
     if (signupReward !== undefined) {
       const val = Number(signupReward);
@@ -33,6 +46,34 @@ exports.updateSettings = async (req, res, next) => {
         return res.status(400).json({ success: false, message: 'signupReward must be a non-negative number' });
       }
       await AppSettings.setSetting('signupReward', val);
+    }
+
+    if (referralBonusPercent !== undefined) {
+      const val = Number(referralBonusPercent);
+      if (isNaN(val) || val < 0 || val > 100) {
+        return res.status(400).json({ success: false, message: 'referralBonusPercent must be 0-100' });
+      }
+      await AppSettings.setSetting('referralBonusPercent', val);
+    }
+
+    if (referralDurationDays !== undefined) {
+      const val = Number(referralDurationDays);
+      if (isNaN(val) || val < 1 || val > 365) {
+        return res.status(400).json({ success: false, message: 'referralDurationDays must be 1-365' });
+      }
+      await AppSettings.setSetting('referralDurationDays', val);
+    }
+
+    if (maxReferralsPerUser !== undefined) {
+      const val = Number(maxReferralsPerUser);
+      if (isNaN(val) || val < 1 || val > 1000) {
+        return res.status(400).json({ success: false, message: 'maxReferralsPerUser must be 1-1000' });
+      }
+      await AppSettings.setSetting('maxReferralsPerUser', val);
+    }
+
+    if (referralIPRestriction !== undefined) {
+      await AppSettings.setSetting('referralIPRestriction', !!referralIPRestriction);
     }
 
     // Return updated settings

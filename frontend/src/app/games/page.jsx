@@ -1,24 +1,51 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import GameCard from '@/components/GameCard';
 import { useAuth } from '@/context/AuthContext';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 export default function GamesPage() {
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, authFetch } = useAuth();
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [reviewMap, setReviewMap] = useState({});
 
   const fetchGames = async () => {
     try {
       const res = await fetch(`${API}/games`);
       const data = await res.json();
-      setGames(Array.isArray(data) ? data : []);
+      const list = Array.isArray(data) ? data : [];
+      setGames(list);
+      // Fetch review summaries for all games in one call
+      if (list.length > 0) {
+        fetchReviewSummary(list.map(g => g.slug));
+      }
     } catch { /* ignore */ }
     setLoading(false);
   };
+
+  const fetchReviewSummary = async (slugs) => {
+    try {
+      const data = await authFetch('/reviews/bulk-summary', {
+        method: 'POST',
+        body: JSON.stringify({ slugs }),
+      });
+      setReviewMap(data);
+    } catch { /* ignore */ }
+  };
+
+  const handleToggleLike = useCallback(async (slug) => {
+    if (!isLoggedIn) return;
+    try {
+      const data = await authFetch(`/reviews/${slug}/like`, { method: 'POST' });
+      setReviewMap(prev => ({
+        ...prev,
+        [slug]: { ...prev[slug], totalLikes: data.totalLikes, userLiked: data.liked },
+      }));
+    } catch { /* ignore */ }
+  }, [isLoggedIn, authFetch]);
 
   useEffect(() => {
     fetchGames();
@@ -46,7 +73,7 @@ export default function GamesPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {games.map((game, i) => (
-              <GameCard key={game._id} game={game} i={i} isLoggedIn={isLoggedIn} />
+              <GameCard key={game._id} game={game} i={i} isLoggedIn={isLoggedIn} reviewData={reviewMap[game.slug]} onToggleLike={handleToggleLike} />
             ))}
           </div>
         )}

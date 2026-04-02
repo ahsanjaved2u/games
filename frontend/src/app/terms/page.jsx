@@ -62,6 +62,18 @@ const sections = [
     ],
   },
   {
+    icon: '🤝',
+    title: 'Referral Program',
+    items: [
+      'Referral rewards are earned when your referred friend signs up, verifies their email, and plays games',
+      'You earn a percentage bonus on your referral\'s game rewards for a limited time (e.g., 30 days)',
+      'Referrals flagged for fraud (e.g., same IP address) may be reviewed or rejected by the admin',
+      'Creating multiple accounts to self-refer is prohibited and may result in account suspension',
+      'GameVesta reserves the right to modify referral bonus rates and duration at any time',
+      'Referral bonuses are credited to your wallet and are subject to standard withdrawal terms',
+    ],
+  },
+  {
     icon: '🔄',
     title: 'Changes to Terms',
     items: [

@@ -4,7 +4,7 @@ export default function robots() {
       {
         userAgent: '*',
         allow: '/',
-        disallow: ['/dashboard/', '/profile/', '/wallet/', '/settings/', '/verify-email/'],
+        disallow: ['/dashboard/', '/profile/', '/wallet/', '/settings/', '/verify-email/', '/my-comments/'],
       },
     ],
     sitemap: 'https://gamevesta.com/sitemap.xml',

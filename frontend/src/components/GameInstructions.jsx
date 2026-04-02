@@ -7,7 +7,7 @@ import TopUpModal from '@/components/TopUpModal';
 
 const GAMES_BASE = process.env.NEXT_PUBLIC_GAMES_BASE_URL || '/games';
 
-export default function GameInstructions({ game, onStart, attemptCost = 0, walletBalance = 0, onPayAndPlay, onBalanceAdded }) {
+export default function GameInstructions({ game, onStart, attemptCost = 0, walletBalance = 0, onPayAndPlay, onBalanceAdded, children }) {
   const [paying, setPaying] = useState(false);
   const [showTopUp, setShowTopUp] = useState(false);
   const instructions = game.instructions || [];
@@ -146,6 +146,9 @@ export default function GameInstructions({ game, onStart, attemptCost = 0, walle
         <p style={{ marginTop: 8, fontSize: 12, color: 'rgba(255,255,255,0.25)', textAlign: 'center' }}>
           {isPaid ? 'Score well to earn it back and more!' : 'Best on mobile in portrait mode'}
         </p>
+
+        {/* Slot for extra content (e.g. GameReviews) */}
+        {children && <div style={{ width: '100%', maxWidth: 560, marginTop: 24 }}>{children}</div>}
       </div>
 
       <style>{`

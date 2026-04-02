@@ -16,6 +16,17 @@ const protect = async (req, res, next) => {
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         req.user = await User.findById(decoded.id).select('-password');
+
+        // Block soft-deleted or blocked users
+        if (req.user) {
+            if (req.user.deletedAt) {
+                return res.status(403).json({ success: false, message: 'Account has been deleted' });
+            }
+            if (req.user.blockedUntil && new Date(req.user.blockedUntil) > new Date()) {
+                return res.status(403).json({ success: false, message: `Account blocked until ${new Date(req.user.blockedUntil).toLocaleDateString()}` });
+            }
+        }
+
         next();
     } catch (error) {
         return res.status(401).json({ success: false, message: 'Not authorized, token invalid' });

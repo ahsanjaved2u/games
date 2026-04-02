@@ -89,43 +89,55 @@ function DashboardContent() {
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
         {/* ── Header ── */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 rounded-xl" style={{
-                background: 'linear-gradient(135deg, color-mix(in srgb, var(--neon-purple) 15%, transparent), color-mix(in srgb, var(--neon-cyan) 15%, transparent))',
-                border: '1px solid color-mix(in srgb, var(--neon-purple) 20%, transparent)',
-              }}>
-                <ShieldIcon />
+        <div className="mb-8">
+          <div className="flex items-start justify-between gap-4 mb-5">
+            <div>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2 rounded-xl" style={{
+                  background: 'linear-gradient(135deg, color-mix(in srgb, var(--neon-purple) 15%, transparent), color-mix(in srgb, var(--neon-cyan) 15%, transparent))',
+                  border: '1px solid color-mix(in srgb, var(--neon-purple) 20%, transparent)',
+                }}>
+                  <ShieldIcon />
+                </div>
+                <h1 className="text-2xl sm:text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>
+                  Admin Dashboard
+                </h1>
               </div>
-              <h1 className="text-2xl sm:text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>
-                Admin Dashboard
-              </h1>
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                Welcome back, <span className="neon-text-cyan">{user?.name}</span>. Here&apos;s your platform overview.
+              </p>
             </div>
-            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-              Welcome back, <span className="neon-text-cyan">{user?.name}</span>. Here&apos;s your platform overview.
-            </p>
+            <button onClick={() => { fetchStats(); fetchUsers(); }} className="btn-neon text-sm flex-shrink-0">
+              <RefreshIcon /> <span className="hidden sm:inline">Refresh</span>
+            </button>
           </div>
 
-          <div className="flex items-center gap-3">
-            <Link href="/dashboard/games" className="btn-neon text-sm" style={{ textDecoration: 'none' }}>
-              <GamepadIcon /> Manage Games
+          {/* Nav links — wrap on mobile */}
+          <div className="grid grid-cols-3 sm:grid-cols-4 lg:flex lg:flex-wrap gap-2">
+            <Link href="/dashboard/games" className="btn-neon text-sm justify-center" style={{ textDecoration: 'none' }}>
+              <GamepadIcon /> <span>Games</span>
             </Link>
-            <Link href="/dashboard/logs" className="btn-neon text-sm" style={{ textDecoration: 'none' }}>
-              <LogsIcon /> View Logs
+            <Link href="/dashboard/logs" className="btn-neon text-sm justify-center" style={{ textDecoration: 'none' }}>
+              <LogsIcon /> <span>Logs</span>
             </Link>
-            <Link href="/dashboard/claimable" className="btn-neon text-sm" style={{ textDecoration: 'none' }}>
-              💸 Claimables
+            <Link href="/dashboard/claimable" className="btn-neon text-sm justify-center" style={{ textDecoration: 'none' }}>
+              💸 <span>Claimables</span>
             </Link>
-            <Link href="/dashboard/wallet" className="btn-neon text-sm" style={{ textDecoration: 'none' }}>
-              💰 Wallets
+            <Link href="/dashboard/wallet" className="btn-neon text-sm justify-center" style={{ textDecoration: 'none' }}>
+              💰 <span>Wallets</span>
             </Link>
-            <Link href="/dashboard/settings" className="btn-neon text-sm" style={{ textDecoration: 'none' }}>
-              ⚙️ Settings
+            <Link href="/dashboard/users" className="btn-neon text-sm justify-center" style={{ textDecoration: 'none' }}>
+              👥 <span>Users</span>
             </Link>
-            <button onClick={() => { fetchStats(); fetchUsers(); }} className="btn-neon text-sm">
-              <RefreshIcon /> Refresh
-            </button>
+            <Link href="/dashboard/settings" className="btn-neon text-sm justify-center" style={{ textDecoration: 'none' }}>
+              ⚙️ <span>Settings</span>
+            </Link>
+            <Link href="/dashboard/referrals" className="btn-neon text-sm justify-center" style={{ textDecoration: 'none' }}>
+              🤝 <span>Referrals</span>
+            </Link>
+            <Link href="/dashboard/comments" className="btn-neon text-sm justify-center" style={{ textDecoration: 'none' }}>
+              💬 <span>Comments</span>
+            </Link>
           </div>
         </div>
 
@@ -162,130 +174,44 @@ function DashboardContent() {
           )}
         </div>
 
-        {/* ── Users Table ── */}
-        <div className="glass-card overflow-hidden">
-          <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(0,229,255,0.1)' }}>
+        {/* ── Users Summary ── */}
+        <div className="glass-card p-5 sm:p-6">
+          <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
               <UsersIcon /> Registered Users
             </h2>
-            <span className="text-xs px-3 py-1 rounded-full" style={{
-              background: 'rgba(0,229,255,0.1)',
-              color: 'var(--neon-cyan)',
-              border: '1px solid rgba(0,229,255,0.2)',
-            }}>
-              {users.length} total
-            </span>
+            <Link href="/dashboard/users" className="btn-neon text-sm" style={{ textDecoration: 'none' }}>
+              Manage Users →
+            </Link>
           </div>
 
           {loadingUsers ? (
-            <div className="p-8 text-center">
-              <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin mx-auto mb-3" style={{
-                borderColor: 'rgba(0,229,255,0.3)',
-                borderTopColor: 'transparent',
-              }} />
-              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Loading users...</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {Array(4).fill(0).map((_, i) => <div key={i} className="glass-card p-4 shimmer" style={{ height: 70 }} />)}
             </div>
-          ) : (
-            <div className="overflow-x-auto">
-              {/* Desktop table */}
-              <table className="w-full hidden md:table">
-                <thead>
-                  <tr style={{ borderBottom: '1px solid rgba(0,229,255,0.08)' }}>
-                    {['User', 'Email', 'Role', 'Status', 'Joined'].map(h => (
-                      <th key={h} className="px-6 py-3 text-left text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.map((u, i) => (
-                    <tr key={u._id} className="transition-colors"
-                      style={{ borderBottom: '1px solid color-mix(in srgb, var(--neon-cyan) 5%, transparent)' }}
-                      onMouseEnter={e => e.currentTarget.style.background = 'color-mix(in srgb, var(--neon-cyan) 3%, transparent)'}
-                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                    >
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white" style={{
-                            background: u.role === 'admin'
-                              ? 'linear-gradient(135deg, #a855f7, #ff2d78)'
-                              : 'var(--accent-gradient, linear-gradient(135deg, var(--neon-cyan), var(--neon-purple)))',
-                          }}>
-                            {u.name?.charAt(0).toUpperCase()}
-                          </div>
-                          <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{u.name}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm" style={{ color: 'var(--text-secondary)' }}>{u.email}</td>
-                      <td className="px-6 py-4">
-                        <span className="text-[11px] font-bold uppercase px-2.5 py-1 rounded-full" style={{
-                          background: u.role === 'admin' ? 'rgba(168,85,247,0.15)' : 'color-mix(in srgb, var(--neon-cyan) 10%, transparent)',
-                          color: u.role === 'admin' ? 'var(--neon-purple)' : 'var(--neon-cyan)',
-                          border: `1px solid ${u.role === 'admin' ? 'rgba(168,85,247,0.3)' : 'color-mix(in srgb, var(--neon-cyan) 20%, transparent)'}`,
-                        }}>
-                          {u.role}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="flex items-center gap-1.5 text-xs" style={{
-                          color: u.isActive ? 'var(--neon-green)' : 'var(--text-muted)',
-                        }}>
-                          <span className="w-2 h-2 rounded-full" style={{
-                            background: u.isActive ? 'var(--neon-green)' : 'var(--text-muted)',
-                          }} />
-                          {u.isActive ? 'Active' : 'Inactive'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-xs" style={{ color: 'var(--text-muted)' }}>
-                        {new Date(u.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              {/* Mobile card layout */}
-              <div className="md:hidden divide-y" style={{ borderColor: 'rgba(0,229,255,0.06)' }}>
-                {users.map(u => (
-                  <div key={u._id} className="px-4 py-4 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0" style={{
-                          background: u.role === 'admin'
-                            ? 'linear-gradient(135deg, #a855f7, #ff2d78)'
-                            : 'var(--accent-gradient, linear-gradient(135deg, var(--neon-cyan), var(--neon-purple)))',
-                        }}>
-                          {u.name?.charAt(0).toUpperCase()}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{u.name}</p>
-                          <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>{u.email}</p>
-                        </div>
-                      </div>
-                      <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full shrink-0 ml-2" style={{
-                        background: u.role === 'admin' ? 'rgba(168,85,247,0.15)' : 'rgba(0,229,255,0.1)',
-                        color: u.role === 'admin' ? 'var(--neon-purple)' : 'var(--neon-cyan)',
-                        border: `1px solid ${u.role === 'admin' ? 'rgba(168,85,247,0.3)' : 'rgba(0,229,255,0.2)'}`,
-                      }}>
-                        {u.role}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-xs" style={{ color: 'var(--text-muted)' }}>
-                      <span className="flex items-center gap-1.5" style={{ color: u.isActive ? 'var(--neon-green)' : 'var(--text-muted)' }}>
-                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: u.isActive ? 'var(--neon-green)' : 'var(--text-muted)' }} />
-                        {u.isActive ? 'Active' : 'Inactive'}
-                      </span>
-                      <span>{new Date(u.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                    </div>
+          ) : (() => {
+            const now = new Date();
+            const verified = users.filter(u => u.emailVerified && !u.deletedAt && !(u.blockedUntil && new Date(u.blockedUntil) > now)).length;
+            const unverified = users.filter(u => !u.emailVerified && !u.deletedAt && !(u.blockedUntil && new Date(u.blockedUntil) > now)).length;
+            const blocked = users.filter(u => u.blockedUntil && new Date(u.blockedUntil) > now && !u.deletedAt).length;
+            const deleted = users.filter(u => u.deletedAt).length;
+            return (
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                {[
+                  { label: 'Total', value: users.length, color: 'var(--neon-cyan)' },
+                  { label: 'Verified', value: verified, color: '#00ff88' },
+                  { label: 'Unverified', value: unverified, color: '#ffd93d' },
+                  { label: 'Blocked', value: blocked, color: '#ff2d78' },
+                  { label: 'Deleted', value: deleted, color: '#6b7280' },
+                ].map(s => (
+                  <div key={s.label} className="text-center p-3 rounded-xl" style={{ background: 'var(--subtle-overlay)' }}>
+                    <div className="text-xl font-bold" style={{ color: s.color }}>{s.value}</div>
+                    <div className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>{s.label}</div>
                   </div>
                 ))}
               </div>
-              {users.length === 0 && (
-                <div className="p-8 text-center text-sm" style={{ color: 'var(--text-muted)' }}>No users found</div>
-              )}
-            </div>
-          )}
+            );
+          })()}
         </div>
       </div>
     </div>

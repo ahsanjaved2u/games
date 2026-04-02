@@ -518,7 +518,7 @@ const GameZone = (() => {
     position: absolute;
     top: 0;
     left: 100%;
-    width: 240px;
+    width: 300px;
     height: auto;
     background: linear-gradient(180deg, #13132e 0%, #0a0a1e 100%);
     border: 2px solid rgba(0, 255, 255, 0.25);
@@ -543,12 +543,12 @@ const GameZone = (() => {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 16px;
+    padding: 14px 18px;
     background: linear-gradient(180deg, rgba(255,255,255,0.05), transparent);
     border-bottom: 1px solid rgba(255,255,255,0.08);
 }
 #gz-lb-title {
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 700;
     letter-spacing: 1.5px;
     color: #ffd93d;
@@ -574,20 +574,20 @@ const GameZone = (() => {
 }
 #gz-lb-table-wrap {
     overflow-y: auto;
-    padding: 8px 12px 14px;
+    padding: 10px 16px 16px;
 }
 #gz-lb-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 12px;
+    font-size: 13px;
 }
 #gz-lb-table thead th {
     text-transform: uppercase;
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 700;
     letter-spacing: 1px;
     color: #6c7a89;
-    padding: 6px 4px;
+    padding: 7px 5px;
     text-align: left;
     border-bottom: 1px solid rgba(255,255,255,0.06);
 }
@@ -600,7 +600,7 @@ const GameZone = (() => {
     background: rgba(255,255,255,0.03);
 }
 #gz-lb-table tbody td {
-    padding: 7px 4px;
+    padding: 8px 5px;
     color: #bbb;
     border-bottom: 1px solid rgba(255,255,255,0.03);
 }

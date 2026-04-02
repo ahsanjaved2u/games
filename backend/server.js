@@ -16,6 +16,8 @@ const gameRoutes = require('./routes/gameRoutes');
 const walletRoutes = require('./routes/walletRoutes');
 const entryRoutes = require('./routes/entryRoutes');
 const settingsRoutes = require('./routes/settingsRoutes');
+const referralRoutes = require('./routes/referralRoutes');
+const reviewRoutes = require('./routes/reviewRoutes');
 const stripeRoutes = require('./stripe/stripeRoutes');
 
 // Competitive prize cron
@@ -29,7 +31,13 @@ connectDB();
 const app = express();
 
 // ── Core Middleware ──
-app.use(compression());
+app.use(compression({
+    filter: (req, res) => {
+        // Don't compress SSE streams — compression buffers prevent flush
+        if (req.headers.accept === 'text/event-stream') return false;
+        return compression.filter(req, res);
+    },
+}));
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -50,6 +58,8 @@ app.use('/api/games', gameRoutes);
 app.use('/api/wallet', walletRoutes);
 app.use('/api/entries', entryRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/referrals', referralRoutes);
+app.use('/api/reviews', reviewRoutes);
 app.use('/api/stripe', stripeRoutes);
 
 // Health check

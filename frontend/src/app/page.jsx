@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from "next/link";
 import PaymentModal from '@/components/PaymentModal';
 import GameCard from '@/components/GameCard';
@@ -10,10 +10,11 @@ import { useAuth } from "@/context/AuthContext";
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 export default function Home() {
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, authFetch } = useAuth();
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
   const [payGame, setPayGame] = useState(null);
+  const [reviewMap, setReviewMap] = useState({});
   const [heroSlide, setHeroSlide] = useState(0);
   const [signupReward, setSignupReward] = useState(0);
 
@@ -54,11 +55,34 @@ export default function Home() {
   const rewardingCount = games.filter(g => g.gameType === 'rewarding').length;
   const competitiveCount = games.filter(g => g.gameType === 'competitive').length;
 
+  const fetchReviewSummary = useCallback(async (slugs) => {
+    try {
+      const data = await authFetch('/reviews/bulk-summary', {
+        method: 'POST',
+        body: JSON.stringify({ slugs }),
+      });
+      setReviewMap(data);
+    } catch { /* ignore */ }
+  }, [authFetch]);
+
+  const handleToggleLike = useCallback(async (slug) => {
+    if (!isLoggedIn) return;
+    try {
+      const data = await authFetch(`/reviews/${slug}/like`, { method: 'POST' });
+      setReviewMap(prev => ({
+        ...prev,
+        [slug]: { ...prev[slug], totalLikes: data.totalLikes, userLiked: data.liked },
+      }));
+    } catch { /* ignore */ }
+  }, [isLoggedIn, authFetch]);
+
   const fetchGames = async () => {
     try {
       const res = await fetch(`${API}/games`);
       const data = await res.json();
-      setGames(Array.isArray(data) ? data : []);
+      const list = Array.isArray(data) ? data : [];
+      setGames(list);
+      if (list.length > 0) fetchReviewSummary(list.map(g => g.slug));
     } catch { /* ignore */ }
     setLoading(false);
   };
@@ -69,7 +93,14 @@ export default function Home() {
       if (document.visibilityState === 'visible') fetchGames();
     }, 30_000);
     return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Re-fetch review summary when user logs in/out so userLiked state is correct
+  useEffect(() => {
+    if (games.length > 0) fetchReviewSummary(games.map(g => g.slug));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoggedIn]);
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -180,7 +211,7 @@ export default function Home() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {games.map((game, i) => (
-              <GameCard key={game._id} game={game} i={i} isLoggedIn={isLoggedIn} onPay={setPayGame} />
+              <GameCard key={game._id} game={game} i={i} isLoggedIn={isLoggedIn} onPay={setPayGame} reviewData={reviewMap[game.slug]} onToggleLike={handleToggleLike} />
             ))}
           </div>
         )}

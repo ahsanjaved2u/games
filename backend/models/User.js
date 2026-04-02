@@ -2,6 +2,8 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
+const crypto = require('crypto');
+
 const userSchema = new mongoose.Schema({
     name: {
         type: String,
@@ -55,6 +57,33 @@ const userSchema = new mongoose.Schema({
         type: Date,
         select: false,
     },
+    referralCode: {
+        type: String,
+        unique: true,
+        sparse: true,
+        index: true,
+    },
+    referredBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        default: null,
+    },
+    referralIP: {
+        type: String,
+        default: null,
+    },
+    blockedUntil: {
+        type: Date,
+        default: null,
+    },
+    blockReason: {
+        type: String,
+        default: null,
+    },
+    deletedAt: {
+        type: Date,
+        default: null,
+    },
 }, {
     timestamps: true,
 });
@@ -64,6 +93,14 @@ userSchema.pre('save', async function (next) {
     if (!this.isModified('password')) return next();
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
+    next();
+});
+
+// Auto-generate referral code on new user creation
+userSchema.pre('save', function (next) {
+    if (this.isNew && !this.referralCode) {
+        this.referralCode = 'GV-' + crypto.randomBytes(4).toString('hex');
+    }
     next();
 });
 

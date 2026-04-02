@@ -53,6 +53,16 @@ const sections = [
     ],
   },
   {
+    icon: '🤝',
+    title: 'Referral Program Data',
+    items: [
+      'We collect your IP address during signup to detect and prevent referral fraud',
+      'Referral relationships (who referred whom) are stored to calculate and distribute bonuses',
+      'IP addresses are only compared for fraud detection and are not shared with third parties',
+      'Referral earnings and bonus history are stored as part of your wallet transaction records',
+    ],
+  },
+  {
     icon: '📡',
     title: 'Third-Party Services',
     items: [

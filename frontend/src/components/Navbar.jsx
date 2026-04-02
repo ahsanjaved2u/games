@@ -146,7 +146,7 @@ export default function Navbar() {
           </Link>
 
           {/* ── Desktop Nav Links ── */}
-          <div className="hidden md:flex items-center gap-0.5">
+          <div className="hidden lg:flex items-center gap-0.5">
             {navLinks.map(link => (
               <Link key={link.href} href={link.href}
                 className="px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200"
@@ -169,8 +169,8 @@ export default function Navbar() {
           </div>
 
           {/* ── Right side: Auth buttons or User dropdown ── */}
-          <div className="hidden md:flex items-center gap-2">
-            <ShareMenu />
+          <div className="hidden lg:flex items-center gap-2">
+            <ShareMenu referralCode={user?.referralCode} />
             {isLoggedIn ? (
               <>
                 {/* Wallet / Claimable Badge */}
@@ -284,6 +284,20 @@ export default function Navbar() {
                     >
                       ⚙️ Settings
                     </Link>
+                    <Link href="/referrals" onClick={() => setUserDropdown(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm transition-colors"
+                      style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'color-mix(in srgb, var(--neon-purple) 8%, transparent)'; e.currentTarget.style.color = 'var(--neon-purple)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                    >
+                      🤝 Referrals
+                    </Link>
+                    <Link href="/my-comments" onClick={() => setUserDropdown(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm transition-colors"
+                      style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'color-mix(in srgb, var(--neon-cyan) 8%, transparent)'; e.currentTarget.style.color = 'var(--neon-cyan)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                    >
+                      💬 My Comments
+                    </Link>
                     <div style={{ borderTop: '1px solid color-mix(in srgb, var(--neon-cyan) 10%, transparent)', margin: '4px 0' }} />
                     <button onClick={logout} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors text-left"
                       style={{ color: 'var(--neon-pink)' }}
@@ -310,7 +324,7 @@ export default function Navbar() {
 
           {/* ── Mobile hamburger ── */}
           <button
-            className="md:hidden p-2 rounded-lg transition-colors"
+            className="lg:hidden p-2 rounded-lg transition-colors"
             onClick={() => setMobileOpen(!mobileOpen)}
             style={{ color: 'var(--neon-cyan)' }}
           >
@@ -321,7 +335,7 @@ export default function Navbar() {
 
       {/* ── Mobile Menu ── */}
       {mobileOpen && (
-        <div className="md:hidden animate-fade-in-up" style={{
+        <div className="lg:hidden animate-fade-in-up" style={{
           background: 'var(--bg-secondary)',
           borderTop: '1px solid var(--border-color)',
         }}>
@@ -348,7 +362,7 @@ export default function Navbar() {
             ))}
 
             <div className="px-3 pt-1">
-              <ShareMenu />
+              <ShareMenu referralCode={user?.referralCode} />
             </div>
 
             <div style={{ borderTop: '1px solid color-mix(in srgb, var(--neon-cyan) 8%, transparent)', margin: '12px 0' }} />
@@ -415,6 +429,18 @@ export default function Navbar() {
                     🛡️ Dashboard
                   </Link>
                 )}
+                <Link href="/referrals" onClick={() => setMobileOpen(false)}
+                  className="block px-4 py-3 rounded-xl text-base font-medium transition-all"
+                  style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}
+                >
+                  🤝 Referrals
+                </Link>
+                <Link href="/my-comments" onClick={() => setMobileOpen(false)}
+                  className="block px-4 py-3 rounded-xl text-base font-medium transition-all"
+                  style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}
+                >
+                  💬 My Comments
+                </Link>
                 <Link href="/settings" onClick={() => setMobileOpen(false)}
                   className="block px-4 py-3 rounded-xl text-base font-medium transition-all"
                   style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}

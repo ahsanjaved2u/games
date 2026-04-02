@@ -4,8 +4,10 @@ const GameScore = require('../models/GameScore');
 const Wallet = require('../models/Wallet');
 const Transaction = require('../models/Transaction');
 const AppSettings = require('../models/AppSettings');
+const Referral = require('../models/Referral');
 const crypto = require('crypto');
 const { sendVerificationCode } = require('../utils/mailer');
+const { pushEvent } = require('../utils/sse');
 
 // Generate a 6-digit verification code
 const generateCode = () => crypto.randomInt(100000, 999999).toString();
@@ -15,7 +17,7 @@ const generateCode = () => crypto.randomInt(100000, 999999).toString();
 // @access  Public
 exports.register = async (req, res, next) => {
     try {
-        const { name, email, password } = req.body;
+        const { name, email, password, referralCode } = req.body;
 
         // Check if user already exists
         const existingUser = await User.findOne({ email });
@@ -23,7 +25,47 @@ exports.register = async (req, res, next) => {
             return res.status(400).json({ success: false, message: 'Email already registered' });
         }
 
-        const user = await User.create({ name, email, password });
+        // Capture signup IP for fraud detection
+        const signupIP = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || null;
+
+        // Resolve referrer if referral code provided
+        let referrer = null;
+        if (referralCode) {
+            referrer = await User.findOne({ referralCode: referralCode.trim() });
+        }
+
+        const user = await User.create({
+            name,
+            email,
+            password,
+            referredBy: referrer ? referrer._id : null,
+            referralIP: signupIP,
+        });
+
+        // Create referral record if referred by someone
+        if (referrer) {
+            try {
+                const [maxReferrals, ipRestriction] = await Promise.all([
+                    AppSettings.getSetting('maxReferralsPerUser', 50).then(Number),
+                    AppSettings.getSetting('referralIPRestriction', true).then(v => String(v) === 'true'),
+                ]);
+                const existingCount = await Referral.countDocuments({ referrer: referrer._id });
+                if (existingCount < maxReferrals) {
+                    const referrerIP = referrer.referralIP || null;
+                    const sameIP = ipRestriction && signupIP && referrerIP && signupIP === referrerIP;
+                    await Referral.create({
+                        referrer: referrer._id,
+                        referee: user._id,
+                        referrerIP,
+                        refereeIP: signupIP,
+                        status: sameIP ? 'flagged' : 'pending',
+                        flagReason: sameIP ? 'Same IP as referrer' : null,
+                    });
+                }
+            } catch (refErr) {
+                console.error('[referral-create]', refErr.message);
+            }
+        }
 
         // Generate verification code and send email
         const code = generateCode();
@@ -59,7 +101,7 @@ exports.register = async (req, res, next) => {
         res.status(201).json({
             success: true,
             token,
-            user: { id: user._id, name: user.name, email: user.email, role: user.role, emailVerified: false },
+            user: { id: user._id, name: user.name, email: user.email, role: user.role, emailVerified: false, referralCode: user.referralCode },
             signupReward: signupRewardAmount,
         });
     } catch (error) {
@@ -90,6 +132,20 @@ exports.verifyEmail = async (req, res, next) => {
         user.verificationCode = undefined;
         user.verificationCodeExpires = undefined;
         await user.save({ validateBeforeSave: false });
+
+        // Activate referral if this user was referred
+        try {
+            const referral = await Referral.findOne({ referee: user._id, status: 'pending' });
+            if (referral) {
+                const durationDays = Number(await AppSettings.getSetting('referralDurationDays', 30));
+                referral.status = 'active';
+                referral.activatedAt = new Date();
+                referral.expiresAt = new Date(Date.now() + durationDays * 86400000);
+                await referral.save();
+            }
+        } catch (refErr) {
+            console.error('[referral-activate]', refErr.message);
+        }
 
         res.json({ success: true, message: 'Email verified successfully' });
     } catch (error) {
@@ -139,8 +195,20 @@ exports.login = async (req, res, next) => {
             return res.status(401).json({ success: false, message: 'Invalid credentials' });
         }
 
+        // Check if account is deleted or blocked
+        if (user.deletedAt) {
+            return res.status(403).json({ success: false, message: 'This account has been deleted. Contact support.' });
+        }
+        if (user.blockedUntil && new Date(user.blockedUntil) > new Date()) {
+            return res.status(403).json({ success: false, message: `Account blocked until ${new Date(user.blockedUntil).toLocaleDateString()}. ${user.blockReason ? 'Reason: ' + user.blockReason : ''}` });
+        }
+
         // Update last login
         user.lastLogin = new Date();
+        // Generate referral code if missing (for users created before referral system)
+        if (!user.referralCode) {
+            user.referralCode = 'GV-' + crypto.randomBytes(4).toString('hex');
+        }
         await user.save({ validateBeforeSave: false });
 
         const token = user.getSignedJwtToken();
@@ -148,7 +216,7 @@ exports.login = async (req, res, next) => {
         res.status(200).json({
             success: true,
             token,
-            user: { id: user._id, name: user.name, email: user.email, role: user.role, emailVerified: user.emailVerified },
+            user: { id: user._id, name: user.name, email: user.email, role: user.role, emailVerified: user.emailVerified, referralCode: user.referralCode },
         });
     } catch (error) {
         next(error);
@@ -167,13 +235,119 @@ exports.getMe = async (req, res, next) => {
     }
 };
 
-// @desc    Get all users (admin)
+// @desc    Get all users (admin) — includes computed status
 // @route   GET /api/users
 // @access  Private/Admin
 exports.getAllUsers = async (req, res, next) => {
     try {
-        const users = await User.find().sort('-createdAt');
-        res.status(200).json({ success: true, count: users.length, users });
+        const users = await User.find().sort('-createdAt').lean();
+        const now = new Date();
+        const enriched = users.map(u => {
+            let status = 'active';
+            if (u.deletedAt) status = 'deleted';
+            else if (u.blockedUntil && new Date(u.blockedUntil) > now) status = 'blocked';
+            else if (!u.emailVerified) status = 'unverified';
+            return { ...u, status };
+        });
+        res.status(200).json({ success: true, count: enriched.length, users: enriched });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// @desc    Admin verify a user's email manually
+// @route   PATCH /api/users/:id/verify
+// @access  Private/Admin
+exports.adminVerifyUser = async (req, res, next) => {
+    try {
+        const user = await User.findById(req.params.id);
+        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+        user.emailVerified = !user.emailVerified;
+        user.verificationCode = undefined;
+        user.verificationCodeExpires = undefined;
+        await user.save({ validateBeforeSave: false });
+
+        // If just verified, activate pending referral
+        if (user.emailVerified) {
+            try {
+                const referral = await Referral.findOne({ referee: user._id, status: 'pending' });
+                if (referral) {
+                    const durationDays = Number(await AppSettings.getSetting('referralDurationDays', 30));
+                    referral.status = 'active';
+                    referral.activatedAt = new Date();
+                    referral.expiresAt = new Date(Date.now() + durationDays * 86400000);
+                    await referral.save();
+                }
+            } catch (e) { console.error('[admin-verify-referral]', e.message); }
+        }
+
+        // Push real-time event to the user's browser
+        pushEvent(user._id.toString(), 'verified', { emailVerified: user.emailVerified });
+
+        res.json({ success: true, emailVerified: user.emailVerified });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// @desc    Admin block/unblock a user
+// @route   PATCH /api/users/:id/block
+// @access  Private/Admin
+exports.adminBlockUser = async (req, res, next) => {
+    try {
+        const { days, reason } = req.body;
+        const user = await User.findById(req.params.id);
+        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+        if (user.role === 'admin') return res.status(400).json({ success: false, message: 'Cannot block an admin' });
+
+        if (days && Number(days) > 0) {
+            user.blockedUntil = new Date(Date.now() + Number(days) * 86400000);
+            user.blockReason = reason || null;
+        } else {
+            // Unblock
+            user.blockedUntil = null;
+            user.blockReason = null;
+        }
+        await user.save({ validateBeforeSave: false });
+
+        // Push real-time event — blocked users get force-logged-out
+        if (user.blockedUntil) {
+            pushEvent(user._id.toString(), 'blocked', { blockedUntil: user.blockedUntil, reason: user.blockReason });
+        } else {
+            pushEvent(user._id.toString(), 'unblocked', {});
+        }
+
+        res.json({ success: true, blockedUntil: user.blockedUntil, blockReason: user.blockReason });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// @desc    Admin soft-delete / restore a user
+// @route   DELETE /api/users/:id
+// @access  Private/Admin
+exports.adminDeleteUser = async (req, res, next) => {
+    try {
+        const user = await User.findById(req.params.id);
+        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+        if (user.role === 'admin') return res.status(400).json({ success: false, message: 'Cannot delete an admin' });
+
+        if (user.deletedAt) {
+            // Restore
+            user.deletedAt = null;
+        } else {
+            user.deletedAt = new Date();
+        }
+        await user.save({ validateBeforeSave: false });
+
+        // Push real-time event — deleted users get force-logged-out
+        if (user.deletedAt) {
+            pushEvent(user._id.toString(), 'deleted', {});
+        } else {
+            pushEvent(user._id.toString(), 'restored', {});
+        }
+
+        res.json({ success: true, deletedAt: user.deletedAt });
     } catch (error) {
         next(error);
     }

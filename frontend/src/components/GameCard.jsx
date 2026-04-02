@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useAuth } from '@/context/AuthContext';
+import CommentsModal from '@/components/CommentsModal';
 
 
 const GAMES_BASE = process.env.NEXT_PUBLIC_GAMES_BASE_URL || '/games';
@@ -269,13 +271,20 @@ function RewardPeriodCountdown({ days, hours, minutes, slug, anchor }) {
   );
 }
 
-export default function GameCard({ game, i, isLoggedIn }) {
+export default function GameCard({ game, i, isLoggedIn, reviewData, onToggleLike }) {
+  const { user } = useAuth();
   const thumb = game.thumbnail ? `${GAMES_BASE}/${game.gamePath}/${game.thumbnail}` : null;
   const [shareOpen, setShareOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [commentsOpen, setCommentsOpen] = useState(false);
   const shareRef = useRef(null);
 
-  const gameUrl = `${SITE_URL}/games/${game.slug}`;
+  const likes = reviewData?.totalLikes || 0;
+  const comments = reviewData?.totalComments || 0;
+  const userLiked = reviewData?.userLiked || false;
+
+  const baseGameUrl = `${SITE_URL}/games/${game.slug}`;
+  const gameUrl = user?.referralCode ? `${baseGameUrl}?ref=${user.referralCode}` : baseGameUrl;
   const shareText = game.entryFee > 0 || game.attemptCost > 0
     ? `🎮 Play ${game.name} on GameVesta and win real cash!`
     : `🎮 Play ${game.name} for FREE on GameVesta!`;
@@ -372,20 +381,77 @@ export default function GameCard({ game, i, isLoggedIn }) {
           <span className="absolute top-3 right-3 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full" style={{ background: 'rgba(255,45,120,0.15)', color: '#ff5c8a', border: '1px solid rgba(255,45,120,0.3)' }}>Not Live</span>
         )}
 
+        {/* Heart + Comment badges — bottom left */}
+        <div className="absolute bottom-3 left-3 flex items-center gap-1.5" style={{ zIndex: 10 }}>
+          <button
+            onClick={(e) => {
+              e.preventDefault(); e.stopPropagation();
+              if (onToggleLike) onToggleLike(game.slug);
+            }}
+            className="flex items-center gap-1.5 transition-all duration-200"
+            style={{
+              padding: '4px 10px 4px 7px', borderRadius: 20,
+              background: 'rgba(11,11,26,0.75)', backdropFilter: 'blur(8px)',
+              border: `1px solid ${userLiked ? 'rgba(255,45,120,0.4)' : 'rgba(255,255,255,0.12)'}`,
+              color: userLiked ? '#ff2d78' : 'rgba(255,255,255,0.7)',
+              cursor: 'pointer', fontSize: 12, fontWeight: 600,
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(11,11,26,0.9)'; if (!userLiked) { e.currentTarget.style.color = '#ff2d78'; e.currentTarget.style.borderColor = 'rgba(255,45,120,0.3)'; } }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(11,11,26,0.75)'; if (!userLiked) { e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; } }}
+            title={userLiked ? 'Unlike' : 'Like this game'}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill={userLiked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>
+            </svg>
+            {likes > 0 && <span>{likes}</span>}
+          </button>
+
+          <button
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setCommentsOpen(true); }}
+            className="flex items-center gap-1 transition-all duration-200"
+            style={{
+              padding: '5px 10px 5px 7px', borderRadius: 20,
+              background: 'rgba(11,11,26,0.75)', backdropFilter: 'blur(8px)',
+              border: '1px solid rgba(255,255,255,0.12)',
+              color: 'rgba(255,255,255,0.7)', cursor: 'pointer',
+              fontSize: 12, fontWeight: 600,
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(11,11,26,0.9)'; e.currentTarget.style.color = '#00e5ff'; e.currentTarget.style.borderColor = 'rgba(0,229,255,0.4)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(11,11,26,0.75)'; e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; }}
+            title={comments > 0 ? `${comments} comment${comments !== 1 ? 's' : ''}` : 'Add a comment'}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+            </svg>
+            {comments > 0 && <span>{comments}</span>}
+          </button>
+
+          {commentsOpen && (
+            <CommentsModal
+              slug={game.slug}
+              gameName={game.name}
+              onClose={() => setCommentsOpen(false)}
+            />
+          )}
+        </div>
+
+        {/* Share button — bottom right */}
+        <div className="absolute bottom-3 right-3 flex items-center gap-1.5" style={{ zIndex: 10 }}>
+
         {/* Share button */}
-        <div ref={shareRef} className="absolute bottom-3 right-3" style={{ zIndex: 10 }}>
+        <div ref={shareRef}>
           {!shareOpen ? (
             <button
               onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShareOpen(true); }}
               className="flex items-center justify-center transition-all duration-200"
               style={{
                 width: 32, height: 32, borderRadius: '50%',
-                background: 'rgba(11,11,26,0.75)', backdropFilter: 'blur(8px)',
-                border: '1px solid rgba(255,255,255,0.12)',
-                color: 'rgba(255,255,255,0.7)', cursor: 'pointer',
+                background: 'rgba(0,229,255,0.1)', backdropFilter: 'blur(8px)',
+                border: '1px solid rgba(0,229,255,0.3)',
+                color: '#00e5ff', cursor: 'pointer',
               }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(11,11,26,0.9)'; e.currentTarget.style.color = '#00e5ff'; e.currentTarget.style.borderColor = 'rgba(0,229,255,0.4)'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(11,11,26,0.75)'; e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,229,255,0.2)'; e.currentTarget.style.borderColor = 'rgba(0,229,255,0.6)'; e.currentTarget.style.boxShadow = '0 0 10px rgba(0,229,255,0.3)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,229,255,0.1)'; e.currentTarget.style.borderColor = 'rgba(0,229,255,0.3)'; e.currentTarget.style.boxShadow = 'none'; }}
               title="Share this game"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -438,6 +504,7 @@ export default function GameCard({ game, i, isLoggedIn }) {
               </button>
             </div>
           )}
+        </div>
         </div>
       </div>
 

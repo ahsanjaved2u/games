@@ -216,6 +216,48 @@ const faqSections = [
     ],
   },
   {
+    title: '🤝 Referral Program',
+    icon: '🎁',
+    questions: [
+      {
+        q: 'What is the Referral Program?',
+        a: 'The Referral Program lets you invite friends to GameVesta. When they sign up using your unique referral link, verify their email, and start playing — you earn a **bonus percentage** on their game rewards for a limited time.',
+      },
+      {
+        q: 'How do I get my referral link?',
+        a: 'Go to the **Referrals** page (click "🤝 Referrals" in the navigation menu). Your unique referral link and code are displayed at the top. You can copy the link or share it directly.',
+      },
+      {
+        q: 'How much do I earn from referrals?',
+        a: 'You earn a percentage of your referred friend\'s game rewards. For example, if the bonus is 10% and your friend earns PKR 100 from a game, you get PKR 10 as a referral bonus. The exact percentage is set by the platform admin.',
+      },
+      {
+        q: 'How long do referral rewards last?',
+        a: 'Referral rewards are active for a limited period (e.g., 30 days) starting from when your friend verifies their email. After the period expires, you no longer earn bonuses from that referral.',
+      },
+      {
+        q: 'Is there a limit to how many people I can refer?',
+        a: 'Yes, there is a maximum number of referrals per user (set by the admin). Check your Referrals page to see your current count and limit.',
+      },
+      {
+        q: 'When does a referral become active?',
+        a: 'A referral becomes **active** once your friend completes email verification. Until then, the referral stays in "pending" status and no bonuses are earned.',
+      },
+      {
+        q: 'What happens if a referral is flagged?',
+        a: 'If the system detects suspicious activity (e.g., the referrer and referee sharing the same IP address), the referral is automatically **flagged** for admin review. Flagged referrals do not earn bonuses until approved.',
+      },
+      {
+        q: 'Where do referral bonuses go?',
+        a: 'Referral bonuses are automatically credited to your **wallet** as regular credits. You can see them in your transaction history and withdraw them like any other earnings.',
+      },
+      {
+        q: 'Can I refer myself with another account?',
+        a: 'No. Creating multiple accounts for self-referral is against our Terms of Service. Such activity is automatically detected and may result in account suspension.',
+      },
+    ],
+  },
+  {
     title: '❓ General & Troubleshooting',
     icon: '🔧',
     questions: [

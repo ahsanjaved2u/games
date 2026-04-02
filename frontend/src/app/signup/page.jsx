@@ -2,16 +2,28 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { Suspense } from 'react';
 
-export default function SignupPage() {
+function SignupForm() {
   const { signup, isLoggedIn } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const refFromUrl = searchParams.get('ref') || '';
+  const [refCode, setRefCode] = useState(refFromUrl);
   const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '' });
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [signedUp, setSignedUp] = useState(false);
+
+  // Also check sessionStorage for ref code (set by ReferralCapture when landing on game pages)
+  useEffect(() => {
+    if (!refCode) {
+      const stored = sessionStorage.getItem('gz_ref');
+      if (stored) setRefCode(stored);
+    }
+  }, [refCode]);
 
   // Redirect if already logged in
   useEffect(() => {
@@ -35,7 +47,7 @@ export default function SignupPage() {
 
     setSubmitting(true);
     try {
-      await signup(form.name, form.email, form.password);
+      await signup(form.name, form.email, form.password, refCode);
       setSignedUp(true);
     } catch (err) {
       setError(err.message);
@@ -225,6 +237,17 @@ export default function SignupPage() {
           </button>
         </form>
 
+        {/* Referral banner */}
+        {refCode && (
+          <div className="mb-6 px-4 py-3 rounded-xl text-sm font-medium animate-fade-in-up" style={{
+            background: 'linear-gradient(135deg, rgba(168,85,247,0.1), rgba(0,229,255,0.1))',
+            border: '1px solid rgba(168,85,247,0.25)',
+            color: 'var(--neon-purple)',
+          }}>
+            🎉 You&apos;re signing up with a referral! Both you and your friend earn rewards.
+          </div>
+        )}
+
         {/* Footer */}
         <p className="text-center text-sm mt-6" style={{ color: 'var(--text-muted)' }}>
           Already have an account?{' '}
@@ -236,5 +259,13 @@ export default function SignupPage() {
 
       )}
     </div>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense>
+      <SignupForm />
+    </Suspense>
   );
 }
