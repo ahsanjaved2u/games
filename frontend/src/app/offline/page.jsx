@@ -1,3 +1,5 @@
+'use client';
+
 export default function OfflinePage() {
   return (
     <div className="bg-grid relative" style={{ minHeight: 'calc(100vh - 64px)', overflow: 'hidden' }}>
