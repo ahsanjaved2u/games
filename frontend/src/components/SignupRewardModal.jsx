@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 /**
@@ -15,6 +16,7 @@ import Link from 'next/link';
  */
 export default function SignupRewardModal({ show, rewardAmount = 0, onClose, context = 'first-visit' }) {
   const [visible, setVisible] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     if (show) {
@@ -139,7 +141,7 @@ export default function SignupRewardModal({ show, rewardAmount = 0, onClose, con
 
           {/* CTA Buttons */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <Link href="/signup" style={{
+            <Link href="/signup" onClick={onClose} style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               padding: '13px 20px', borderRadius: 14, textDecoration: 'none',
               fontWeight: 700, fontSize: 14,
@@ -155,7 +157,7 @@ export default function SignupRewardModal({ show, rewardAmount = 0, onClose, con
             </Link>
 
             <button
-              onClick={onClose}
+              onClick={() => { onClose(); router.push('/games'); }}
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 padding: '11px 20px', borderRadius: 14,
@@ -177,7 +179,7 @@ export default function SignupRewardModal({ show, rewardAmount = 0, onClose, con
             marginTop: 14,
           }}>
             Already have an account?{' '}
-            <Link href="/login" style={{ color: 'var(--neon-cyan)', fontWeight: 600, textDecoration: 'none' }}>
+            <Link href="/login" onClick={onClose} style={{ color: 'var(--neon-cyan)', fontWeight: 600, textDecoration: 'none' }}>
               Log In
             </Link>
           </p>

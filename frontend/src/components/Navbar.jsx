@@ -51,6 +51,7 @@ const navLinks = [
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userDropdown, setUserDropdown] = useState(false);
+  const [mobileUserOpen, setMobileUserOpen] = useState(false);
   const [claimableTotal, setClaimableTotal] = useState(0);
   const dropdownRef = useRef(null);
   const pathname = usePathname();
@@ -60,6 +61,7 @@ export default function Navbar() {
   useEffect(() => {
     setUserDropdown(false);
     setMobileOpen(false);
+    setMobileUserOpen(false);
   }, [pathname]);
 
   const fetchAdminClaimableTotal = async () => {
@@ -322,14 +324,36 @@ export default function Navbar() {
             )}
           </div>
 
-          {/* ── Mobile hamburger ── */}
-          <button
-            className="lg:hidden p-2 rounded-lg transition-colors"
-            onClick={() => setMobileOpen(!mobileOpen)}
-            style={{ color: 'var(--neon-cyan)' }}
-          >
-            {mobileOpen ? <CloseIcon /> : <MenuIcon />}
-          </button>
+          {/* ── Mobile right: wallet + share + hamburger ── */}
+          <div className="flex lg:hidden items-center gap-1.5">
+            {isLoggedIn && (
+              <>
+                {isAdmin ? (
+                  <Link href="/dashboard/claimable" className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold" style={{
+                    border: '1px solid rgba(255,217,61,0.25)', background: 'rgba(255,217,61,0.08)',
+                    color: '#ffd93d', textDecoration: 'none',
+                  }}>
+                    💰 {parseFloat(claimableTotal.toFixed(0)).toLocaleString()}
+                  </Link>
+                ) : (
+                  <Link href="/wallet" className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold" style={{
+                    border: '1px solid rgba(0,255,136,0.2)', background: 'rgba(0,255,136,0.05)',
+                    color: '#00ff88', textDecoration: 'none',
+                  }}>
+                    💰 {walletBalance.toLocaleString()}
+                  </Link>
+                )}
+              </>
+            )}
+            <ShareMenu referralCode={user?.referralCode} />
+            <button
+              className="p-2 rounded-lg transition-colors"
+              onClick={() => setMobileOpen(!mobileOpen)}
+              style={{ color: 'var(--neon-cyan)' }}
+            >
+              {mobileOpen ? <CloseIcon /> : <MenuIcon />}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -339,22 +363,16 @@ export default function Navbar() {
           background: 'var(--bg-secondary)',
           borderTop: '1px solid var(--border-color)',
         }}>
-          <div className="px-3 py-2 space-y-0.5">
+          <div className="px-4 py-3 space-y-1">
+            {/* Nav links */}
             {navLinks.map(link => (
               <Link key={link.href} href={link.href}
                 onClick={() => setMobileOpen(false)}
-                className="block px-3 py-2 rounded-xl text-base font-medium transition-all"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all"
                 style={{
-                  color: 'var(--text-secondary)',
+                  color: pathname === link.href ? 'var(--neon-cyan)' : 'var(--text-secondary)',
+                  background: pathname === link.href ? 'rgba(0,229,255,0.06)' : 'transparent',
                   textDecoration: 'none',
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.color = 'var(--neon-cyan)';
-                  e.currentTarget.style.background = 'color-mix(in srgb, var(--neon-cyan) 8%, transparent)';
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.color = 'var(--text-secondary)';
-                  e.currentTarget.style.background = 'transparent';
                 }}
               >
                 {link.label}
@@ -365,97 +383,117 @@ export default function Navbar() {
               <ShareMenu referralCode={user?.referralCode} />
             </div>
 
-            <div style={{ borderTop: '1px solid color-mix(in srgb, var(--neon-cyan) 8%, transparent)', margin: '12px 0' }} />
+            <div style={{ borderTop: '1px solid var(--border-color)', margin: '8px 0' }} />
 
             {isLoggedIn ? (
-              <div className="space-y-1">
-                <div className="flex items-center gap-3 px-4 py-3">
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center relative" style={{
+              <div>
+                {/* User card — tap to expand */}
+                <button
+                  onClick={() => setMobileUserOpen(p => !p)}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all"
+                  style={{
+                    background: mobileUserOpen ? 'rgba(0,229,255,0.06)' : 'transparent',
+                    border: 'none',
+                    textAlign: 'left',
+                  }}
+                >
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 relative" style={{
                     background: 'var(--accent-gradient, linear-gradient(135deg, var(--neon-cyan), var(--neon-purple)))',
                   }}>
-                    <span className="text-sm font-bold text-white">{user?.name?.charAt(0).toUpperCase()}</span>
+                    <span className="text-xs font-bold text-white">{user?.name?.charAt(0).toUpperCase()}</span>
                     {!user?.emailVerified && (
                       <span style={{
                         position: 'absolute', top: -1, right: -1,
-                        width: 10, height: 10, borderRadius: '50%',
+                        width: 8, height: 8, borderRadius: '50%',
                         background: '#ffd93d',
-                        border: '2px solid rgba(10,11,26,0.9)',
+                        border: '2px solid var(--bg-secondary)',
                         boxShadow: '0 0 6px rgba(255,217,61,0.5)',
                       }} />
                     )}
                   </div>
-                  <div>
-                    <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{user?.name}</p>
-                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{user?.role === 'admin' ? 'Administrator' : 'Player'}</p>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{user?.name}</p>
+                    <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>{user?.role === 'admin' ? 'Administrator' : 'Player'}</p>
                   </div>
-                </div>
-                {!user?.emailVerified && (
-                  <Link href="/verify-email" onClick={() => setMobileOpen(false)}
-                    className="flex items-center gap-2 mx-4 px-3 py-2 rounded-xl text-xs font-semibold"
-                    style={{
-                      background: 'rgba(255,217,61,0.08)', border: '1px solid rgba(255,217,61,0.2)',
-                      color: '#ffd93d', textDecoration: 'none',
-                    }}>
-                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#ffd93d', boxShadow: '0 0 6px rgba(255,217,61,0.5)', flexShrink: 0 }} />
-                    Verify your email to claim rewards
-                  </Link>
-                )}
-                {isAdmin ? (
-                  <Link
-                    href="/dashboard/claimable"
-                    onClick={() => setMobileOpen(false)}
-                    className="block w-[calc(100%-2rem)] mx-4 px-4 py-2.5 rounded-xl text-left"
-                    style={{
-                      background: 'rgba(255,217,61,0.08)', border: '1px solid rgba(255,217,61,0.22)',
-                      color: '#ffd93d', fontWeight: 700, fontSize: 14, textDecoration: 'none',
-                    }}
-                  >
-                    💰 PKR {parseFloat(claimableTotal.toFixed(2)).toLocaleString()}
-                  </Link>
-                ) : (
-                  <Link href="/wallet" onClick={() => setMobileOpen(false)}
-                    className="flex items-center gap-2 mx-4 px-4 py-2.5 rounded-xl" style={{
-                      background: 'rgba(0,255,136,0.06)', border: '1px solid rgba(0,255,136,0.15)',
-                      color: '#00ff88', textDecoration: 'none', fontWeight: 700, fontSize: 14,
-                    }}>
-                    💰 PKR {walletBalance.toLocaleString()}
-                  </Link>
-                )}
-                {isAdmin && (
-                  <Link href="/dashboard" onClick={() => setMobileOpen(false)}
-                    className="block px-4 py-3 rounded-xl text-base font-medium transition-all"
-                    style={{ color: 'var(--neon-purple)', textDecoration: 'none' }}
-                  >
-                    🛡️ Dashboard
-                  </Link>
-                )}
-                <Link href="/referrals" onClick={() => setMobileOpen(false)}
-                  className="block px-4 py-3 rounded-xl text-base font-medium transition-all"
-                  style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}
-                >
-                  🤝 Referrals
-                </Link>
-                <Link href="/my-comments" onClick={() => setMobileOpen(false)}
-                  className="block px-4 py-3 rounded-xl text-base font-medium transition-all"
-                  style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}
-                >
-                  💬 My Comments
-                </Link>
-                <Link href="/settings" onClick={() => setMobileOpen(false)}
-                  className="block px-4 py-3 rounded-xl text-base font-medium transition-all"
-                  style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}
-                >
-                  ⚙️ Settings
-                </Link>
-                <button onClick={() => { logout(); setMobileOpen(false); }}
-                  className="w-full text-left px-4 py-3 rounded-xl text-base font-medium transition-all"
-                  style={{ color: 'var(--neon-pink)' }}
-                >
-                  🚪 Logout
+                  <span className={`transition-transform duration-200 ${mobileUserOpen ? 'rotate-180' : ''}`} style={{ color: 'var(--text-muted)' }}>
+                    <ChevronDown />
+                  </span>
                 </button>
+
+                {/* Expandable user menu */}
+                {mobileUserOpen && (
+                  <div className="mt-1 ml-2 mr-2 rounded-xl overflow-hidden" style={{
+                    background: 'rgba(0,229,255,0.02)',
+                    border: '1px solid var(--border-color)',
+                  }}>
+                    {!user?.emailVerified && (
+                      <Link href="/verify-email" onClick={() => setMobileOpen(false)}
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-all"
+                        style={{ color: '#ffd93d', textDecoration: 'none', borderBottom: '1px solid var(--border-color)' }}
+                      >
+                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#ffd93d', boxShadow: '0 0 6px rgba(255,217,61,0.5)', flexShrink: 0 }} />
+                        Verify Email
+                      </Link>
+                    )}
+                    {isAdmin ? (
+                      <Link href="/dashboard/claimable" onClick={() => setMobileOpen(false)}
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm font-semibold transition-all"
+                        style={{ color: '#ffd93d', textDecoration: 'none', borderBottom: '1px solid var(--border-color)' }}
+                      >
+                        💰 PKR {parseFloat(claimableTotal.toFixed(2)).toLocaleString()}
+                      </Link>
+                    ) : (
+                      <Link href="/wallet" onClick={() => setMobileOpen(false)}
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm font-semibold transition-all"
+                        style={{ color: '#00ff88', textDecoration: 'none', borderBottom: '1px solid var(--border-color)' }}
+                      >
+                        💰 PKR {walletBalance.toLocaleString()}
+                      </Link>
+                    )}
+                    <Link href="/profile" onClick={() => setMobileOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-all"
+                      style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}
+                    >
+                      <UserIcon /> Profile
+                    </Link>
+                    {isAdmin && (
+                      <Link href="/dashboard" onClick={() => setMobileOpen(false)}
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-all"
+                        style={{ color: 'var(--neon-purple)', textDecoration: 'none' }}
+                      >
+                        🛡️ Dashboard
+                      </Link>
+                    )}
+                    <Link href="/referrals" onClick={() => setMobileOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-all"
+                      style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}
+                    >
+                      🤝 Referrals
+                    </Link>
+                    <Link href="/my-comments" onClick={() => setMobileOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-all"
+                      style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}
+                    >
+                      💬 My Comments
+                    </Link>
+                    <Link href="/settings" onClick={() => setMobileOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-all"
+                      style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}
+                    >
+                      ⚙️ Settings
+                    </Link>
+                    <div style={{ borderTop: '1px solid var(--border-color)' }} />
+                    <button onClick={() => { logout(); setMobileOpen(false); }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-all text-left"
+                      style={{ color: 'var(--neon-pink)' }}
+                    >
+                      🚪 Logout
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
-              <div className="flex gap-3 px-4 pt-2">
+              <div className="flex gap-3 pt-1">
                 <Link href="/login" className="btn-neon text-sm flex-1 text-center" onClick={() => setMobileOpen(false)}>
                   Log In
                 </Link>

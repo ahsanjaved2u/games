@@ -5,7 +5,6 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import GameInstructions from '@/components/GameInstructions';
-import GameReviews from '@/components/GameReviews';
 import EntryFeeModal from '@/components/EntryFeeModal';
 import SignupRewardModal from '@/components/SignupRewardModal';
 import Confetti from '@/components/Confetti';
@@ -394,9 +393,7 @@ export default function GamePage() {
         attemptCost={hasAttemptCost ? game.attemptCost : 0}
         walletBalance={walletBalance ?? 0}
         onPayAndPlay={hasAttemptCost ? handlePayAndPlay : undefined}
-      >
-        <GameReviews slug={slug} />
-      </GameInstructions>
+      />
     );
   }
 
