@@ -75,7 +75,7 @@ const selectStyle = {
   };
 
 const emptyForm = {
-  name: '', slug: '', description: '', thumbnail: 'images/background.png',
+  name: '', slug: '', description: '', thumbnail: 'images/background.webp',
   isLive: false, gamePath: '',
   tag: '', color: '#00e5ff', gameType: 'rewarding',
   isFree: true,
@@ -160,11 +160,17 @@ function GamesManagement() {
     e.preventDefault();
     setSaving(true);
     try {
+      // Convert datetime-local strings to proper ISO with timezone
+      const payload = { ...form };
+      ['scheduleStart', 'scheduleEnd'].forEach(key => {
+        if (payload[key]) payload[key] = new Date(payload[key]).toISOString();
+      });
+
       if (editingId) {
-        await authFetch(`/games/${editingId}`, { method: 'PUT', body: JSON.stringify(form) });
+        await authFetch(`/games/${editingId}`, { method: 'PUT', body: JSON.stringify(payload) });
         flash('Game updated');
       } else {
-        await authFetch('/games', { method: 'POST', body: JSON.stringify(form) });
+        await authFetch('/games', { method: 'POST', body: JSON.stringify(payload) });
         flash('Game created');
       }
       setShowForm(false);
@@ -358,7 +364,7 @@ function GamesManagement() {
                   <input style={inputStyle} value={form.gamePath} onChange={e => setForm(f => ({ ...f, gamePath: e.target.value }))} required />
                 </Field>
                 <Field label="Thumbnail (relative path)" half>
-                  <input style={inputStyle} value={form.thumbnail} onChange={e => setForm(f => ({ ...f, thumbnail: e.target.value }))} placeholder="images/background.png" />
+                  <input style={inputStyle} value={form.thumbnail} onChange={e => setForm(f => ({ ...f, thumbnail: e.target.value }))} placeholder="images/background.webp" />
                 </Field>
                 <Field label="Description">
                   <textarea style={{ ...inputStyle, minHeight: 70, resize: 'vertical' }} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
