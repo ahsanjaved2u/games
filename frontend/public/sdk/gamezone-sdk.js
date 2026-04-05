@@ -189,6 +189,11 @@ const GameZone = (() => {
         const cardR = F(14);
         const pad = F(14);
 
+        // Vertical scale factor: how much vertical space we have vs ideal
+        const idealCardH = F(480); // ideal card height at 400px wide
+        const vScale = Math.min(1, cardH / idealCardH);
+        const V = (px) => Math.round(F(px) * vScale);
+
         ctx.fillStyle = '#0c0c24';
         ctx.beginPath();
         ctx.roundRect(cardL, cardT, cardW, cardH, cardR);
@@ -204,29 +209,29 @@ const GameZone = (() => {
         ctx.fillStyle = 'rgba(255, 71, 87, 0.15)';
         ctx.fillRect(cardL + 1, cardT + 1, cardW - 2, F(4));
 
-        let y = cardT + F(28);
+        let y = cardT + V(24);
 
         // ══ GAME OVER ══
         ctx.fillStyle = '#ff4757';
-        ctx.font = `bold ${F(28)}px Arial`;
+        ctx.font = `bold ${V(28)}px Arial`;
         ctx.fillText('GAME OVER', cx, y);
-        y += F(40);
+        y += V(36);
 
         // ══ Big score ══
         ctx.fillStyle = '#ffd93d';
-        ctx.font = `bold ${F(48)}px Arial`;
+        ctx.font = `bold ${V(44)}px Arial`;
         ctx.fillText(finalScore, cx, y);
-        y += F(32);
+        y += V(28);
 
         ctx.fillStyle = '#666';
-        ctx.font = `bold ${F(11)}px Arial`;
+        ctx.font = `bold ${V(10)}px Arial`;
         ctx.fillText('S C O R E', cx, y);
-        y += F(22);
+        y += V(18);
 
         // ══ Stats row ══
         const boxGap = F(8);
         const boxW = (cardW - pad * 2 - boxGap * 2) / 3;
-        const boxH = F(44);
+        const boxH = V(40);
         const boxL = cardL + pad;
         const boxR2 = F(8);
 
@@ -255,190 +260,142 @@ const GameZone = (() => {
             const bcx = bx + boxW / 2;
 
             ctx.fillStyle = '#555';
-            ctx.font = `bold ${F(9)}px Arial`;
+            ctx.font = `bold ${V(9)}px Arial`;
             ctx.fillText(s.label, bcx, y + boxH * 0.32);
 
             ctx.fillStyle = s.color;
-            ctx.font = `bold ${F(16)}px Arial`;
+            ctx.font = `bold ${V(15)}px Arial`;
             ctx.fillText(s.value, bcx, y + boxH * 0.72);
         });
 
-        y += boxH + F(18);
+        y += boxH + V(14);
 
-        // ══ Leaderboard header ══
-        ctx.fillStyle = '#ffd93d';
-        ctx.font = `bold ${F(14)}px Arial`;
-        ctx.textAlign = 'left';
-        ctx.fillText('🏆  TOP 10', cardL + pad, y);
-        ctx.textAlign = 'center';
+        // ══ Button (reserve space at bottom first) ══
+        const btnH = V(38);
+        const btnBottomMargin = V(16);
+        const btnY = cardT + cardH - btnBottomMargin - btnH;
+        const btnW = cardW * 0.65;
+        const btnX = cx - btnW / 2;
+        const btnR3 = F(6);
 
-        y += F(10);
-        ctx.strokeStyle = 'rgba(255,255,255,0.08)';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(cardL + pad, y);
-        ctx.lineTo(cardL + cardW - pad, y);
-        ctx.stroke();
-        y += F(8);
+        // ══ Leaderboard section (fills space between stats and button) ══
+        const lbBottom = btnY - V(10); // gap above button
+        const lbAvailable = lbBottom - y;
 
-        // ══ Column headers ══
-        const innerW = cardW - pad * 2;
-        const cols = {
-            rank:  cardL + pad + innerW * 0.06,
-            name:  cardL + pad + innerW * 0.30,
-            pts:   cardL + pad + innerW * 0.54,
-            time:  cardL + pad + innerW * 0.74,
-            score: cardL + pad + innerW * 0.93,
-        };
+        if (lbAvailable > V(30)) {
+            // Leaderboard header
+            ctx.fillStyle = '#ffd93d';
+            ctx.font = `bold ${V(13)}px Arial`;
+            ctx.textAlign = 'left';
+            ctx.fillText('🏆  TOP 10', cardL + pad, y);
+            ctx.textAlign = 'center';
 
-        ctx.fillStyle = '#555';
-        ctx.font = `bold ${F(9)}px Arial`;
-        ['#', 'NAME', 'PTS', 'TIME', 'SCORE'].forEach((lbl, i) => {
-            ctx.fillText(lbl, [cols.rank, cols.name, cols.pts, cols.time, cols.score][i], y);
-        });
-        y += F(14);
+            y += V(10);
+            ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(cardL + pad, y);
+            ctx.lineTo(cardL + cardW - pad, y);
+            ctx.stroke();
+            y += V(6);
 
-        // ══ Leaderboard rows ══
-        const rowH = F(22);
-        const rowFont = F(11);
-        const medals = ['🥇', '🥈', '🥉'];
-        const medalColors = ['#ffd93d', '#c0c0c0', '#cd7f32'];
-        const rowTextColors = ['#e8d48f', '#c8c8c8', '#c9a06c'];
+            // Column headers
+            const innerW = cardW - pad * 2;
+            const cols = {
+                rank:  cardL + pad + innerW * 0.06,
+                name:  cardL + pad + innerW * 0.30,
+                pts:   cardL + pad + innerW * 0.54,
+                time:  cardL + pad + innerW * 0.74,
+                score: cardL + pad + innerW * 0.93,
+            };
 
-        lbEntries.forEach((e, i) => {
-            const ry = y + rowH * i;
-            const rcy = ry + rowH / 2;
-            const isP = !!e.isPlayer;
+            ctx.fillStyle = '#555';
+            ctx.font = `bold ${V(9)}px Arial`;
+            ['#', 'NAME', 'PTS', 'TIME', 'SCORE'].forEach((lbl, i) => {
+                ctx.fillText(lbl, [cols.rank, cols.name, cols.pts, cols.time, cols.score][i], y);
+            });
+            y += V(12);
 
-            if (isP) {
-                ctx.fillStyle = 'rgba(0, 229, 255, 0.1)';
-                ctx.beginPath();
-                ctx.roundRect(cardL + pad - F(4), ry, innerW + F(8), rowH, F(4));
-                ctx.fill();
-                ctx.fillStyle = '#00e5ff';
-                ctx.beginPath();
-                ctx.roundRect(cardL + pad - F(4), ry + F(3), F(3), rowH - F(6), 2);
-                ctx.fill();
-            } else if (i % 2 === 0) {
-                ctx.fillStyle = 'rgba(255,255,255,0.02)';
-                ctx.fillRect(cardL + pad, ry, innerW, rowH);
-            }
+            // Rows — fit as many as possible
+            const rowSpace = lbBottom - y;
+            const idealRowH = V(20);
+            const maxRows = Math.max(1, Math.floor(rowSpace / idealRowH));
+            const rowH = Math.min(idealRowH, Math.floor(rowSpace / Math.min(lbEntries.length, maxRows)));
+            const visibleEntries = lbEntries.slice(0, maxRows);
+            const rowFont = Math.min(V(11), Math.round(rowH * 0.5));
+            const medals = ['🥇', '🥈', '🥉'];
+            const medalColors = ['#ffd93d', '#c0c0c0', '#cd7f32'];
+            const rowTextColors = ['#e8d48f', '#c8c8c8', '#c9a06c'];
 
-            const baseCol = i < 3 ? rowTextColors[i] : (isP ? '#00e5ff' : '#aaa');
-            const rkCol   = i < 3 ? medalColors[i] : (isP ? '#00e5ff' : '#aaa');
+            visibleEntries.forEach((e, i) => {
+                const ry = y + rowH * i;
+                const rcy = ry + rowH / 2;
+                const isP = !!e.isPlayer;
 
-            ctx.fillStyle = rkCol;
-            ctx.font = `bold ${F(13)}px Arial`;
-            if (i < 3) {
-                ctx.fillText(medals[i], cols.rank, rcy);
-            } else {
-                ctx.fillText(String(i + 1), cols.rank, rcy);
-            }
+                if (isP) {
+                    ctx.fillStyle = 'rgba(0, 229, 255, 0.1)';
+                    ctx.beginPath();
+                    ctx.roundRect(cardL + pad - F(4), ry, innerW + F(8), rowH, F(4));
+                    ctx.fill();
+                    ctx.fillStyle = '#00e5ff';
+                    ctx.beginPath();
+                    ctx.roundRect(cardL + pad - F(4), ry + F(3), F(3), rowH - F(6), 2);
+                    ctx.fill();
+                } else if (i % 2 === 0) {
+                    ctx.fillStyle = 'rgba(255,255,255,0.02)';
+                    ctx.fillRect(cardL + pad, ry, innerW, rowH);
+                }
 
-            ctx.fillStyle = isP ? '#00e5ff' : baseCol;
-            ctx.font = isP ? `bold ${rowFont}px Arial` : `${rowFont}px Arial`;
-            ctx.fillText(isP ? `${e.name} ✦` : e.name, cols.name, rcy);
+                const baseCol = i < 3 ? rowTextColors[i] : (isP ? '#00e5ff' : '#aaa');
+                const rkCol   = i < 3 ? medalColors[i] : (isP ? '#00e5ff' : '#aaa');
 
-            ctx.fillStyle = baseCol;
-            ctx.font = `${rowFont}px Arial`;
-            ctx.fillText(e.points, cols.pts, rcy);
-            ctx.fillText(formatTime(e.time), cols.time, rcy);
+                ctx.fillStyle = rkCol;
+                ctx.font = `bold ${Math.min(V(13), Math.round(rowH * 0.6))}px Arial`;
+                if (i < 3) {
+                    ctx.fillText(medals[i], cols.rank, rcy);
+                } else {
+                    ctx.fillText(String(i + 1), cols.rank, rcy);
+                }
 
-            ctx.fillStyle = isP ? '#00e5ff' : (i < 3 ? medalColors[i] : '#00e5ff');
-            ctx.font = `bold ${rowFont}px Arial`;
-            ctx.fillText(e.score, cols.score, rcy);
-        });
+                ctx.fillStyle = isP ? '#00e5ff' : baseCol;
+                ctx.font = isP ? `bold ${rowFont}px Arial` : `${rowFont}px Arial`;
+                ctx.fillText(isP ? `${e.name} ✦` : e.name, cols.name, rcy);
+
+                ctx.fillStyle = baseCol;
+                ctx.font = `${rowFont}px Arial`;
+                ctx.fillText(e.points, cols.pts, rcy);
+                ctx.fillText(formatTime(e.time), cols.time, rcy);
+
+                ctx.fillStyle = isP ? '#00e5ff' : (i < 3 ? medalColors[i] : '#00e5ff');
+                ctx.font = `bold ${rowFont}px Arial`;
+                ctx.fillText(e.score, cols.score, rcy);
+            });
+        }
 
         // ══ Try Again button ══
-        const btnW = cardW * 0.65;
-        const btnH = F(42);
-        const btnX = cx - btnW / 2;
-        const btnY = cardT + cardH - F(22) - btnH;
-        const btnR3 = btnH / 2;
-
-        const t_now = performance.now();
-        const glowPulse = 0.6 + 0.4 * Math.sin(t_now * 0.004);
-
-        // Outer glow
-        ctx.save();
-        ctx.shadowColor = `rgba(0, 255, 200, ${0.35 * glowPulse})`;
-        ctx.shadowBlur = 30 + 12 * glowPulse;
-        ctx.fillStyle = 'rgba(0,229,255,0.04)';
-        ctx.beginPath();
-        ctx.roundRect(btnX - 6, btnY - 6, btnW + 12, btnH + 12, btnR3 + 6);
-        ctx.fill();
-        ctx.fill();
-        ctx.restore();
 
         // Drop shadow
-        ctx.fillStyle = 'rgba(0,0,0,0.45)';
+        ctx.fillStyle = 'rgba(0,0,0,0.4)';
         ctx.beginPath();
         ctx.roundRect(btnX + 2, btnY + 3, btnW, btnH, btnR3);
         ctx.fill();
 
-        // Gradient body
+        // Gradient body — matches Start Game button (game color → purple)
         ctx.save();
         const btnGrad = ctx.createLinearGradient(btnX, btnY, btnX + btnW, btnY + btnH);
-        btnGrad.addColorStop(0, '#00ffcc');
-        btnGrad.addColorStop(0.25, '#00e5ff');
-        btnGrad.addColorStop(0.55, '#00b0ff');
-        btnGrad.addColorStop(0.85, '#6c5ce7');
+        btnGrad.addColorStop(0, '#00e5ff');
         btnGrad.addColorStop(1, '#a855f7');
         ctx.fillStyle = btnGrad;
         ctx.beginPath();
         ctx.roundRect(btnX, btnY, btnW, btnH, btnR3);
         ctx.fill();
-        ctx.restore();
 
-        // Glossy highlight
-        ctx.save();
-        ctx.globalAlpha = 0.35;
-        const shineGrad = ctx.createLinearGradient(btnX, btnY, btnX, btnY + btnH * 0.5);
-        shineGrad.addColorStop(0, 'rgba(255,255,255,0.9)');
-        shineGrad.addColorStop(0.5, 'rgba(255,255,255,0.15)');
-        shineGrad.addColorStop(1, 'rgba(255,255,255,0)');
-        ctx.fillStyle = shineGrad;
+        // Subtle glow shadow
+        ctx.shadowColor = 'rgba(0,229,255,0.35)';
+        ctx.shadowBlur = 20;
         ctx.beginPath();
-        ctx.roundRect(btnX + 3, btnY + 2, btnW - 6, btnH * 0.45, [btnR3, btnR3, 4, 4]);
+        ctx.roundRect(btnX, btnY, btnW, btnH, btnR3);
         ctx.fill();
-        ctx.restore();
-
-        // Shimmer sweep
-        ctx.save();
-        const shimmerX = btnX + ((t_now * 0.08) % (btnW + 60)) - 30;
-        const shimGrad = ctx.createLinearGradient(shimmerX - 30, btnY, shimmerX + 30, btnY);
-        shimGrad.addColorStop(0, 'rgba(255,255,255,0)');
-        shimGrad.addColorStop(0.5, 'rgba(255,255,255,0.18)');
-        shimGrad.addColorStop(1, 'rgba(255,255,255,0)');
-        ctx.fillStyle = shimGrad;
-        ctx.beginPath();
-        ctx.roundRect(btnX, btnY, btnW, btnH, btnR3);
-        ctx.clip();
-        ctx.fillRect(shimmerX - 30, btnY, 60, btnH);
-        ctx.restore();
-
-        // Neon border — triple stroke
-        ctx.save();
-        ctx.strokeStyle = `rgba(0,255,220,${0.7 + 0.3 * glowPulse})`;
-        ctx.lineWidth = 4;
-        ctx.shadowColor = `rgba(0,255,200,${0.9 * glowPulse})`;
-        ctx.shadowBlur = 24;
-        ctx.beginPath();
-        ctx.roundRect(btnX, btnY, btnW, btnH, btnR3);
-        ctx.stroke();
-        ctx.shadowBlur = 16;
-        ctx.stroke();
-        ctx.shadowBlur = 0;
-        ctx.strokeStyle = `rgba(0,255,255,${0.8 + 0.2 * glowPulse})`;
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.roundRect(btnX, btnY, btnW, btnH, btnR3);
-        ctx.stroke();
-        ctx.strokeStyle = `rgba(255,255,255,${0.6 + 0.2 * glowPulse})`;
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.roundRect(btnX + 2, btnY + 2, btnW - 4, btnH - 4, btnR3 - 2);
-        ctx.stroke();
         ctx.restore();
 
         // Button text

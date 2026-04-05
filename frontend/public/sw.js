@@ -1,5 +1,5 @@
-const CACHE = 'gamevesta-v2';
-const GAME_CACHE = 'gamevesta-games-v1';
+const CACHE = 'gamevesta-v3';
+const GAME_CACHE = 'gamevesta-games-v2';
 
 // File extensions worth caching for games
 const GAME_ASSET_EXTS = /\.(js|css|html|png|jpg|jpeg|webp|svg|woff2|woff|ttf|mp3|ogg|wav|json)$/i;
@@ -58,11 +58,43 @@ self.addEventListener('fetch', (e) => {
 // ── Listen for prefetch messages from the app ──
 self.addEventListener('message', (e) => {
   if (e.data && e.data.type === 'PREFETCH_GAME') {
-    const gameUrl = e.data.url; // e.g. "https://...r2.dev/plasmaburst/index.html"
-    caches.open(GAME_CACHE).then((cache) =>
-      cache.match(gameUrl).then((existing) => {
-        if (!existing) fetch(gameUrl).then((res) => { if (res.ok) cache.put(gameUrl, res); }).catch(() => {});
-      })
-    );
+    const indexUrl = e.data.url; // e.g. "/games/plasmaburst/index.html"
+    const base = indexUrl.substring(0, indexUrl.lastIndexOf('/') + 1);
+
+    caches.open(GAME_CACHE).then((cache) => {
+      // Check if we already cached this game (index.html present = all assets cached)
+      cache.match(indexUrl).then((existing) => {
+        if (existing) return; // already fully cached, nothing to do
+
+        // Fetch index.html, then parse and cache all assets found in it
+        fetch(indexUrl).then((res) => {
+          if (!res.ok) return;
+          const resClone = res.clone();
+          cache.put(indexUrl, res);
+
+          resClone.text().then((html) => {
+            // Extract all src/href asset references
+            const assetUrls = new Set();
+            const matches = html.matchAll(/(?:src|href)=["']([^"'?#]+)["']/gi);
+            for (const m of matches) {
+              const ref = m[1];
+              if (!GAME_ASSET_EXTS.test(ref)) continue;
+              // Resolve relative URLs
+              const absolute = ref.startsWith('http') ? ref
+                : ref.startsWith('/') ? self.location.origin + ref
+                : base + ref;
+              assetUrls.add(absolute);
+            }
+
+            // Fetch and cache every asset in parallel
+            assetUrls.forEach((url) => {
+              cache.match(url).then((hit) => {
+                if (!hit) fetch(url).then((r) => { if (r.ok) cache.put(url, r); }).catch(() => {});
+              });
+            });
+          });
+        }).catch(() => {});
+      });
+    });
   }
 });
