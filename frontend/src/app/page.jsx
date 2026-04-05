@@ -9,6 +9,7 @@ import GameCardSkeleton from '@/components/GameCardSkeleton';
 import { useAuth } from "@/context/AuthContext";
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const GAMES_BASE = process.env.NEXT_PUBLIC_GAMES_BASE_URL || '/games';
 
 export default function Home() {
   const { isLoggedIn, authFetch } = useAuth();
@@ -117,6 +118,21 @@ export default function Home() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [TOTAL_SLIDES]);
 
+  // Light preload: cache each game's index.html via Service Worker
+  useEffect(() => {
+    if (games.length === 0 || !('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.ready.then(reg => {
+      if (!reg.active) return;
+      games.forEach(game => {
+        if (!game.gamePath) return;
+        reg.active.postMessage({
+          type: 'PREFETCH_GAME',
+          url: `${GAMES_BASE}/${game.gamePath}/index.html`,
+        });
+      });
+    });
+  }, [games]);
+
   return (
     <div className="bg-grid relative" style={{ overflow: 'hidden' }}>
 
@@ -124,17 +140,17 @@ export default function Home() {
       <div className="glow-orb" style={{ width: '30vw', height: '30vw', maxWidth: 400, maxHeight: 400, background: 'var(--neon-cyan)', top: '0%', left: '5%' }} />
       <div className="glow-orb" style={{ width: '25vw', height: '25vw', maxWidth: 300, maxHeight: 300, background: 'var(--neon-purple)', bottom: '10%', right: '5%', animationDelay: '5s' }} />
 
-      <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+      <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-2 pb-4 sm:pb-6">
 
         {/* ── Hero Slider ── */}
-        <div className="mb-5 sm:mb-6 animate-fade-in-up">
+        <div className="hidden sm:block mb-5 sm:mb-6 animate-fade-in-up" style={{ marginTop: 0 }}>
           {/* Fixed height wrapper — all slides match this */}
           <div
             className="rounded-2xl overflow-hidden relative"
             style={{
               border: '1px solid var(--border-color)',
               boxShadow: '0 0 40px rgba(0,229,255,0.06), inset 0 1px 0 rgba(255,255,255,0.04)',
-              height: 170,
+              height: 100,
             }}
             onTouchStart={e => { touchStartX.current = e.touches[0].clientX; }}
             onTouchEnd={e => {
@@ -204,30 +220,8 @@ export default function Home() {
                 </div>
               )}
             </div>
-
-            {/* Dot indicators */}
-            <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1.5">
-              {Array.from({ length: TOTAL_SLIDES }).map((_, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => setHeroSlide(idx)}
-                  aria-label={`Slide ${idx + 1}`}
-                  style={{
-                    width: heroSlide === idx ? 18 : 7,
-                    height: 7,
-                    borderRadius: 999,
-                    border: 'none',
-                    cursor: 'pointer',
-                    background: heroSlide === idx ? 'rgba(0,229,255,0.9)' : 'rgba(255,255,255,0.35)',
-                    boxShadow: heroSlide === idx ? '0 0 8px rgba(0,229,255,0.6)' : 'none',
-                    transition: 'all 220ms ease',
-                    padding: 0,
-                  }}
-                />
-              ))}
-            </div>
           </div>
+
         </div>
 
         {/* ── Games Grid ── */}

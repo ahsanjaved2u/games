@@ -334,6 +334,17 @@ export default function GameCard({ game, i, isLoggedIn, reviewData, onToggleLike
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game.gameType, game.isLive, game.scheduleStart, game.scheduleEnd, game.prizesDistributed]);
 
+  // Prefetch game assets on hover (via service worker) — runs once per game
+  const prefetched = useRef(false);
+  const prefetchGame = useCallback(() => {
+    if (prefetched.current || !game.gamePath) return;
+    prefetched.current = true;
+    const gameUrl = `${GAMES_BASE}/${game.gamePath}/index.html`;
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({ type: 'PREFETCH_GAME', url: gameUrl });
+    }
+  }, [game.gamePath]);
+
   const handlePlay = () => {
     if (!effectiveLive) return;
   };
@@ -341,16 +352,23 @@ export default function GameCard({ game, i, isLoggedIn, reviewData, onToggleLike
   return (
     <div
       className="glass-card group transition-all duration-300 animate-fade-in-up relative overflow-hidden flex flex-col"
-      style={{ animationDelay: `${i * 0.08}s`, opacity: effectiveLive ? 1 : 0.7 }}
+      style={{
+        animationDelay: `${i * 0.08}s`,
+        opacity: effectiveLive ? 1 : 0.7,
+        border: `2px solid ${(game.color || '#00e5ff')}30`,
+        boxShadow: `0 0 10px ${(game.color || '#00e5ff')}12, inset 0 1px 0 ${(game.color || '#00e5ff')}0a`,
+      }}
       onMouseEnter={e => {
+        prefetchGame();
         if (!effectiveLive) return;
-        e.currentTarget.style.borderColor = (game.color || '#00e5ff') + '40';
-        e.currentTarget.style.boxShadow = `0 0 30px ${game.color || '#00e5ff'}15`;
+        e.currentTarget.style.borderColor = (game.color || '#00e5ff') + '60';
+        e.currentTarget.style.boxShadow = `0 0 24px ${game.color || '#00e5ff'}28, inset 0 1px 0 ${game.color || '#00e5ff'}14`;
         e.currentTarget.style.transform = 'translateY(-4px)';
       }}
+      onTouchStart={() => { prefetchGame(); }}
       onMouseLeave={e => {
-        e.currentTarget.style.borderColor = 'var(--glass-border)';
-        e.currentTarget.style.boxShadow = 'none';
+        e.currentTarget.style.borderColor = (game.color || '#00e5ff') + '30';
+        e.currentTarget.style.boxShadow = `0 0 10px ${(game.color || '#00e5ff')}12, inset 0 1px 0 ${(game.color || '#00e5ff')}0a`;
         e.currentTarget.style.transform = 'translateY(0)';
       }}
     >

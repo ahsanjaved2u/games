@@ -52,26 +52,40 @@ export default function ReferralBanner() {
       background: 'linear-gradient(135deg, rgba(168,85,247,0.12), rgba(0,229,255,0.08), rgba(255,45,120,0.06))',
       borderBottom: '1px solid rgba(168,85,247,0.2)',
     }}>
-      <div className="max-w-7xl mx-auto px-4 py-2.5 flex items-center justify-center gap-3 text-center relative">
-        <span className="text-base">🤝</span>
-        <p className="text-xs sm:text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-          <span className="font-bold" style={{ color: 'var(--neon-purple)' }}>Invite friends & earn rewards!</span>
-          {' '}Get bonus PKR when your referrals play games.
+      <div className="max-w-7xl mx-auto px-4 py-2 flex items-center gap-2 relative pr-12">
+        <span className="text-base shrink-0">🤝</span>
+        <p className="text-xs font-medium truncate" style={{ color: 'var(--text-primary)' }}>
+          <span className="font-bold" style={{ color: 'var(--neon-purple)' }}>Invite friends</span>
+          <span className="hidden sm:inline" style={{ color: 'var(--text-primary)' }}> &amp; earn rewards!</span>
+          {' '}
+          <span className="hidden sm:inline" style={{ color: 'var(--text-muted)' }}>Get bonus PKR when your referrals play.</span>
+          <span className="sm:hidden" style={{ color: 'var(--text-muted)' }}>&amp; earn real money</span>
         </p>
         <Link
           href="/referrals"
           onClick={dismiss}
-          className="shrink-0 px-3 py-1 rounded-lg text-[11px] font-bold transition-all"
+          className="shrink-0 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all"
           style={{
             background: 'linear-gradient(135deg, rgba(168,85,247,0.2), rgba(0,229,255,0.15))',
             border: '1px solid rgba(168,85,247,0.3)',
             color: 'var(--neon-purple)',
             textDecoration: 'none',
+            whiteSpace: 'nowrap',
           }}
         >
-          Invite Now →
+          Invite →
         </Link>
-        <button onClick={dismiss} className="absolute right-3 top-1/2 -translate-y-1/2 text-sm p-1" style={{ color: 'var(--text-muted)', lineHeight: 1 }}>✕</button>
+        <button
+          onClick={dismiss}
+          className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold transition-all"
+          style={{
+            color: 'var(--text-muted)',
+            background: 'rgba(255,255,255,0.07)',
+            border: '1px solid rgba(255,255,255,0.15)',
+            lineHeight: 1,
+          }}
+          aria-label="Dismiss"
+        >✕</button>
       </div>
     </div>
   );

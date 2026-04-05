@@ -279,23 +279,31 @@ function SummaryView({ summaryData, loading, isLoggedIn, user, games }) {
   return (
     <div className="space-y-4 animate-fade-in-up">
       {/* Greeting */}
-      <div className="flex items-center gap-3 mb-2">
-        <div className="w-11 h-11 rounded-full flex items-center justify-center text-base font-bold" style={{
-          background: 'var(--accent-gradient, linear-gradient(135deg, var(--neon-cyan), var(--neon-purple)))', color: '#fff',
-        }}>
-          {user?.name?.charAt(0).toUpperCase()}
-        </div>
-        <div>
+      <div className="flex items-center justify-between gap-3 mb-2">
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 rounded-full flex items-center justify-center text-base font-bold" style={{
+            background: 'var(--accent-gradient, linear-gradient(135deg, var(--neon-cyan), var(--neon-purple)))', color: '#fff',
+          }}>
+            {user?.name?.charAt(0).toUpperCase()}
+          </div>
           <p className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>{user?.name}&apos;s Overview</p>
-          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-            {summaryEntries.length} entr{summaryEntries.length !== 1 ? 'ies' : 'y'}
-            {` · ${uniqueGames} game${uniqueGames !== 1 ? 's' : ''}`}
-            {totalContests > 0 && ` · ${totalContests} contest${totalContests !== 1 ? 's' : ''}`}
-          </p>
         </div>
+        <p className="text-xs text-right shrink-0" style={{ color: 'var(--text-muted)' }}>
+          {summaryEntries.length} entr{summaryEntries.length !== 1 ? 'ies' : 'y'}
+          {` · ${uniqueGames} game${uniqueGames !== 1 ? 's' : ''}`}
+          {totalContests > 0 && ` · ${totalContests} contest${totalContests !== 1 ? 's' : ''}`}
+        </p>
       </div>
 
       <div className="glass-card overflow-hidden">
+        {/* ── TEMPORARILY HIDDEN for launch ──────────────────────────────────────
+            Hiding the stats summary (Entries / Live / Ended / Standard) and the
+            filter tabs (All / Live Contest / Ended Contest / Standard/Rewarding)
+            plus the Search box because they confuse new users when contest
+            activity is low. Re-enable this block once we have enough contests
+            and active players to make the filters meaningful.
+            ────────────────────────────────────────────────────────────────────── */}
+        {false && (
         <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--subtle-border)', background: 'var(--subtle-overlay)' }}>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3 text-center">
             <div className="rounded-lg py-2" style={{ background: 'rgba(0,229,255,0.08)', border: '1px solid rgba(0,229,255,0.2)' }}>
@@ -336,6 +344,7 @@ function SummaryView({ summaryData, loading, isLoggedIn, user, games }) {
             }}
           />
         </div>
+        )}{/* END TEMPORARILY HIDDEN */}
 
         <div className="hidden sm:grid px-4 py-2 text-[10px] uppercase tracking-wider font-bold" style={{
           gridTemplateColumns: '1.4fr 1fr 0.7fr 0.7fr 0.6fr',

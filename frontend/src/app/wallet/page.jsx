@@ -117,7 +117,7 @@ export default function WalletPage() {
       <div className="relative z-10 max-w-2xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
 
         {/* ── Balance Card ── */}
-        <div className="rounded-2xl px-5 py-4 mb-5 flex items-center justify-between gap-4 relative overflow-hidden" style={{
+        <div className="rounded-2xl px-4 py-4 mb-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 relative overflow-hidden" style={{
           background: 'linear-gradient(135deg, rgba(0,255,136,0.06) 0%, rgba(0,229,255,0.04) 50%, rgba(168,85,247,0.06) 100%)',
           border: '1px solid rgba(0,255,136,0.15)',
           backdropFilter: 'blur(12px)',
@@ -135,23 +135,27 @@ export default function WalletPage() {
             </p>
             <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Available for withdrawal</p>
           </div>
-          <button onClick={() => {
-            if (user && !user.emailVerified) { router.push('/verify-email'); return; }
-            setShowWithdraw(!showWithdraw); setWithdrawStep(1); setPayMethod(''); setPayDetails({}); setWithdrawAmount(''); setWithdrawNote('');
-          }} className="btn-neon text-sm shrink-0" style={{
-            background: showWithdraw ? 'rgba(255,217,61,0.12)' : 'rgba(0,255,136,0.08)',
-            borderColor: showWithdraw ? 'rgba(255,217,61,0.3)' : 'rgba(0,255,136,0.2)',
-            color: showWithdraw ? '#ffd93d' : '#00ff88',
-          }}>
-            {showWithdraw ? '✕ Cancel' : '🏦 Withdraw'}
-          </button>
-          <button onClick={() => setShowTopUp(true)} className="btn-neon text-sm shrink-0" style={{
-            background: 'rgba(0,229,255,0.08)',
-            borderColor: 'rgba(0,229,255,0.25)',
-            color: 'var(--neon-cyan)',
-          }}>
-            💳 Add Funds
-          </button>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <button onClick={() => {
+              if (user && !user.emailVerified) { router.push('/verify-email'); return; }
+              setShowWithdraw(!showWithdraw); setWithdrawStep(1); setPayMethod(''); setPayDetails({}); setWithdrawAmount(''); setWithdrawNote('');
+            }} className="btn-neon text-sm flex-1 sm:flex-none" style={{
+              background: showWithdraw ? 'rgba(255,217,61,0.12)' : 'rgba(0,255,136,0.08)',
+              borderColor: showWithdraw ? 'rgba(255,217,61,0.3)' : 'rgba(0,255,136,0.2)',
+              color: showWithdraw ? '#ffd93d' : '#00ff88',
+              padding: '8px 16px',
+            }}>
+              {showWithdraw ? '✕ Cancel' : '🏦 Withdraw'}
+            </button>
+            <button onClick={() => setShowTopUp(true)} className="btn-neon text-sm flex-1 sm:flex-none" style={{
+              background: 'rgba(0,229,255,0.08)',
+              borderColor: 'rgba(0,229,255,0.25)',
+              color: 'var(--neon-cyan)',
+              padding: '8px 16px',
+            }}>
+              💳 Add Funds
+            </button>
+          </div>
         </div>
 
         {/* ── Email Verification Banner ── */}

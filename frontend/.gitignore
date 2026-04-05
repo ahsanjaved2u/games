@@ -41,4 +41,5 @@ yarn-error.log*
 
 # Game files — served from Cloudflare R2, not committed to git
 /public/games/*/
+/public/games/*.zip
 next-env.d.ts

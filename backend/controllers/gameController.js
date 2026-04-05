@@ -197,6 +197,7 @@ const deleteGame = async (req, res) => {
     if (!game) return res.status(404).json({ message: 'Game not found' });
 
     // Delete game files from R2
+    let r2Error = null;
     if (game.gamePath) {
       console.log(`[deleteGame] Deleting R2 folder: ${game.gamePath}/`);
       try {
@@ -204,6 +205,7 @@ const deleteGame = async (req, res) => {
         console.log(`[deleteGame] R2 cleanup successful for: ${game.gamePath}`);
       } catch (err) {
         console.error('[deleteGame] R2 cleanup failed:', err.message);
+        r2Error = err.message;
         // Still delete DB record even if R2 cleanup fails
       }
     } else {
@@ -211,7 +213,11 @@ const deleteGame = async (req, res) => {
     }
 
     await game.deleteOne();
-    res.json({ message: 'Game deleted', r2Cleaned: !!game.gamePath });
+    res.json({
+      message: 'Game deleted',
+      r2Cleaned: !!game.gamePath && !r2Error,
+      ...(r2Error && { r2Warning: `R2 cleanup failed: ${r2Error}. Files may still exist on Cloudflare R2.` }),
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -272,7 +278,7 @@ const uploadGameFiles = async (req, res) => {
     // Delete old files on R2 for this game path
     await deleteR2Folder(`${game.gamePath}/`);
 
-    // Recursively upload all files to R2
+    // Recursively upload all files to R2 AND copy to local GAMES_DIR for dev
     const uploadDir = async (dir, prefix) => {
       const items = fs.readdirSync(dir);
       for (const item of items) {
@@ -281,7 +287,12 @@ const uploadGameFiles = async (req, res) => {
         if (fs.statSync(fullPath).isDirectory()) {
           await uploadDir(fullPath, key);
         } else {
-          await uploadToR2(`${game.gamePath}/${key}`, fs.readFileSync(fullPath));
+          const fileBuffer = fs.readFileSync(fullPath);
+          await uploadToR2(`${game.gamePath}/${key}`, fileBuffer);
+          // Also write to local games dir for local dev (GAMES_DIR)
+          const localDest = path.join(GAMES_DIR, game.gamePath, key);
+          fs.mkdirSync(path.dirname(localDest), { recursive: true });
+          fs.writeFileSync(localDest, fileBuffer);
         }
       }
     };

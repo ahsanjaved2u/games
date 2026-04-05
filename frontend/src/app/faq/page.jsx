@@ -393,9 +393,9 @@ export default function FAQPage() {
   const totalQuestions = faqSections.reduce((sum, s) => sum + s.questions.length, 0);
 
   return (
-    <div className="min-h-screen" style={{ background: 'var(--bg-primary)', paddingTop: '64px' }}>
+    <div className="min-h-screen" style={{ background: 'var(--bg-primary)' }}>
       {/* ── Hero ── */}
-      <div className="relative overflow-hidden pt-0 pb-4">
+      <div className="relative overflow-hidden pt-6 pb-4">
         <div className="max-w-4xl mx-auto px-4 text-center">
           <h1
             className="text-3xl sm:text-4xl font-bold"
