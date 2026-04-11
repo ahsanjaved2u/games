@@ -63,6 +63,7 @@ connectDB();
 const app = express();
 
 // ── Core Middleware ──
+app.use(cors());
 app.use(compression({
     filter: (req, res) => {
         // Don't compress SSE streams — compression buffers prevent flush
@@ -70,7 +71,6 @@ app.use(compression({
         return compression.filter(req, res);
     },
 }));
-app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
