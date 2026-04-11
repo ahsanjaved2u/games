@@ -2,6 +2,7 @@ const Wallet = require('../models/Wallet');
 const Transaction = require('../models/Transaction');
 const User = require('../models/User');
 const Game = require('../models/Game');
+const Contest = require('../models/Contest');
 const GameScore = require('../models/GameScore');
 const { sendWithdrawalRequestToAdmin, sendWithdrawalApprovedToPlayer, sendWithdrawalRejectedToPlayer } = require('../utils/mailer');
 
@@ -64,9 +65,22 @@ const getMyWallet = async (req, res) => {
 
     const wonAmount = Number(wonAgg[0]?.total || 0);
     const redeemedAmount = Number(redeemedAgg[0]?.total || 0);
+    const lockedBalance = await getLockedBalance(req.user._id);
+    const availableBalance = parseFloat(Math.max(0, wallet.balance - lockedBalance).toFixed(2));
+
+    // Get details of locked reward sessions
+    const lockedRewards = await Transaction.find({
+      user: req.user._id,
+      type: 'credit',
+      description: 'Game reward',
+      lockedUntil: { $gt: new Date() },
+    }).select('game amount lockedUntil').lean();
 
     res.json({
       balance: wallet.balance,
+      lockedBalance,
+      availableBalance,
+      lockedRewards,
       transactions,
       summary: {
         wonAmount,
@@ -82,12 +96,33 @@ const getMyWallet = async (req, res) => {
 // ────────────────────────────────────────
 // @desc    Get just the balance (lightweight, for navbar)
 // @route   GET /api/wallet/balance
+// ── Helper: compute locked balance (active reward session funds) ──
+const getLockedBalance = async (userId) => {
+  const result = await Transaction.aggregate([
+    {
+      $match: {
+        user: userId,
+        type: 'credit',
+        description: 'Game reward',
+        lockedUntil: { $gt: new Date() },
+      },
+    },
+    { $group: { _id: null, total: { $sum: '$amount' } } },
+  ]);
+  return result.length > 0 ? parseFloat(result[0].total.toFixed(2)) : 0;
+};
+
+// ────────────────────────────────────────
+// @desc    Get own balance (total + locked + available)
+// @route   GET /api/wallet/balance
 // @access  Private
 // ────────────────────────────────────────
 const getMyBalance = async (req, res) => {
   try {
     const wallet = await getOrCreateWallet(req.user._id);
-    res.json({ balance: wallet.balance });
+    const lockedBalance = await getLockedBalance(req.user._id);
+    const availableBalance = parseFloat(Math.max(0, wallet.balance - lockedBalance).toFixed(2));
+    res.json({ balance: wallet.balance, lockedBalance, availableBalance });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -111,7 +146,9 @@ const requestWithdrawal = async (req, res) => {
     }
 
     const wallet = await getOrCreateWallet(req.user._id);
-    if (wallet.balance < amount) return res.status(400).json({ message: 'Insufficient balance' });
+    const lockedBalance = await getLockedBalance(req.user._id);
+    const availableBalance = parseFloat(Math.max(0, wallet.balance - lockedBalance).toFixed(2));
+    if (availableBalance < amount) return res.status(400).json({ message: 'Insufficient available balance. Some funds are locked in active game sessions.' });
 
     // Deduct immediately, mark as pending
     wallet.balance -= amount;
@@ -356,6 +393,7 @@ const adminGetPlayerContestClaimableSummary = async (req, res) => {
       {
         $group: {
           _id: { game: '$game', contestId: '$contestId' },
+          contest: { $first: '$contest' },
           contestStart: { $first: '$contestStart' },
           contestEnd: { $first: '$contestEnd' },
           bestScore: { $max: '$score' },
@@ -375,11 +413,17 @@ const adminGetPlayerContestClaimableSummary = async (req, res) => {
 
     const gameSlugs = [...new Set(participations.map(p => p._id.game).filter(Boolean))];
     const games = await Game.find({ slug: { $in: gameSlugs } })
-      .select('slug name prizes isLive activeContestId scheduleStart')
+      .select('slug name isLive')
       .lean();
 
     const gameMap = {};
     games.forEach(g => { gameMap[g.slug] = g; });
+
+    // Load all Contest docs referenced by these participations
+    const contestObjIds = participations.map(p => p.contest).filter(Boolean);
+    const contestDocs = await Contest.find({ _id: { $in: contestObjIds } }).lean();
+    const contestMap = {};
+    contestDocs.forEach(c => { contestMap[String(c._id)] = c; });
 
     const now = new Date();
     const rows = [];
@@ -388,6 +432,7 @@ const adminGetPlayerContestClaimableSummary = async (req, res) => {
     for (const p of participations) {
       const gameSlug = p._id.game;
       const contestId = p._id.contestId;
+      const contestObjId = p.contest;
       const bestScore = Number(p.bestScore || 0);
 
       const higherUsers = await GameScore.aggregate([
@@ -400,15 +445,12 @@ const adminGetPlayerContestClaimableSummary = async (req, res) => {
       const rank = (higherUsers[0]?.above || 0) + 1;
 
       const game = gameMap[gameSlug];
-      const prizes = Array.isArray(game?.prizes) ? game.prizes : [];
+      const contestDoc = contestObjId ? contestMap[String(contestObjId)] : null;
+      const prizes = Array.isArray(contestDoc?.prizes) ? contestDoc.prizes : [];
       const wonAmount = Number(prizes[rank - 1] || 0);
 
-      const currentContestId = game?.activeContestId || safeIso(game?.scheduleStart) || null;
-      const isCurrent = contestId === currentContestId;
-      const isLive = isCurrent && game?.isLive === true;
-      const contestEndDate = p.contestEnd ? new Date(p.contestEnd) : null;
-      const hasValidEnd = !!contestEndDate && !Number.isNaN(contestEndDate.getTime());
-      const isEnded = hasValidEnd ? now >= contestEndDate : !isCurrent;
+      const isLive = contestDoc?.status === 'live';
+      const isEnded = contestDoc ? ['ended', 'distributed', 'cancelled'].includes(contestDoc.status) : true;
 
       rows.push({
         game: gameSlug,
@@ -611,9 +653,10 @@ const autoCreditScore = async (userId, gameSlug, gameName, newTotalPkr) => {
 //          A new schedule period → new transaction document.
 // @access  Internal (called from scoreController)
 // ────────────────────────────────────────
-const creditRewardingGame = async (userId, gameLabel, earnedPkr, scheduleId) => {
+const creditRewardingGame = async (userId, gameLabel, earnedPkr, scheduleId, periodEnd) => {
   const wallet = await getOrCreateWallet(userId);
   const sid = scheduleId || '';
+  const lockDate = periodEnd ? new Date(periodEnd) : null;
 
   // Find existing reward txn for this player + game + schedule
   const existingTxn = await Transaction.findOne({
@@ -630,6 +673,7 @@ const creditRewardingGame = async (userId, gameLabel, earnedPkr, scheduleId) => 
     if (delta <= 0) return wallet.balance; // current best is still higher
 
     existingTxn.amount = parseFloat(earnedPkr.toFixed(2));
+    if (lockDate) existingTxn.lockedUntil = lockDate;
     await existingTxn.save();
 
     wallet.balance = parseFloat((wallet.balance + delta).toFixed(2));
@@ -645,6 +689,7 @@ const creditRewardingGame = async (userId, gameLabel, earnedPkr, scheduleId) => 
       game: gameLabel,
       scheduleId: sid,
       status: 'completed',
+      lockedUntil: lockDate,
     });
 
     wallet.balance = parseFloat((wallet.balance + amount).toFixed(2));

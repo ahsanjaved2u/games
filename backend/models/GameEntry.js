@@ -11,9 +11,22 @@ const gameEntrySchema = new mongoose.Schema({
     ref: 'Game',
     required: true,
   },
+  // For competitive games — links to the Contest document
+  contest: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Contest',
+    default: null,
+  },
+  // For rewarding games — links to the Session document
+  session: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Session',
+    default: null,
+  },
+  // For rewarding games — the period start timestamp
   periodStart: {
     type: Date,
-    required: true,
+    default: null,
   },
   amountPaid: {
     type: Number,
@@ -28,7 +41,9 @@ const gameEntrySchema = new mongoose.Schema({
   timestamps: true,
 });
 
-// One entry per user per game per period — prevents double payment
-gameEntrySchema.index({ user: 1, game: 1, periodStart: 1 }, { unique: true });
+// One entry per user per game per contest (competitive)
+gameEntrySchema.index({ user: 1, game: 1, contest: 1 }, { unique: true, sparse: true });
+// One entry per user per game per period (rewarding)
+gameEntrySchema.index({ user: 1, game: 1, periodStart: 1 }, { unique: true, sparse: true });
 
 module.exports = mongoose.model('GameEntry', gameEntrySchema);

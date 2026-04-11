@@ -25,6 +25,17 @@ const transactionSchema = new mongoose.Schema({
     type: String,
     default: '',
   },
+  // Reference to Contest document (competitive prize payouts)
+  contest: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Contest',
+    default: null,
+  },
+  // Deprecated: old string-based contest ID
+  contestId: {
+    type: String,
+    default: '',
+  },
   scheduleId: {
     type: String,
     default: '',
@@ -49,6 +60,10 @@ const transactionSchema = new mongoose.Schema({
     accountTitle: { type: String, default: '' },
     accountNumber: { type: String, default: '' },
     phoneNumber: { type: String, default: '' },
+  },
+  lockedUntil: {
+    type: Date,
+    default: null,
   },
 }, {
   timestamps: true,

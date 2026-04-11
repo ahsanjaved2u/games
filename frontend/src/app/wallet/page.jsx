@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import TopUpModal from '@/components/TopUpModal';
 
 export default function WalletPage() {
-  const { authFetch, isLoggedIn, walletBalance, fetchBalance, user } = useAuth();
+  const { authFetch, isLoggedIn, walletBalance, lockedBalance, availableBalance, fetchBalance, user } = useAuth();
   const router = useRouter();
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -20,28 +20,43 @@ export default function WalletPage() {
   const [withdrawStep, setWithdrawStep] = useState(1); // 1=amount, 2=method+details
   const [submitting, setSubmitting] = useState(false);
   const [msg, setMsg] = useState(null);
+  const [lockedRewards, setLockedRewards] = useState([]);
 
   const flash = (text, type = 'success') => {
     setMsg({ text, type });
     setTimeout(() => setMsg(null), 4000);
   };
 
+  const refreshWallet = async () => {
+    try {
+      const data = await authFetch('/wallet');
+      setTransactions(data.transactions || []);
+      setLockedRewards(data.lockedRewards || []);
+    } catch { /* ignore */ }
+  };
+
   useEffect(() => {
     if (!isLoggedIn) { setLoading(false); return; }
     (async () => {
-      try {
-        const data = await authFetch('/wallet');
-        setTransactions(data.transactions || []);
-      } catch { /* ignore */ }
+      await Promise.all([refreshWallet(), fetchBalance()]);
       setLoading(false);
     })();
   }, [isLoggedIn]);
+
+  // Auto-refresh when the earliest lock expires
+  useEffect(() => {
+    if (lockedRewards.length === 0) return;
+    const earliest = Math.min(...lockedRewards.map(lr => new Date(lr.lockedUntil).getTime()));
+    const delay = Math.max(0, earliest - Date.now()) + 1500;
+    const timer = setTimeout(() => { refreshWallet(); fetchBalance(); }, delay);
+    return () => clearTimeout(timer);
+  }, [lockedRewards]);
 
   const handleWithdraw = async (e) => {
     e.preventDefault();
     const amt = Number(withdrawAmount);
     if (!amt || amt <= 0) { flash('Enter a valid amount', 'error'); return; }
-    if (amt > walletBalance) { flash('Insufficient balance', 'error'); return; }
+    if (amt > availableBalance) { flash('Insufficient available balance', 'error'); return; }
     if (!payMethod) { flash('Select a payment method', 'error'); return; }
 
     // Validate required fields per method
@@ -74,8 +89,7 @@ export default function WalletPage() {
       setWithdrawStep(1);
       setShowWithdraw(false);
       fetchBalance();
-      const fresh = await authFetch('/wallet');
-      setTransactions(fresh.transactions || []);
+      await refreshWallet();
     } catch (err) {
       flash(err.message || 'Failed', 'error');
     }
@@ -96,6 +110,10 @@ export default function WalletPage() {
       </div>
     );
   }
+
+  // Hide locked rewards from main transaction list while they're locked
+  const lockedIds = new Set(lockedRewards.map(lr => lr._id));
+  const visibleTransactions = transactions.filter(t => !lockedIds.has(t._id));
 
   const typeConfig = {
     credit: { icon: '💰', color: '#00ff88', label: 'Credit', sign: '+' },
@@ -133,7 +151,15 @@ export default function WalletPage() {
             }}>
               PKR {walletBalance.toLocaleString()}
             </p>
-            <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Available for withdrawal</p>
+            {lockedBalance > 0 ? (
+              <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                Available: <span style={{ color: '#00ff88', fontWeight: 700 }}>PKR {availableBalance.toLocaleString()}</span>
+                {' · '}
+                Locked: <span style={{ color: '#ffd93d', fontWeight: 700 }}>PKR {lockedBalance.toLocaleString()}</span>
+              </p>
+            ) : (
+              <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Available for withdrawal</p>
+            )}
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
             <button onClick={() => {
@@ -177,6 +203,34 @@ export default function WalletPage() {
           </div>
         )}
 
+        {/* ── Locked Rewards ── */}
+        {lockedRewards.length > 0 && (
+          <div className="rounded-xl px-4 py-3 mb-4 animate-fade-in-up" style={{
+            background: 'rgba(255,217,61,0.06)',
+            border: '1px solid rgba(255,217,61,0.15)',
+          }}>
+            <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#ffd93d' }}>🔒 Locked Rewards</p>
+            <div className="flex flex-col gap-1.5">
+              {lockedRewards.map((lr, i) => {
+                const unlockAt = new Date(lr.lockedUntil);
+                const now = new Date();
+                const diffMs = Math.max(0, unlockAt - now);
+                const mins = Math.ceil(diffMs / 60000);
+                return (
+                  <div key={lr._id || i} className="flex items-center justify-between text-xs">
+                    <span style={{ color: 'var(--text-muted)' }}>{lr.game}</span>
+                    <span style={{ color: 'var(--text-muted)' }}>
+                      <span style={{ color: '#ffd93d', fontWeight: 700 }}>PKR {lr.amount.toLocaleString()}</span>
+                      {' · unlocks in '}
+                      {mins >= 60 ? `${Math.floor(mins / 60)}h ${mins % 60}m` : `${mins}m`}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* ── Withdraw Form ── */}
         {showWithdraw && (
           <div className="glass-card p-5 mb-5 animate-fade-in-up">
@@ -192,7 +246,7 @@ export default function WalletPage() {
                         type="number"
                         min="0.01"
                         step="any"
-                        max={walletBalance}
+                        max={availableBalance}
                         value={withdrawAmount}
                         onChange={e => setWithdrawAmount(e.target.value)}
                         placeholder="Enter amount"
@@ -206,7 +260,7 @@ export default function WalletPage() {
                     <button type="button" onClick={() => {
                       const amt = Number(withdrawAmount);
                       if (!amt || amt <= 0) { flash('Enter a valid amount', 'error'); return; }
-                      if (amt > walletBalance) { flash('Insufficient balance', 'error'); return; }
+                      if (amt > availableBalance) { flash('Insufficient available balance', 'error'); return; }
                       setWithdrawStep(2);
                     }} className="btn-neon btn-neon-primary text-sm">
                       Next → Choose Payment Method
@@ -371,14 +425,14 @@ export default function WalletPage() {
             <div className="text-center py-12">
               <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin mx-auto" style={{ borderColor: 'rgba(0,229,255,0.3)', borderTopColor: 'transparent' }} />
             </div>
-          ) : transactions.length === 0 ? (
+          ) : visibleTransactions.length === 0 ? (
             <div className="glass-card p-8 text-center">
               <span style={{ fontSize: 40, display: 'block', marginBottom: 8 }}>📭</span>
               <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No transactions yet. Play games and earn rewards!</p>
             </div>
           ) : (
             <div className="flex flex-col gap-2">
-              {transactions.map((txn) => {
+              {visibleTransactions.map((txn) => {
                 const cfg = typeConfig[txn.type] || typeConfig.credit;
                 const sc = statusColors[txn.status] || statusColors.completed;
                 return (

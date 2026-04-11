@@ -11,7 +11,19 @@ const gameScoreSchema = new mongoose.Schema({
     required: true,
     index: true
   },
-  // Contest period tracking (competitive games only)
+  // Reference to Contest document (competitive games)
+  contest: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Contest',
+    default: null,
+  },
+  // Reference to Session document (rewarding games)
+  session: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Session',
+    default: null,
+  },
+  // Deprecated: old string-based contest ID (kept for backward compat)
   contestId: {
     type: String,
     default: null,
@@ -30,16 +42,15 @@ const gameScoreSchema = new mongoose.Schema({
     default: 0
   },
   time: {
-    type: Number, // seconds played
+    type: Number,
     required: true,
     default: 0
   },
   score: {
-    type: Number, // calculated score
+    type: Number,
     required: true,
     default: 0
   },
-  // Reward-period tracking for rewarding games
   periodStart: {
     type: Date,
     default: null,
@@ -52,9 +63,14 @@ const gameScoreSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Fast leaderboard queries (contest-aware)
+// New contest-based leaderboard queries
+gameScoreSchema.index({ game: 1, contest: 1, score: -1 });
+gameScoreSchema.index({ user: 1, game: 1, contest: 1 });
+// Session-based leaderboard queries
+gameScoreSchema.index({ game: 1, session: 1, periodStart: 1, score: -1 });
+gameScoreSchema.index({ user: 1, game: 1, session: 1, periodStart: 1 });
+// Legacy indexes (kept for old data queries)
 gameScoreSchema.index({ game: 1, contestId: 1, score: -1 });
-// Fast user-specific queries (contest-aware)
 gameScoreSchema.index({ user: 1, game: 1, contestId: 1 });
 
 module.exports = mongoose.model('GameScore', gameScoreSchema);

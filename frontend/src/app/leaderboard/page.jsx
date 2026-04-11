@@ -165,6 +165,7 @@ function AdminSummaryView({ rows, loading }) {
                             <div>
                               <p className="text-xs font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{winner.name}</p>
                               <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{winner.score}</p>
+                              {(!row.isRewarding && row.isLive) ? <p className="text-[10px] font-semibold italic" style={{ color: 'var(--text-muted)' }}>Pending</p> : winner.earnedPkr > 0 && <p className="text-[10px] font-semibold" style={{ color: '#00ff88' }}>₨{winner.earnedPkr}</p>}
                             </div>
                           ) : (
                             <span className="text-xs" style={{ color: 'var(--text-muted)', opacity: 0.5 }}>—</span>
@@ -234,7 +235,7 @@ function SummaryView({ summaryData, loading, isLoggedIn, user, games }) {
         ...entry,
         _slug: slug,
         _game: gameInfo,
-        _key: `${slug}-${entry.contestId || ''}-${entry.periodStart || ''}-${index}`,
+        _key: `${slug}-${entry.contestId || entry.contest || ''}-${entry.periodStart || ''}-${index}`,
         _sortTs: new Date(timestamp).getTime() || 0,
       };
     })
@@ -253,13 +254,13 @@ function SummaryView({ summaryData, loading, isLoggedIn, user, games }) {
   }
 
   const uniqueGames = new Set(summaryEntries.map(e => e._slug)).size;
-  const totalContests = summaryEntries.filter(e => e.contestId).length;
-  const liveCount = summaryEntries.filter(e => !!e.contestId && !!e.isLive).length;
-  const endedCount = summaryEntries.filter(e => !!e.contestId && !e.isLive).length;
-  const standardCount = summaryEntries.filter(e => !e.contestId).length;
+  const totalContests = summaryEntries.filter(e => e.contestId || e.contest).length;
+  const liveCount = summaryEntries.filter(e => !!(e.contestId || e.contest) && !!e.isLive).length;
+  const endedCount = summaryEntries.filter(e => !!(e.contestId || e.contest) && !e.isLive).length;
+  const standardCount = summaryEntries.filter(e => !(e.contestId || e.contest)).length;
 
   const filteredEntries = summaryEntries.filter((entry) => {
-    const status = entry.contestId ? (entry.isLive ? 'live' : 'ended') : 'standard';
+    const status = (entry.contestId || entry.contest) ? (entry.isLive ? 'live' : 'ended') : 'standard';
     if (statusFilter !== 'all' && status !== statusFilter) return false;
 
     const text = `${entry._game.title} ${entry._slug}`.toLowerCase();
@@ -347,7 +348,7 @@ function SummaryView({ summaryData, loading, isLoggedIn, user, games }) {
         )}{/* END TEMPORARILY HIDDEN */}
 
         <div className="hidden sm:grid px-4 py-2 text-[10px] uppercase tracking-wider font-bold" style={{
-          gridTemplateColumns: '1.4fr 1fr 0.7fr 0.7fr 0.6fr',
+          gridTemplateColumns: summaryEntries.some(e => e.earnedPkr > 0 || (!!(e.contestId || e.contest) && !!e.isLive)) ? '1.4fr 1fr 0.7fr 0.7fr 0.6fr 0.6fr' : '1.4fr 1fr 0.7fr 0.7fr 0.6fr',
           color: 'var(--text-muted)',
           borderBottom: '1px solid var(--subtle-border)',
           background: 'rgba(255,255,255,0.015)',
@@ -356,6 +357,7 @@ function SummaryView({ summaryData, loading, isLoggedIn, user, games }) {
           <span>Status</span>
           <span className="text-center">Rank</span>
           <span className="text-center">Score</span>
+          {summaryEntries.some(e => e.earnedPkr > 0 || (!!(e.contestId || e.contest) && !!e.isLive)) && <span className="text-center">PKR</span>}
           <span className="text-right">Plays</span>
         </div>
 
@@ -367,7 +369,7 @@ function SummaryView({ summaryData, loading, isLoggedIn, user, games }) {
         ) : (
           visibleEntries.map((entry) => {
             const game = entry._game;
-            const isContestEntry = !!entry.contestId;
+            const isContestEntry = !!(entry.contestId || entry.contest);
             const isPeriodEntry = !!entry.periodStart;
             const isLive = !!entry.isLive;
             const status = (isContestEntry || isPeriodEntry) ? (isLive ? 'LIVE' : 'ENDED') : 'STANDARD';
@@ -393,7 +395,7 @@ function SummaryView({ summaryData, loading, isLoggedIn, user, games }) {
                     }}>{status}</span>
                   </div>
                   <p className="text-[11px] mb-2" style={{ color: 'var(--text-muted)' }}>{subtitle}</p>
-                  <div className="grid grid-cols-3 text-center">
+                  <div className={`grid ${(entry.earnedPkr > 0 || (isContestEntry && isLive)) ? 'grid-cols-4' : 'grid-cols-3'} text-center`}>
                     <div>
                       <p className="text-sm font-extrabold" style={{ color: isLive ? game.color : 'var(--text-primary)' }}>#{entry.rank || '—'}</p>
                       <p className="text-[9px] uppercase" style={{ color: 'var(--text-muted)' }}>Rank</p>
@@ -402,6 +404,17 @@ function SummaryView({ summaryData, loading, isLoggedIn, user, games }) {
                       <p className="text-sm font-extrabold" style={{ color: 'var(--neon-yellow)' }}>{entry.bestScore ?? '—'}</p>
                       <p className="text-[9px] uppercase" style={{ color: 'var(--text-muted)' }}>Score</p>
                     </div>
+                    {(isContestEntry && isLive) ? (
+                    <div>
+                      <p className="text-sm font-extrabold italic" style={{ color: 'var(--text-muted)' }}>Pending</p>
+                      <p className="text-[9px] uppercase" style={{ color: 'var(--text-muted)' }}>Prize</p>
+                    </div>
+                    ) : entry.earnedPkr > 0 && (
+                    <div>
+                      <p className="text-sm font-extrabold" style={{ color: '#00ff88' }}>₨{entry.earnedPkr}</p>
+                      <p className="text-[9px] uppercase" style={{ color: 'var(--text-muted)' }}>Earned</p>
+                    </div>
+                    )}
                     <div>
                       <p className="text-sm font-extrabold" style={{ color: 'var(--text-primary)' }}>{entry.totalPlays ?? 0}</p>
                       <p className="text-[9px] uppercase" style={{ color: 'var(--text-muted)' }}>Plays</p>
@@ -409,7 +422,7 @@ function SummaryView({ summaryData, loading, isLoggedIn, user, games }) {
                   </div>
                 </div>
 
-                <div className="hidden sm:grid items-center" style={{ gridTemplateColumns: '1.4fr 1fr 0.7fr 0.7fr 0.6fr' }}>
+                <div className="hidden sm:grid items-center" style={{ gridTemplateColumns: summaryEntries.some(e => e.earnedPkr > 0 || (!!(e.contestId || e.contest) && !!e.isLive)) ? '1.4fr 1fr 0.7fr 0.7fr 0.6fr 0.6fr' : '1.4fr 1fr 0.7fr 0.7fr 0.6fr' }}>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 min-w-0">
                       <span style={{ fontSize: 18 }}>{game.emoji}</span>
@@ -428,6 +441,7 @@ function SummaryView({ summaryData, loading, isLoggedIn, user, games }) {
 
                   <p className="text-center text-sm font-bold" style={{ color: isLive ? game.color : 'var(--text-primary)' }}>#{entry.rank || '—'}</p>
                   <p className="text-center text-sm font-extrabold" style={{ color: 'var(--neon-yellow)' }}>{entry.bestScore ?? '—'}</p>
+                  {summaryEntries.some(e => e.earnedPkr > 0 || (!!(e.contestId || e.contest) && !!e.isLive)) && <p className="text-center text-sm font-semibold italic" style={{ color: (isContestEntry && isLive) ? 'var(--text-muted)' : '#00ff88', fontStyle: (isContestEntry && isLive) ? 'italic' : 'normal' }}>{(isContestEntry && isLive) ? 'Pending' : entry.earnedPkr > 0 ? `₨${entry.earnedPkr}` : '—'}</p>}
                   <p className="text-right text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{entry.totalPlays ?? 0}</p>
                 </div>
               </div>
@@ -638,13 +652,24 @@ function GameView({ game, isLoggedIn, authFetch, user }) {
                 <p className="text-[9px] uppercase" style={{ color: 'var(--text-muted)' }}>Best</p>
               </div>
               )}
+              {(isCompetitive && activeContest?.isLive) ? (
+              <div>
+                <p className="text-sm font-extrabold italic" style={{ color: 'var(--text-muted)' }}>Pending</p>
+                <p className="text-[9px] uppercase" style={{ color: 'var(--text-muted)' }}>Prize</p>
+              </div>
+              ) : myStats.earnedPkr > 0 && (
+              <div>
+                <p className="text-sm font-extrabold" style={{ color: '#00ff88' }}>₨{myStats.earnedPkr}</p>
+                <p className="text-[9px] uppercase" style={{ color: 'var(--text-muted)' }}>Earned</p>
+              </div>
+              )}
             </div>
           </div>
         )}
 
         {/* Column headers */}
         <div className="grid px-4 py-2 text-[10px] uppercase tracking-wider font-bold" style={{
-          gridTemplateColumns: '40px 1fr 56px 56px 64px',
+          gridTemplateColumns: (leaderboard.some(e => e.earnedPkr > 0) || (isCompetitive && activeContest?.isLive)) ? '40px 1fr 56px 56px 64px 64px' : '40px 1fr 56px 56px 64px',
           color: 'var(--text-muted)',
           borderBottom: '1px solid rgba(255,255,255,0.05)',
           background: 'rgba(255,255,255,0.012)',
@@ -654,6 +679,7 @@ function GameView({ game, isLoggedIn, authFetch, user }) {
           <span className="text-center">Pts</span>
           <span className="text-center">Time</span>
           <span className="text-right">Score</span>
+          {(leaderboard.some(e => e.earnedPkr > 0) || (isCompetitive && activeContest?.isLive)) && <span className="text-right">PKR</span>}
         </div>
 
         {/* Rows */}
@@ -671,12 +697,13 @@ function GameView({ game, isLoggedIn, authFetch, user }) {
           leaderboard.map((entry) => {
             const badge = rankBadge(entry.rank);
             const isMe = isLoggedIn && user && entry.userId === user._id;
+            const hasEarningsCol = leaderboard.some(e => e.earnedPkr > 0) || (isCompetitive && activeContest?.isLive);
             return (
               <div
                 key={entry.rank}
                 className="grid px-4 py-2.5 items-center"
                 style={{
-                  gridTemplateColumns: '40px 1fr 56px 56px 64px',
+                  gridTemplateColumns: hasEarningsCol ? '40px 1fr 56px 56px 64px 64px' : '40px 1fr 56px 56px 64px',
                   borderBottom: '1px solid rgba(255,255,255,0.035)',
                   background: isMe ? `${game.color}0a` : entry.rank <= 3 ? badge.bg : 'transparent',
                   transition: 'background 0.15s',
@@ -699,6 +726,7 @@ function GameView({ game, isLoggedIn, authFetch, user }) {
                 <span className="text-xs text-center" style={{ color: 'var(--text-secondary)' }}>{entry.points}</span>
                 <span className="text-xs text-center" style={{ color: 'var(--text-muted)' }}>{formatTime(entry.time)}</span>
                 <span className="text-xs text-right font-bold" style={{ color: entry.rank <= 3 ? badge.color : 'var(--text-primary)' }}>{entry.score}</span>
+                {hasEarningsCol && <span className="text-xs text-right font-semibold italic" style={{ color: (isCompetitive && activeContest?.isLive) ? 'var(--text-muted)' : '#00ff88' }}>{(isCompetitive && activeContest?.isLive) ? 'Pending' : entry.earnedPkr > 0 ? `₨${entry.earnedPkr}` : '—'}</span>}
               </div>
             );
           })
@@ -779,6 +807,7 @@ export default function LeaderboardPage() {
           contestEnd: null,
           rank: stats.rank ?? null,
           bestScore: stats.bestScore ?? baseEntry?.bestScore ?? 0,
+          earnedPkr: stats.earnedPkr ?? 0,
           totalPlays: stats.totalPlays ?? baseEntry?.totalPlays ?? 0,
           lastPlayed: stats?.record?.updatedAt || baseEntry?.lastPlayed || null,
         };
@@ -838,6 +867,7 @@ export default function LeaderboardPage() {
                             isEnded: !period.isActive,
                             rank: stats.rank ?? null,
                             bestScore: stats.bestScore ?? 0,
+                            earnedPkr: stats.earnedPkr ?? 0,
                             totalPlays: stats.totalPlays ?? 0,
                             lastPlayed: stats?.record?.updatedAt || null,
                           };
@@ -871,6 +901,7 @@ export default function LeaderboardPage() {
                       isEnded: !!contest.isEnded,
                       rank: stats.rank ?? null,
                       bestScore: stats.bestScore ?? 0,
+                      earnedPkr: stats.earnedPkr ?? 0,
                       totalPlays: stats.totalPlays ?? 0,
                       lastPlayed: stats?.record?.updatedAt || contest.contestEnd || contest.contestStart || null,
                     };
@@ -962,6 +993,7 @@ export default function LeaderboardPage() {
                       userId: entry.userId,
                       name: entry.name,
                       score: entry.score,
+                      earnedPkr: entry.earnedPkr || 0,
                     })),
                   };
                 } catch {
@@ -999,7 +1031,7 @@ export default function LeaderboardPage() {
                       periodStart: period.periodStart, periodEnd: period.periodEnd,
                       isCurrent: false, isLive: !!period.isActive, isEnded: !period.isActive,
                       isRewarding: true,
-                      winners: lb.slice(0, 10).map((e, i) => ({ rank: i + 1, userId: e.userId, name: e.name, score: e.score })),
+                      winners: lb.slice(0, 10).map((e, i) => ({ rank: i + 1, userId: e.userId, name: e.name, score: e.score, earnedPkr: e.earnedPkr || 0 })),
                     };
                   } catch { return null; }
                 })
@@ -1018,7 +1050,7 @@ export default function LeaderboardPage() {
               isCurrent: false, isLive: false, isEnded: false,
               isRewarding: true,
               winners: leaderboard.slice(0, 10).map((entry, idx) => ({
-                rank: idx + 1, userId: entry.userId, name: entry.name, score: entry.score,
+                rank: idx + 1, userId: entry.userId, name: entry.name, score: entry.score, earnedPkr: entry.earnedPkr || 0,
               })),
             }];
           } catch {

@@ -2,25 +2,79 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const Game = require('../models/Game');
+const Contest = require('../models/Contest');
+const Session = require('../models/Session');
 const { uploadToR2, deleteR2Folder } = require('../config/r2');
 
 // Resolve the directory where game files are stored
-// Default: ../frontend/public/games  (local dev)
-// Override with GAMES_UPLOAD_DIR env for S3 or other storage
 const GAMES_DIR = process.env.GAMES_UPLOAD_DIR
   || path.resolve(__dirname, '../../frontend/public/games');
 
+// Helper: check if a session's period is still running
+const isSessionPeriodActive = (s) => {
+  const periodMs = ((s.durationDays || 0) * 86400000)
+    + ((s.durationHours || 0) * 3600000)
+    + ((s.durationMinutes || 0) * 60000);
+  if (periodMs <= 0) return false;
+  const anchorMs = s.periodAnchor ? new Date(s.periodAnchor).getTime() : 0;
+  return Date.now() < anchorMs + periodMs;
+};
+
+// Helper: Attach active contests and sessions to games array
+const enrichGamesWithContestsSessions = async (games) => {
+  const gameIds = games.map(g => g._id || g.id);
+  const [contests, sessions] = await Promise.all([
+    Contest.find({ game: { $in: gameIds }, status: { $in: ['scheduled', 'live'] } }).lean(),
+    Session.find({ game: { $in: gameIds }, isActive: true }).lean(),
+  ]);
+
+  // Filter out sessions whose period has already expired (cron hasn't processed yet)
+  const liveSessions = sessions.filter(isSessionPeriodActive);
+
+  const contestMap = {};
+  contests.forEach(c => {
+    const gid = String(c.game);
+    if (!contestMap[gid]) contestMap[gid] = [];
+    contestMap[gid].push(c);
+  });
+
+  const sessionMap = {};
+  liveSessions.forEach(s => {
+    const gid = String(s.game);
+    if (!sessionMap[gid]) sessionMap[gid] = [];
+    sessionMap[gid].push(s);
+  });
+
+  return games.map(g => {
+    const obj = g.toJSON ? g.toJSON() : { ...g };
+    const gid = String(obj._id);
+    obj.contests = contestMap[gid] || [];
+    obj.sessions = sessionMap[gid] || [];
+    return obj;
+  });
+};
+
 // ────────────────────────────────────────
-// @desc    Get all games (public — includes non-live for display)
+// @desc    Get all games (public)
 // @route   GET /api/games
 // @access  Public
+// Only returns games that have at least one live/scheduled contest or active session
 // ────────────────────────────────────────
 const getGames = async (req, res) => {
   try {
-    const games = await Game.find()
-      .select('-instructions')
-      .sort({ createdAt: -1 });
-    res.json(games);
+    // Find game IDs that have a published contest or active session
+    const [contestGameIds, activeSessions] = await Promise.all([
+      Contest.distinct('game', { status: { $in: ['scheduled', 'live'] } }),
+      Session.find({ isActive: true }).lean(),
+    ]);
+    // Only include sessions whose period hasn't expired yet
+    const sessionGameIds = activeSessions.filter(isSessionPeriodActive).map(s => s.game);
+    const visibleGameIds = [...new Set([...contestGameIds, ...sessionGameIds].map(String))];
+    if (visibleGameIds.length === 0) return res.json([]);
+
+    const games = await Game.find({ _id: { $in: visibleGameIds } }).sort({ createdAt: -1 });
+    const enriched = await enrichGamesWithContestsSessions(games);
+    res.json(enriched);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -36,17 +90,36 @@ const getGameBySlug = async (req, res) => {
     const game = await Game.findOne({ slug: req.params.slug });
     if (!game) return res.status(404).json({ message: 'Game not found' });
 
-    // Competitive: check schedule window in case auto-publish hasn't fired yet
-    if (!game.isLive && game.gameType === 'competitive' && game.scheduleStart && game.scheduleEnd) {
-      const now = new Date();
-      if (now >= new Date(game.scheduleStart) && now < new Date(game.scheduleEnd) && !game.prizesDistributed && !game.manualUnpublish) {
-        game.isLive = true;
-        await game.save();
-      }
+    const now = new Date();
+
+    // Auto-promote scheduled→live contests whose start has passed
+    await Contest.updateMany(
+      { game: game._id, status: 'scheduled', startDate: { $lte: now }, endDate: { $gt: now } },
+      { $set: { status: 'live' } }
+    );
+
+    // Fetch published contests and active sessions
+    const [contests, sessions] = await Promise.all([
+      Contest.find({ game: game._id, status: { $in: ['scheduled', 'live'] } }).lean(),
+      Session.find({ game: game._id, isActive: true }).lean(),
+    ]);
+
+    // Game is only accessible if it has at least one published contest or active session
+    if (contests.length === 0 && sessions.length === 0) {
+      return res.status(404).json({ message: 'Game not found' });
     }
 
-    if (!game.isLive) return res.status(404).json({ message: 'Game not found' });
-    res.json(game);
+    // Auto-publish game if needed
+    if (!game.isLive) {
+      game.isLive = true;
+      await game.save();
+    }
+
+    const obj = game.toJSON();
+    obj.contests = contests;
+    obj.sessions = sessions;
+
+    res.json(obj);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -60,63 +133,33 @@ const getGameBySlug = async (req, res) => {
 const getAllGamesAdmin = async (req, res) => {
   try {
     const games = await Game.find().sort({ createdAt: -1 });
-    res.json(games);
+    const enriched = await enrichGamesWithContestsSessions(games);
+    res.json(enriched);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
 // ────────────────────────────────────────
-// @desc    Create a new game (metadata only)
+// @desc    Create a new game (simplified)
 // @route   POST /api/games
 // @access  Private/Admin
 // ────────────────────────────────────────
 const createGame = async (req, res) => {
   try {
-    const { name, slug, description, thumbnail, isLive, gamePath, instructions, tag, color, scheduleStart, scheduleEnd, showSchedule, gameType, conversionRate, showCurrency, prizes, minPlayersThreshold, hasTimeLimit, timeLimitSeconds, rewardPeriodDays, rewardPeriodHours, rewardPeriodMinutes, entryFee, attemptCost } = req.body;
+    const { name, slug, description, thumbnail, gamePath, tag } = req.body;
 
     const existing = await Game.findOne({ slug });
     if (existing) return res.status(400).json({ message: 'A game with this slug already exists' });
 
-    const resolvedType = gameType || 'rewarding';
-    const start = scheduleStart ? new Date(scheduleStart) : null;
-    const end = scheduleEnd ? new Date(scheduleEnd) : null;
-    const now = new Date();
-    // Competitive: isLive is schedule-driven; rewarding: use provided value
-    const resolvedIsLive = resolvedType === 'competitive'
-      ? !!(start && end && now >= start && now < end)
-      : (isLive || false);
-
-    // Unique contest ID — changes whenever the schedule changes so each round gets its own leaderboard
-    const activeContestId = (resolvedType === 'competitive' && start)
-      ? `${start.toISOString()}_${end ? end.toISOString() : 'open'}`
-      : null;
-
     const game = await Game.create({
-      name, slug, description, thumbnail,
-      isLive: resolvedIsLive,
+      name,
+      slug,
+      description: description || '',
+      thumbnail: thumbnail || '',
       gamePath: gamePath || slug,
-      instructions: instructions || [],
       tag: tag || '',
-      color: color || '#00e5ff',
-      gameType: resolvedType,
-      conversionRate: conversionRate || 0,
-      showCurrency: showCurrency || false,
-      prizes: prizes || [],
-      scheduleStart: start,
-      scheduleEnd: end,
-      showSchedule: showSchedule || false,
-      prizesDistributed: false,
-      minPlayersThreshold: minPlayersThreshold || 0,
-      activeContestId,
-      hasTimeLimit: hasTimeLimit || false,
-      timeLimitSeconds: timeLimitSeconds || 0,
-      rewardPeriodDays: rewardPeriodDays || 0,
-      rewardPeriodHours: rewardPeriodHours || 0,
-      rewardPeriodMinutes: rewardPeriodMinutes || 0,
-      periodAnchor: new Date(),
-      entryFee: entryFee || 0,
-      attemptCost: attemptCost || 0,
+      isLive: false,
     });
 
     res.status(201).json(game);
@@ -135,49 +178,10 @@ const updateGame = async (req, res) => {
     const game = await Game.findById(req.params.id);
     if (!game) return res.status(404).json({ message: 'Game not found' });
 
-    const fields = ['name', 'slug', 'description', 'thumbnail', 'isLive', 'gamePath', 'instructions', 'tag', 'color', 'gameType', 'conversionRate', 'showCurrency', 'prizes', 'scheduleStart', 'scheduleEnd', 'showSchedule', 'minPlayersThreshold', 'hasTimeLimit', 'timeLimitSeconds', 'rewardPeriodDays', 'rewardPeriodHours', 'rewardPeriodMinutes', 'entryFee', 'attemptCost'];
-
-    // If admin changes schedule (start or end), reset prizesDistributed so the new round can pay out
-    const incomingEnd = req.body.scheduleEnd;
-    const incomingStart = req.body.scheduleStart;
-    const currentEnd = game.scheduleEnd ? new Date(game.scheduleEnd).toISOString() : null;
-    const currentStart = game.scheduleStart ? new Date(game.scheduleStart).toISOString() : null;
-    const scheduleChanged =
-      (incomingEnd !== undefined && (incomingEnd ? new Date(incomingEnd).toISOString() : null) !== currentEnd) ||
-      (incomingStart !== undefined && (incomingStart ? new Date(incomingStart).toISOString() : null) !== currentStart);
-    if (scheduleChanged) {
-      game.prizesDistributed = false;
-      // New schedule round → clear manual unpublish so auto-publish can work
-      game.manualUnpublish = false;
-    }
-
-    // Check if reward period fields are changing BEFORE applying updates
-    const periodFields = ['rewardPeriodDays', 'rewardPeriodHours', 'rewardPeriodMinutes'];
-    const periodChanged = periodFields.some(f => req.body[f] !== undefined && Number(req.body[f]) !== Number(game[f]));
-
+    const fields = ['name', 'slug', 'description', 'thumbnail', 'gamePath'];
     fields.forEach(f => {
       if (req.body[f] !== undefined) game[f] = req.body[f];
     });
-
-    // If reward period fields changed, reset the period anchor so the new period starts now
-    if (periodChanged) {
-      game.periodAnchor = new Date();
-    }
-
-    // Recompute activeContestId from current schedule — ensures each unique start+end pair
-    // gets its own contest ID, preventing old frozen leaderboards from being overwritten
-    if (game.gameType === 'competitive' && game.scheduleStart) {
-      game.activeContestId = `${new Date(game.scheduleStart).toISOString()}_${game.scheduleEnd ? new Date(game.scheduleEnd).toISOString() : 'open'}`;
-    }
-
-    // For competitive games, isLive is fully schedule-driven — compute it now
-    // so saving the form never accidentally publishes/unpublishes out of band
-    if (game.gameType === 'competitive') {
-      const now = new Date();
-      const start = game.scheduleStart ? new Date(game.scheduleStart) : null;
-      const end = game.scheduleEnd ? new Date(game.scheduleEnd) : null;
-      game.isLive = !!(start && end && now >= start && now < end && !game.prizesDistributed);
-    }
 
     const updated = await game.save();
     res.json(updated);
@@ -234,8 +238,6 @@ const toggleLive = async (req, res) => {
     if (!game) return res.status(404).json({ message: 'Game not found' });
 
     game.isLive = !game.isLive;
-    // Admin manually unpublishing → block auto-publish; re-publishing → clear block
-    game.manualUnpublish = !game.isLive;
     await game.save();
     res.json({ isLive: game.isLive });
   } catch (error) {

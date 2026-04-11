@@ -2,6 +2,9 @@
 // Maps userId (string) → Set of Express response objects
 const clients = new Map();
 
+// Public broadcast clients (no auth required)
+const publicClients = new Set();
+
 function addClient(userId, res) {
   if (!clients.has(userId)) clients.set(userId, new Set());
   clients.get(userId).add(res);
@@ -14,6 +17,11 @@ function addClient(userId, res) {
   });
 }
 
+function addPublicClient(res) {
+  publicClients.add(res);
+  res.on('close', () => publicClients.delete(res));
+}
+
 function pushEvent(userId, event, data = {}) {
   const set = clients.get(userId);
   if (!set) return;
@@ -23,4 +31,17 @@ function pushEvent(userId, event, data = {}) {
   }
 }
 
-module.exports = { addClient, pushEvent };
+function broadcastEvent(event, data = {}) {
+  const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+  for (const res of publicClients) {
+    res.write(payload);
+  }
+  // Also push to all authenticated clients
+  for (const [, set] of clients) {
+    for (const res of set) {
+      res.write(payload);
+    }
+  }
+}
+
+module.exports = { addClient, addPublicClient, pushEvent, broadcastEvent };

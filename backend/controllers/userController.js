@@ -380,7 +380,7 @@ exports.getAdminProfileSummary = async (req, res, next) => {
         const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
         const [games, players] = await Promise.all([
-            Game.find().select('slug name gameType isLive scheduleEnd prizesDistributed').lean(),
+            Game.find().select('slug name isLive').lean(),
             User.find({ role: { $ne: 'admin' } }).select('_id name email').lean(),
         ]);
 
@@ -529,8 +529,17 @@ exports.getAdminProfileSummary = async (req, res, next) => {
         ]);
 
         const totalGames = games.length;
-        const competitiveGames = games.filter((g) => g?.gameType === 'competitive').length;
-        const rewardingGames = games.filter((g) => g?.gameType !== 'competitive').length;
+        // Count games that have contests vs sessions
+        const Contest = require('../models/Contest');
+        const Session = require('../models/Session');
+        const [contestGameIds, sessionGameIds] = await Promise.all([
+            Contest.distinct('game'),
+            Session.distinct('game'),
+        ]);
+        const contestGameSet = new Set(contestGameIds.map(String));
+        const sessionGameSet = new Set(sessionGameIds.map(String));
+        const competitiveGames = games.filter(g => contestGameSet.has(String(g._id))).length;
+        const rewardingGames = games.filter(g => sessionGameSet.has(String(g._id))).length;
         const liveGames = games.filter((g) => g?.isLive).length;
 
         const totalContestRounds = Number(contestRoundsAgg[0]?.count || 0);
@@ -577,17 +586,16 @@ exports.getAdminProfileSummary = async (req, res, next) => {
         const activeGames7d = new Set(activeGames7dAgg.map((x) => x?._id).filter(Boolean));
         const gamesNoPlays7d = games.filter((g) => g?.slug && !activeGames7d.has(g.slug)).length;
 
-        const contestsEnding24h = games.filter((g) => {
-            if (g?.gameType !== 'competitive' || !g?.scheduleEnd || g?.prizesDistributed) return false;
-            const end = new Date(g.scheduleEnd);
-            return end > now && end <= next24h;
-        }).length;
+        const contestsEnding24h = await Contest.countDocuments({
+            status: { $in: ['scheduled', 'live'] },
+            endDate: { $gt: now, $lte: next24h },
+        });
 
-        const prizesPendingDistribution = games.filter((g) => {
-            if (g?.gameType !== 'competitive' || !g?.scheduleEnd || g?.prizesDistributed) return false;
-            const end = new Date(g.scheduleEnd);
-            return end <= now;
-        }).length;
+        const prizesPendingDistribution = await Contest.countDocuments({
+            status: 'ended',
+            prizesDistributed: false,
+            endDate: { $lte: now },
+        });
 
         res.status(200).json({
             success: true,

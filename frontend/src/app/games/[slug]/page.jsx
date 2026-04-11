@@ -1,7 +1,34 @@
+// ══════════════════════════════════════════════════════════════════════════════
+//  GAME PAGE — Contest vs Session mode routing & HUD configuration
+//
+//  MODE DETECTION (contest vs session):
+//    1. URL query params take priority: ?contestId=X → contest mode, ?sessionId=X → session mode.
+//    2. If no query param, auto-detect: contest takes priority over session.
+//    3. The resolved mode is stored in `gameMode` ('contest' | 'session' | null).
+//
+//  GAME_CONFIG sent to iframe HUD (via postMessage):
+//    - mode: 'contest' | 'session' | null
+//    - conversionRate: forced to 0 in contest mode (no PKR display). In session mode, uses session's value.
+//    - showCurrency: forced to false in contest mode. In session mode, uses session's value.
+//    - hasTimeLimit, timeLimitSeconds: from the active contest or session.
+//
+//  SCORE SUBMISSION:
+//    - Sends ONLY contestId OR sessionId, never both. Contest takes priority.
+//    - If walletCredited comes back true (session only), triggers confetti + balance refresh.
+//
+//  COUNTDOWN LABEL:
+//    - Contest: "Contest ends in X:XX"
+//    - Session: "Session ends & best score freezes in X:XX"
+//
+//  ENTRY FEE / ATTEMPT COST:
+//    - entryFee: from contest or session (one-time gate to play).
+//    - attemptCost: session-only (deducted per "Try Again").
+// ══════════════════════════════════════════════════════════════════════════════
+
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import GameInstructions from '@/components/GameInstructions';
@@ -14,6 +41,9 @@ const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 export default function GamePage() {
   const { slug } = useParams();
+  const searchParams = useSearchParams();
+  const qsContestId = searchParams.get('contestId');
+  const qsSessionId = searchParams.get('sessionId');
   const [game, setGame] = useState(null);
   const [error, setError] = useState(null);
   const [started, setStarted] = useState(false);
@@ -32,45 +62,86 @@ export default function GamePage() {
   const [showConfetti, setShowConfetti] = useState(false);
   const inGamePromptShown = useRef(false);
 
+  /* ── Derive active contest / session from backend data ── */
+  // URL query param determines which mode (contest vs session).
+  // If query param is present, use ONLY that mode.
+  // If no query param, fall back to whichever is available (contest priority).
+  const _activeContest = game?.contests?.find(c =>
+    c.status === 'live' ||
+    (c.status === 'scheduled' && new Date(c.startDate) <= new Date() && new Date(c.endDate) > new Date())
+  ) || null;
+  const _activeSession = game?.sessions?.find(s => s.isActive) || null;
+
+  // Mode selection: query param overrides auto-detection
+  const gameMode = qsContestId ? 'contest' : qsSessionId ? 'session'
+    : _activeContest ? 'contest' : _activeSession ? 'session' : null;
+  const activeContest = gameMode === 'contest' ? (
+    qsContestId ? (game?.contests?.find(c => c._id === qsContestId) || _activeContest) : _activeContest
+  ) : null;
+  const activeSession = gameMode === 'session' ? (
+    qsSessionId ? (game?.sessions?.find(s => s._id === qsSessionId) || _activeSession) : _activeSession
+  ) : null;
+
+  const ctx = activeContest || activeSession || {};
+  const contestId = activeContest?._id || null;
+  const sessionId = activeSession?._id || null;
+  const entryFee = ctx.entryFee || 0;
+  const attemptCost = activeSession?.attemptCost || 0;
+  const color = ctx.color || game?.color || '#00e5ff';
+  const derivedInstructions = ctx.instructions?.length ? ctx.instructions : [];
+  const hasTimeLimit = ctx.hasTimeLimit || false;
+  const timeLimitSeconds = ctx.timeLimitSeconds || 0;
+  const conversionRate = activeSession?.conversionRate || 0;
+  const showCurrency = activeSession?.showCurrency || false;
+
   /* Fetch game metadata */
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetch(`${API}/games/${slug}`);
-        if (!res.ok) { setError('Game not found'); return; }
-        setGame(await res.json());
-      } catch { setError('Failed to load game'); }
-    })();
+  const fetchGame = useCallback(async () => {
+    try {
+      const res = await fetch(`${API}/games/${slug}`);
+      if (!res.ok) { setError('Game not found'); return; }
+      setGame(await res.json());
+    } catch { setError('Failed to load game'); }
   }, [slug]);
 
-  /* Fetch reward period remaining for rewarding games */
+  useEffect(() => { fetchGame(); }, [fetchGame]);
+
+  /* Auto re-fetch game when a scheduled contest should go live */
   useEffect(() => {
-    if (!game || game.gameType !== 'rewarding') return;
-    const pd = (game.rewardPeriodDays || 0) + (game.rewardPeriodHours || 0) + (game.rewardPeriodMinutes || 0);
-    if (pd <= 0) return;
+    if (!game) return;
+    const scheduled = game.contests?.find(c => c.status === 'scheduled' && new Date(c.startDate) > new Date());
+    if (!scheduled) return;
+    const delay = Math.max(0, new Date(scheduled.startDate) - Date.now()) + 1000;
+    const timer = setTimeout(fetchGame, delay);
+    return () => clearTimeout(timer);
+  }, [game, fetchGame]);
+
+  /* Fetch session period remaining */
+  useEffect(() => {
+    if (!activeSession || !sessionId) return;
     (async () => {
       try {
-        const res = await fetch(`${API}/scores/period-remaining/${slug}`);
+        const res = await fetch(`${API}/scores/period-remaining/${slug}?sessionId=${sessionId}`);
         const data = await res.json();
         if (data.periodEndsAt) setPeriodEndsAt(new Date(data.periodEndsAt));
       } catch { /* ignore */ }
     })();
-  }, [game, slug]);
+  }, [activeSession, sessionId, slug]);
 
-  /* Check entry fee status for paid games */
+  /* Check entry fee status */
   useEffect(() => {
     if (!game || !isLoggedIn) return;
-    if (!game.entryFee || game.entryFee <= 0) { setEntryStatus({ hasPaid: true, entryFee: 0 }); return; }
+    if (entryFee <= 0) { setEntryStatus({ hasPaid: true, entryFee: 0 }); return; }
+    const qs = contestId ? `?contestId=${contestId}` : sessionId ? `?sessionId=${sessionId}` : '';
     (async () => {
       try {
-        const data = await authFetch(`/entries/${slug}/status`);
+        const data = await authFetch(`/entries/${slug}/status${qs}`);
         setEntryStatus(data);
       } catch (err) {
         console.error('[entry check]', err.message);
-        setEntryStatus({ hasPaid: false, entryFee: game.entryFee });
+        setEntryStatus({ hasPaid: false, entryFee });
       }
     })();
-  }, [game, slug, isLoggedIn, authFetch]);
+  }, [game, slug, isLoggedIn, authFetch, entryFee, contestId, sessionId]);
 
   /* Lock body scroll while on this page */
   useEffect(() => {
@@ -108,10 +179,11 @@ export default function GamePage() {
     if (!game) return;
     try {
       let url = `${API}/scores/leaderboard/${slug}?limit=10`;
-      // For rewarding games, fetch leaderboard for the current active period
-      if (game.gameType === 'rewarding') {
+      if (contestId) url += `&contestId=${contestId}`;
+      else if (sessionId) {
+        url += `&sessionId=${sessionId}`;
         try {
-          const pRes = await fetch(`${API}/scores/reward-periods/${slug}`);
+          const pRes = await fetch(`${API}/scores/reward-periods/${slug}?sessionId=${sessionId}`);
           if (pRes.ok) {
             const periods = await pRes.json();
             if (Array.isArray(periods)) {
@@ -131,19 +203,20 @@ export default function GamePage() {
         );
       }
     } catch { /* ignore */ }
-  }, [slug, user?.name, game]);
+  }, [slug, user?.name, game, contestId, sessionId]);
 
-  /* Send game config (conversionRate etc.) to iframe */
+  /* Send game config to iframe */
   const sendGameConfig = useCallback(() => {
     if (!game || !iframeRef.current?.contentWindow) return;
     iframeRef.current.contentWindow.postMessage({
       type: 'GAME_CONFIG',
-      conversionRate: game.conversionRate || 0,
-      showCurrency: game.showCurrency || false,
-      hasTimeLimit: game.hasTimeLimit || false,
-      timeLimitSeconds: game.timeLimitSeconds || 0,
+      mode: gameMode,                             // 'contest' | 'session' | null
+      conversionRate: gameMode === 'contest' ? 0 : conversionRate,
+      showCurrency: gameMode === 'contest' ? false : showCurrency,
+      hasTimeLimit,
+      timeLimitSeconds,
     }, '*');
-  }, [game]);
+  }, [game, gameMode, conversionRate, showCurrency, hasTimeLimit, timeLimitSeconds]);
 
   /* Listen for messages from iframe */
   useEffect(() => {
@@ -171,6 +244,9 @@ export default function GamePage() {
               points: e.data.points,
               time: e.data.time,
               score: e.data.score,
+              // Contest (competition) and Session (rewarding) are mutually exclusive.
+              // If a contest is active, send ONLY contestId — no session rewards.
+              ...(contestId ? { contestId } : sessionId ? { sessionId } : {}),
             }),
           });
           // Refresh wallet balance whenever the backend credited a reward
@@ -187,7 +263,7 @@ export default function GamePage() {
       }
       // SDK "Try Again" button was clicked
       if (e.data?.type === 'TRY_AGAIN') {
-        if (game?.attemptCost > 0 && game?.gameType === 'rewarding') {
+        if (attemptCost > 0 && activeSession) {
           setStarted(false);
           setIsLoaded(false);
         }
@@ -196,7 +272,7 @@ export default function GamePage() {
     };
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [isLoggedIn, authFetch, sendLeaderboardToIframe, sendGameConfig, slug, game]);
+  }, [isLoggedIn, authFetch, sendLeaderboardToIframe, sendGameConfig, slug, game, contestId, sessionId, attemptCost, activeSession]);
 
   /* Sync top bar width with in-game HUD width */
   useEffect(() => {
@@ -257,26 +333,24 @@ export default function GamePage() {
   /* Period countdown ticker — cyclic: restarts automatically when period ends */
   const [periodTimeLeft, setPeriodTimeLeft] = useState(null);
   useEffect(() => {
-    if (!game || game.gameType !== 'rewarding') { setPeriodTimeLeft(null); return; }
-    const pd = (game.rewardPeriodDays || 0);
-    const ph = (game.rewardPeriodHours || 0);
-    const pm = (game.rewardPeriodMinutes || 0);
+    if (!activeSession) { setPeriodTimeLeft(null); return; }
+    const pd = activeSession.durationDays || 0;
+    const ph = activeSession.durationHours || 0;
+    const pm = activeSession.durationMinutes || 0;
     const periodMs = (pd * 86400000) + (ph * 3600000) + (pm * 60000);
     if (periodMs <= 0) { setPeriodTimeLeft(null); return; }
 
     const tick = () => {
       let remaining;
-      const anchorMs = game.periodAnchor ? new Date(game.periodAnchor).getTime() : 0;
+      const anchorMs = activeSession.periodAnchor ? new Date(activeSession.periodAnchor).getTime() : 0;
       if (periodEndsAt) {
         remaining = Math.max(0, periodEndsAt - Date.now());
         if (remaining <= 0) {
-          // Period expired — cycle: recalculate from anchor
           setPeriodEndsAt(null);
           const elapsed = Date.now() - anchorMs;
           remaining = periodMs - (elapsed % periodMs);
         }
       } else {
-        // No active user period — show cyclic countdown from anchor
         const elapsed = Date.now() - anchorMs;
         remaining = periodMs - (elapsed % periodMs);
       }
@@ -290,16 +364,22 @@ export default function GamePage() {
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [game, periodEndsAt]);
+  }, [activeSession, periodEndsAt]);
 
-  /* Competition countdown ticker — counts down to scheduleEnd for competitive games */
+  /* Competition countdown ticker — counts down to contest end */
   const [competitionTimeLeft, setCompetitionTimeLeft] = useState(null);
   useEffect(() => {
-    if (!game || game.gameType !== 'competitive' || !game.scheduleEnd) { setCompetitionTimeLeft(null); return; }
-    const endMs = new Date(game.scheduleEnd).getTime();
+    if (!activeContest?.endDate) { setCompetitionTimeLeft(null); return; }
+    const endMs = new Date(activeContest.endDate).getTime();
     const tick = () => {
       const remaining = Math.max(0, endMs - Date.now());
-      if (remaining <= 0) { setCompetitionTimeLeft(null); return; }
+      if (remaining <= 0) {
+        setCompetitionTimeLeft(null);
+        // Contest just ended — refresh game data and wallet balance
+        fetchGame();
+        fetchBalance();
+        return;
+      }
       setCompetitionTimeLeft({
         d: Math.floor(remaining / 86400000),
         h: Math.floor((remaining % 86400000) / 3600000),
@@ -310,7 +390,7 @@ export default function GamePage() {
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [game]);
+  }, [activeContest, fetchGame, fetchBalance]);
 
   /* ── Loading / Error states ── */
   if (error) {
@@ -335,13 +415,19 @@ export default function GamePage() {
 
   /* ── Instructions Screen ── */
   if (!started) {
-    const needsEntry = isLoggedIn && entryStatus && !entryStatus.hasPaid && game.entryFee > 0;
-    const entryLoading = isLoggedIn && game.entryFee > 0 && !entryStatus;
+    const needsEntry = isLoggedIn && entryStatus && !entryStatus.hasPaid && entryFee > 0;
+    const entryLoading = isLoggedIn && entryFee > 0 && !entryStatus;
 
     const handleEntryPaid = async () => {
-      const data = await authFetch(`/entries/${slug}/pay`, { method: 'POST' });
+      const data = await authFetch(`/entries/${slug}/pay`, {
+        method: 'POST',
+        body: JSON.stringify({
+          ...(contestId && { contestId }),
+          ...(sessionId && { sessionId }),
+        }),
+      });
       if (data?.success) {
-        setEntryStatus({ hasPaid: true, entryFee: game.entryFee, walletBalance: data.balance ?? 0 });
+        setEntryStatus({ hasPaid: true, entryFee, walletBalance: data.balance ?? 0 });
         fetchBalance();
       }
     };
@@ -360,10 +446,10 @@ export default function GamePage() {
     if (needsEntry) {
       return (
         <EntryFeeModal
-          entryFee={game.entryFee}
+          entryFee={entryFee}
           walletBalance={walletBalance ?? 0}
           gameName={game.name}
-          color={game.color}
+          color={color}
           onPay={handleEntryPaid}
           periodTimeLeft={periodTimeLeft}
           backHref="/games"
@@ -372,25 +458,30 @@ export default function GamePage() {
     }
 
     /* Instructions screen — free game or already paid entry */
-    const hasAttemptCost = isLoggedIn && game.attemptCost > 0 && game.gameType === 'rewarding';
+    const hasAttemptCost = isLoggedIn && attemptCost > 0 && !!activeSession;
 
     const handleStartClick = () => {
       setStarted(true);
     };
 
     const handlePayAndPlay = async () => {
-      const data = await authFetch(`/entries/${slug}/pay-attempt`, { method: 'POST' });
+      const data = await authFetch(`/entries/${slug}/pay-attempt`, {
+        method: 'POST',
+        body: JSON.stringify({ sessionId }),
+      });
       if (data?.success) {
         fetchBalance();
         setStarted(true);
       }
     };
 
+    const gameForUI = { ...game, color, instructions: derivedInstructions };
+
     return (
       <GameInstructions
-        game={game}
+        game={gameForUI}
         onStart={handleStartClick}
-        attemptCost={hasAttemptCost ? game.attemptCost : 0}
+        attemptCost={hasAttemptCost ? attemptCost : 0}
         walletBalance={walletBalance ?? 0}
         onPayAndPlay={hasAttemptCost ? handlePayAndPlay : undefined}
       />
@@ -417,7 +508,7 @@ export default function GamePage() {
         borderBottom: gameWidth > 0 ? 'none' : '1px solid rgba(0,229,255,0.15)',
         borderRadius: gameWidth > 0 ? '12px 12px 0 0' : 0,
       }}>
-        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 1, background: `linear-gradient(90deg, transparent, ${game.color || '#00e5ff'}60 30%, rgba(168,85,247,0.4) 70%, transparent)` }} />
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 1, background: `linear-gradient(90deg, transparent, ${color}60 30%, rgba(168,85,247,0.4) 70%, transparent)` }} />
 
         <Link href="/games" style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--text-secondary)', textDecoration: 'none', fontSize: 12, fontWeight: 600, padding: '4px 8px', borderRadius: 6, background: 'var(--input-bg)', border: '1px solid var(--subtle-border)', transition: 'all 0.2s', flexShrink: 0 }}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
@@ -425,7 +516,19 @@ export default function GamePage() {
         </Link>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center', flex: 1, minWidth: 0 }}>
-          {periodTimeLeft && (
+          {activeContest && competitionTimeLeft && (
+            <span style={{
+              fontSize: 11, fontWeight: 700, color: 'var(--neon-cyan)', fontVariantNumeric: 'tabular-nums',
+              padding: '2px 10px', borderRadius: 20,
+              background: 'color-mix(in srgb, var(--neon-cyan) 6%, transparent)', border: '1px solid color-mix(in srgb, var(--neon-cyan) 15%, transparent)',
+              display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap',
+            }}>
+              <span style={{ fontSize: 10, opacity: 0.7 }}>🏆</span>
+              <span style={{ fontSize: 10, fontWeight: 600, opacity: 0.8 }}>Contest ends in</span>
+              {competitionTimeLeft.d > 0 ? `${competitionTimeLeft.d}d ` : ''}{String(competitionTimeLeft.h).padStart(2, '0')}:{String(competitionTimeLeft.m).padStart(2, '0')}:{String(competitionTimeLeft.s).padStart(2, '0')}
+            </span>
+          )}
+          {!activeContest && activeSession && periodTimeLeft && (
             <span style={{
               fontSize: 11, fontWeight: 700, color: '#ffd93d', fontVariantNumeric: 'tabular-nums',
               padding: '2px 10px', borderRadius: 20,
@@ -435,18 +538,6 @@ export default function GamePage() {
               <span style={{ fontSize: 10, opacity: 0.7 }}>⏱</span>
               <span style={{ fontSize: 10, fontWeight: 600, opacity: 0.8 }}>Session ends & best score freezes in</span>
               {periodTimeLeft.d > 0 ? `${periodTimeLeft.d}d ` : ''}{String(periodTimeLeft.h).padStart(2, '0')}:{String(periodTimeLeft.m).padStart(2, '0')}:{String(periodTimeLeft.s).padStart(2, '0')}
-            </span>
-          )}
-          {competitionTimeLeft && (
-            <span style={{
-              fontSize: 11, fontWeight: 700, color: 'var(--neon-cyan)', fontVariantNumeric: 'tabular-nums',
-              padding: '2px 10px', borderRadius: 20,
-              background: 'color-mix(in srgb, var(--neon-cyan) 6%, transparent)', border: '1px solid color-mix(in srgb, var(--neon-cyan) 15%, transparent)',
-              display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap',
-            }}>
-              <span style={{ fontSize: 10, opacity: 0.7 }}>🏆</span>
-              <span style={{ fontSize: 10, fontWeight: 600, opacity: 0.8 }}>Ends in</span>
-              {competitionTimeLeft.d > 0 ? `${competitionTimeLeft.d}d ` : ''}{String(competitionTimeLeft.h).padStart(2, '0')}:{String(competitionTimeLeft.m).padStart(2, '0')}:{String(competitionTimeLeft.s).padStart(2, '0')}
             </span>
           )}
         </div>
@@ -464,7 +555,7 @@ export default function GamePage() {
       {/* Loading overlay */}
       {!isLoaded && (
         <div style={{ position: 'absolute', inset: 0, top: 36, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#0b0b1a', zIndex: 10, gap: 16 }}>
-          <div style={{ width: 40, height: 40, border: '3px solid rgba(0,229,255,0.2)', borderTop: `3px solid ${game.color || '#00e5ff'}`, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+          <div style={{ width: 40, height: 40, border: '3px solid rgba(0,229,255,0.2)', borderTop: `3px solid ${color}`, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
           <span style={{ color: 'var(--text-secondary)', fontSize: 14 }}>Loading game...</span>
           <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
         </div>

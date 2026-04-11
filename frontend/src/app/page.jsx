@@ -32,29 +32,15 @@ export default function Home() {
   }, [isLoggedIn]);
 
   const isCurrentlyLive = (game) => {
-    const now = new Date();
-
-    if (game.gameType === 'competitive' && game.scheduleStart && game.scheduleEnd) {
-      const start = new Date(game.scheduleStart);
-      const end = new Date(game.scheduleEnd);
-      if (!Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime())) {
-        return now >= start && now < end && !game.prizesDistributed;
-      }
-    }
-
-    if (game.gameType === 'rewarding' && game.showSchedule && game.scheduleStart) {
-      const start = new Date(game.scheduleStart);
-      if (!Number.isNaN(start.getTime())) {
-        return game.isLive || now >= start;
-      }
-    }
-
-    return !!game.isLive;
+    // A game is "live" if it has a live contest or an active session
+    const hasLiveContest = game.contests?.some(c => c.status === 'live');
+    const hasActiveSession = game.sessions?.some(s => s.isActive);
+    return hasLiveContest || hasActiveSession;
   };
 
   const liveCount = games.filter(isCurrentlyLive).length;
-  const rewardingCount = games.filter(g => g.gameType === 'rewarding').length;
-  const competitiveCount = games.filter(g => g.gameType === 'competitive').length;
+  const contestCount = games.filter(g => g.contests?.length > 0).length;
+  const sessionCount = games.filter(g => g.sessions?.length > 0).length;
 
   const fetchReviewSummary = useCallback(async (slugs) => {
     try {
@@ -93,7 +79,13 @@ export default function Home() {
     const interval = setInterval(() => {
       if (document.visibilityState === 'visible') fetchGames();
     }, 30_000);
-    return () => clearInterval(interval);
+
+    // Listen for real-time session updates from admin actions / cron
+    const baseUrl = API.endsWith('/api') ? API.slice(0, -4) : API;
+    const es = new EventSource(`${baseUrl}/api/stream`);
+    es.addEventListener('session-update', () => fetchGames());
+
+    return () => { clearInterval(interval); es.close(); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -146,10 +138,10 @@ export default function Home() {
                 🟢 Live: {liveCount}
               </span>
               <span className="px-3 py-1 rounded-full text-xs font-semibold" style={{ border: '1px solid rgba(255,217,61,0.3)', color: '#ffd93d', background: 'rgba(255,217,61,0.07)' }}>
-                🏆 Competitive: {competitiveCount}
+                🏆 Contests: {contestCount}
               </span>
               <span className="px-3 py-1 rounded-full text-xs font-semibold" style={{ border: '1px solid rgba(0,229,255,0.3)', color: 'var(--neon-cyan)', background: 'rgba(0,229,255,0.07)' }}>
-                💎 Rewarding: {rewardingCount}
+                💎 Sessions: {sessionCount}
               </span>
             </div>
             {!isLoggedIn && (
@@ -169,9 +161,22 @@ export default function Home() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {games.map((game, i) => (
-              <GameCard key={game._id} game={game} i={i} isLoggedIn={isLoggedIn} onPay={setPayGame} reviewData={reviewMap[game.slug]} onToggleLike={handleToggleLike} />
-            ))}
+            {(() => {
+              const cards = [];
+              games.forEach(game => {
+                const contests = game.contests || [];
+                const sessions = game.sessions || [];
+                const visibleContests = contests.filter(c => c.status === 'live' || (c.status === 'scheduled' && new Date(c.startDate) > new Date()));
+                visibleContests.forEach(c => cards.push({ game, contest: c, session: null, key: `${game._id}_c_${c._id}` }));
+                sessions.filter(s => s.isActive).forEach(s => cards.push({ game, contest: null, session: s, key: `${game._id}_s_${s._id}` }));
+                if (visibleContests.length === 0 && sessions.filter(s => s.isActive).length === 0) {
+                  cards.push({ game, contest: null, session: null, key: game._id });
+                }
+              });
+              return cards.map((entry, i) => (
+                <GameCard key={entry.key} game={entry.game} contest={entry.contest} session={entry.session} i={i} isLoggedIn={isLoggedIn} onPay={setPayGame} reviewData={reviewMap[entry.game.slug]} onToggleLike={handleToggleLike} onContestLive={fetchGames} onSessionEnd={fetchGames} />
+              ));
+            })()}
           </div>
         )}
       </div>

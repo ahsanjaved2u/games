@@ -50,7 +50,13 @@ export default function GamesPage() {
   useEffect(() => {
     fetchGames();
     const interval = setInterval(fetchGames, 30_000);
-    return () => clearInterval(interval);
+
+    // Listen for real-time session updates from admin actions / cron
+    const baseUrl = API.endsWith('/api') ? API.slice(0, -4) : API;
+    const es = new EventSource(`${baseUrl}/api/stream`);
+    es.addEventListener('session-update', () => fetchGames());
+
+    return () => { clearInterval(interval); es.close(); };
   }, []);
 
 
@@ -72,9 +78,22 @@ export default function GamesPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {games.map((game, i) => (
-              <GameCard key={game._id} game={game} i={i} isLoggedIn={isLoggedIn} reviewData={reviewMap[game.slug]} onToggleLike={handleToggleLike} />
-            ))}
+            {(() => {
+              const cards = [];
+              games.forEach(game => {
+                const contests = game.contests || [];
+                const sessions = game.sessions || [];
+                const visibleContests = contests.filter(c => c.status === 'live' || (c.status === 'scheduled' && new Date(c.startDate) > new Date()));
+                visibleContests.forEach(c => cards.push({ game, contest: c, session: null, key: `${game._id}_c_${c._id}` }));
+                sessions.filter(s => s.isActive).forEach(s => cards.push({ game, contest: null, session: s, key: `${game._id}_s_${s._id}` }));
+                if (visibleContests.length === 0 && sessions.filter(s => s.isActive).length === 0) {
+                  cards.push({ game, contest: null, session: null, key: game._id });
+                }
+              });
+              return cards.map((entry, i) => (
+                <GameCard key={entry.key} game={entry.game} contest={entry.contest} session={entry.session} i={i} isLoggedIn={isLoggedIn} reviewData={reviewMap[entry.game.slug]} onToggleLike={handleToggleLike} onContestLive={fetchGames} onSessionEnd={fetchGames} />
+              ));
+            })()}
           </div>
         )}
       </div>

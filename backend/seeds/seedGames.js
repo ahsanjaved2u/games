@@ -28,7 +28,6 @@ const seed = async () => {
         { icon: '⚡', title: 'Upgrade Strength', text: 'Your bullet strength grows as you score. Stronger bullets break bricks faster.' },
         { icon: '⏱️', title: 'Survive', text: 'Bricks keep coming! If any brick reaches the bottom, game over.' },
       ],
-      tag: 'Popular',
       color: '#00e5ff',
     });
     console.log('✅ bubble-shooter seeded');

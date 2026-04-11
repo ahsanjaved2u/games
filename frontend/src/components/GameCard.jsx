@@ -1,3 +1,17 @@
+// ══════════════════════════════════════════════════════════════════════════════
+//  GAME CARD — Mode-aware play links
+//
+//  The "Play" button link includes a query param to tell the game page which mode:
+//    - Contest active → /games/{slug}?contestId={id}
+//    - Session active (no contest) → /games/{slug}?sessionId={id}
+//    - Neither → /games/{slug} (plain)
+//
+//  This ensures the game page opens in the correct mode (contest vs session)
+//  and the HUD displays accordingly (no PKR in contest, PKR in session).
+//
+//  TAG BADGE: Rendered top-left if contest.tag or session.tag is set (e.g. "Hot", "New").
+// ══════════════════════════════════════════════════════════════════════════════
+
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -5,7 +19,6 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
 import CommentsModal from '@/components/CommentsModal';
-
 
 const GAMES_BASE = process.env.NEXT_PUBLIC_GAMES_BASE_URL || '/games';
 const SITE_URL = 'https://gamevesta.com';
@@ -47,47 +60,50 @@ const calcTime = (target) => {
   };
 };
 
-function CompetitiveSchedule({ scheduleStart, scheduleEnd, prizesDistributed }) {
-  const startDate = scheduleStart ? new Date(scheduleStart) : null;
-  const endDate = scheduleEnd ? new Date(scheduleEnd) : null;
+/* ── Contest countdown: before-start or time-remaining ── */
+function ContestCountdown({ contest, onPhaseChange }) {
+  const startDate = new Date(contest.startDate);
+  const endDate = new Date(contest.endDate);
 
   const getPhase = () => {
     const now = new Date();
-    if (!startDate || !endDate) return 'unknown';
     if (now < startDate) return 'before';
-    if (now < endDate && !prizesDistributed) return 'running';
+    if (now < endDate && !contest.prizesDistributed) return 'running';
     return 'ended';
   };
 
   const [phase, setPhase] = useState(getPhase);
   const [time, setTime] = useState(() => calcTime(getPhase() === 'before' ? startDate : endDate));
 
+  // Notify parent of phase changes via effect (not during render)
+  const onPhaseChangeRef = useRef(onPhaseChange);
+  onPhaseChangeRef.current = onPhaseChange;
+  const prevPhaseRef = useRef(phase);
+  useEffect(() => {
+    if (prevPhaseRef.current !== phase) {
+      prevPhaseRef.current = phase;
+      if (onPhaseChangeRef.current) onPhaseChangeRef.current(phase);
+    }
+  }, [phase]);
+
   useEffect(() => {
     const tick = () => {
       const p = getPhase();
       setPhase(p);
       const target = p === 'before' ? startDate : endDate;
-      if (target) setTime(calcTime(target));
+      setTime(calcTime(target));
     };
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scheduleStart, scheduleEnd, prizesDistributed]);
+  }, [contest.startDate, contest.endDate, contest.prizesDistributed]);
 
-  if (!startDate || !endDate) return null;
-
-  const now = new Date();
-  const isOldSchedule = phase === 'ended' && startDate < now;
-
-  if (isOldSchedule) {
+  if (phase === 'ended') {
     return (
       <div style={{ borderRadius: 10, overflow: 'hidden', marginBottom: 10, border: '1px solid rgba(255,92,138,0.22)' }}>
         <div style={{ padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'rgba(255,92,138,0.7)', display: 'inline-block', boxShadow: '0 0 6px rgba(255,92,138,0.7)' }} />
           <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#ff5c8a' }}>Competition Ended</span>
-        </div>
-        <div style={{ padding: '0 12px 10px' }}>
-          <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: 0 }}>🔜 Next round coming soon. Stay tuned!</p>
         </div>
       </div>
     );
@@ -98,8 +114,6 @@ function CompetitiveSchedule({ scheduleStart, scheduleEnd, prizesDistributed }) 
   const cfg = {
     before: { color: '#ffd93d', icon: '⏳', label: 'Starts in', dot: 'rgba(255,217,61,0.7)' },
     running: { color: '#00e5ff', icon: '🔥', label: 'Competition ends in', dot: 'rgba(0,229,255,0.7)' },
-    ended: { color: '#ff5c8a', icon: '🏁', label: 'Competition ended', dot: 'rgba(255,92,138,0.7)' },
-    unknown: { color: '#888', icon: '📅', label: 'Scheduled', dot: 'rgba(136,136,136,0.5)' },
   }[phase];
 
   const seg = (val, unit) => (
@@ -121,85 +135,10 @@ function CompetitiveSchedule({ scheduleStart, scheduleEnd, prizesDistributed }) 
         <span style={{ fontSize: 10, color: cfg.color, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fmtDate(endDate)}</span>
       </div>
       <div style={{ padding: '8px 10px 8px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: phase === 'ended' ? 0 : 6 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
             <span style={{ width: 6, height: 6, borderRadius: '50%', background: cfg.dot, display: 'inline-block', boxShadow: `0 0 6px ${cfg.dot}` }} />
             <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: cfg.color }}>{cfg.label}</span>
-          </div>
-        </div>
-        {phase !== 'ended' && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-            {time.days > 0 && <>{seg(time.days, 'days')}{sep}</>}
-            {seg(time.hours, 'hrs')}{sep}
-            {seg(time.mins, 'min')}{sep}
-            {seg(time.secs, 'sec')}
-          </div>
-        )}
-        {phase === 'ended' && (
-          <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>Prizes have been distributed. Stay tuned for the next round!</p>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function RewardingSchedulePanel({ scheduleStart, isLive, conversionRate }) {
-  const startDate = scheduleStart ? new Date(scheduleStart) : null;
-  const [time, setTime] = useState(() => (startDate ? calcTime(startDate) : null));
-  const [started, setStarted] = useState(() => (!startDate ? false : new Date() >= startDate));
-
-  useEffect(() => {
-    if (!startDate) return undefined;
-    const tick = () => {
-      const hasStarted = new Date() >= startDate;
-      setStarted(hasStarted);
-      if (!hasStarted) setTime(calcTime(startDate));
-    };
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, [scheduleStart]);
-
-  if (!startDate) return null;
-
-  const showCountdown = !isLive && !started;
-
-  if (!showCountdown || !time) {
-    const rateText = conversionRate > 0
-      ? `${Number(conversionRate).toLocaleString()} score = 1 PKR`
-      : 'Rewards are active now';
-
-    return (
-      <div style={{ borderRadius: 10, overflow: 'hidden', marginBottom: 10, border: '1px solid rgba(0,255,136,0.24)' }}>
-        <div style={{ padding: '9px 10px 10px', background: 'linear-gradient(135deg, rgba(0,255,136,0.14), rgba(255,217,61,0.08))' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-            <span className="animate-pulse" style={{ width: 6, height: 6, borderRadius: '50%', background: 'rgba(0,255,136,0.85)', display: 'inline-block', boxShadow: '0 0 7px rgba(0,255,136,0.85)' }} />
-            <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#00ff88' }}>Rewards Live</span>
-          </div>
-          <p style={{ margin: 0, fontSize: 11, color: 'var(--text-primary)' }}>Play now and turn your score into cash rewards.</p>
-          <p style={{ margin: '3px 0 0', fontSize: 10, color: 'var(--text-muted)' }}>{rateText}</p>
-        </div>
-      </div>
-    );
-  }
-
-  const seg = (val, unit) => (
-    <div style={{ textAlign: 'center', minWidth: 34 }}>
-      <div style={{ fontSize: 19, fontWeight: 800, lineHeight: 1, color: '#ffd93d', fontVariantNumeric: 'tabular-nums', textShadow: '0 0 14px rgba(255,217,61,0.56)' }}>
-        {String(val).padStart(2, '0')}
-      </div>
-      <div style={{ fontSize: 9, color: 'var(--text-muted)', marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{unit}</div>
-    </div>
-  );
-  const sep = <span style={{ fontSize: 15, fontWeight: 700, color: '#ffd93d', opacity: 0.5, alignSelf: 'flex-start', marginTop: 1 }}>:</span>;
-
-  return (
-    <div style={{ borderRadius: 10, overflow: 'hidden', marginBottom: 10, border: '1px solid rgba(255,217,61,0.22)' }}>
-      <div style={{ padding: '8px 10px 8px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'rgba(255,217,61,0.7)', display: 'inline-block', boxShadow: '0 0 6px rgba(255,217,61,0.7)' }} />
-            <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#ffd93d' }}>Starts in</span>
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -213,56 +152,51 @@ function RewardingSchedulePanel({ scheduleStart, isLive, conversionRate }) {
   );
 }
 
-function RewardPeriodCountdown({ days, hours, minutes, slug, anchor }) {
-  const periodMs = (days * 86400000) + (hours * 3600000) + (minutes * 60000);
-  const anchorMs = anchor ? new Date(anchor).getTime() : 0;
-  const [periodEndsAt, setPeriodEndsAt] = useState(null);
+/* ── Session period countdown ── */
+function SessionCountdown({ session, slug, onSessionEnd }) {
+  const periodMs = ((session.durationDays || 0) * 86400000) + ((session.durationHours || 0) * 3600000) + ((session.durationMinutes || 0) * 60000);
+  const anchorMs = session.periodAnchor ? new Date(session.periodAnchor).getTime() : 0;
+  const endMs = anchorMs + periodMs;
 
-  useEffect(() => {
-    if (!slug) return;
-    let cancelled = false;
-    fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/scores/period-remaining/${slug}`)
-      .then(r => r.json())
-      .then(data => { if (!cancelled && data.periodEndsAt) setPeriodEndsAt(new Date(data.periodEndsAt)); })
-      .catch(() => {});
-    return () => { cancelled = true; };
-  }, [slug]);
+  const calcRemaining = () => Math.max(0, endMs - Date.now());
 
   const [time, setTime] = useState(() => {
-    const elapsed = Date.now() - anchorMs;
-    const rem = periodMs - (elapsed % periodMs);
-    return calcTime(Date.now() + rem);
+    const rem = calcRemaining();
+    return {
+      days: Math.floor(rem / 86400000),
+      hours: Math.floor((rem % 86400000) / 3600000),
+      mins: Math.floor((rem % 3600000) / 60000),
+      secs: Math.floor((rem % 60000) / 1000),
+    };
   });
 
   useEffect(() => {
+    if (periodMs <= 0) return;
     const tick = () => {
-      let remaining;
-      if (periodEndsAt) {
-        remaining = Math.max(0, periodEndsAt - Date.now());
-        if (remaining <= 0) {
-          setPeriodEndsAt(null);
-          const elapsed = Date.now() - anchorMs;
-          remaining = periodMs - (elapsed % periodMs);
-        }
-      } else {
-        const elapsed = Date.now() - anchorMs;
-        remaining = periodMs - (elapsed % periodMs);
+      const rem = calcRemaining();
+      if (rem <= 0) {
+        setTime({ days: 0, hours: 0, mins: 0, secs: 0 });
+        if (onSessionEnd) onSessionEnd();
+        return;
       }
       setTime({
-        days: Math.floor(remaining / 86400000),
-        hours: Math.floor((remaining % 86400000) / 3600000),
-        mins: Math.floor((remaining % 3600000) / 60000),
-        secs: Math.floor((remaining % 60000) / 1000),
+        days: Math.floor(rem / 86400000),
+        hours: Math.floor((rem % 86400000) / 3600000),
+        mins: Math.floor((rem % 3600000) / 60000),
+        secs: Math.floor((rem % 60000) / 1000),
       });
     };
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [periodMs, periodEndsAt, anchorMs]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [periodMs, anchorMs]);
+
+  if (periodMs <= 0) return null;
 
   return (
     <div className="flex items-center gap-1.5 mt-3" style={{ color: 'rgba(255,217,61,0.9)' }}>
-      <span style={{ fontSize: 11, opacity: 0.85, fontWeight: 600, letterSpacing: '0.2px' }}>Game ends & best score freezes in</span>
+      <span style={{ fontSize: 11, opacity: 0.85, fontWeight: 600, letterSpacing: '0.2px' }}>Session resets in</span>
       <span style={{ fontSize: 13, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
         {time.days > 0 && `${time.days}d `}
         {String(time.hours).padStart(2, '0')}:{String(time.mins).padStart(2, '0')}:{String(time.secs).padStart(2, '0')}
@@ -271,12 +205,13 @@ function RewardPeriodCountdown({ days, hours, minutes, slug, anchor }) {
   );
 }
 
-export default function GameCard({ game, i, isLoggedIn, reviewData, onToggleLike }) {
+export default function GameCard({ game, contest, session, i, isLoggedIn, reviewData, onToggleLike, onContestLive, onSessionEnd }) {
   const { user } = useAuth();
   const thumb = game.thumbnail ? `${GAMES_BASE}/${game.gamePath}/${game.thumbnail}` : null;
   const [shareOpen, setShareOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
+  const [contestPhase, setContestPhase] = useState(null);
   const shareRef = useRef(null);
 
   const likes = reviewData?.totalLikes || 0;
@@ -285,7 +220,30 @@ export default function GameCard({ game, i, isLoggedIn, reviewData, onToggleLike
 
   const baseGameUrl = `${SITE_URL}/games/${game.slug}`;
   const gameUrl = user?.referralCode ? `${baseGameUrl}?ref=${user.referralCode}` : baseGameUrl;
-  const shareText = game.entryFee > 0 || game.attemptCost > 0
+
+  // ── Single contest OR session per card ──
+  const isLiveContest = contest?.status === 'live' || contestPhase === 'running';
+  const isScheduledContest = contest?.status === 'scheduled' && new Date(contest.startDate) > new Date() && contestPhase !== 'running';
+
+  // Determine card accent color
+  const accentColor = contest?.color || session?.color || game.color || '#00e5ff';
+
+  // Determine tag
+  const tag = contest?.tag || session?.tag || '';
+
+  // Entry fee & pricing
+  const contestEntryFee = contest?.entryFee || 0;
+  const contestPrizes = contest?.prizes || [];
+  const sessionEntryFee = session?.entryFee || 0;
+  const sessionAttemptCost = session?.attemptCost || 0;
+
+  // Is the card playable right now?
+  const isContestPlayable = isLiveContest;
+  const isContestScheduled = !isLiveContest && isScheduledContest;
+  const isSessionPlayable = session != null;
+  const isPlayable = isContestPlayable || isSessionPlayable;
+
+  const shareText = contestEntryFee > 0 || sessionAttemptCost > 0
     ? `🎮 Play ${game.name} on GameVesta and win real cash!`
     : `🎮 Play ${game.name} for FREE on GameVesta!`;
 
@@ -308,104 +266,101 @@ export default function GameCard({ game, i, isLoggedIn, reviewData, onToggleLike
     setShareOpen(false);
   };
 
-  const calcEffective = () => {
-    const now = new Date();
-
-    if (game.gameType === 'competitive' && game.scheduleStart && game.scheduleEnd) {
-      return now >= new Date(game.scheduleStart) && now < new Date(game.scheduleEnd) && !game.prizesDistributed;
-    }
-
-    return game.isLive;
-  };
-
-  const [effectiveLive, setEffectiveLive] = useState(calcEffective);
-
-  useEffect(() => {
-    const hasCompetitiveSchedule = game.gameType === 'competitive' && game.scheduleStart && game.scheduleEnd;
-
-    if (!hasCompetitiveSchedule) {
-      setEffectiveLive(calcEffective());
-      return;
-    }
-
-    setEffectiveLive(calcEffective());
-    const id = setInterval(() => setEffectiveLive(calcEffective()), 1000);
-    return () => clearInterval(id);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [game.gameType, game.isLive, game.scheduleStart, game.scheduleEnd, game.prizesDistributed]);
-
-  // Prefetch game assets on hover (via service worker) — runs once per game
+  // Prefetch game assets on hover
   const prefetched = useRef(false);
   const prefetchGame = useCallback(() => {
     if (prefetched.current || !game.gamePath) return;
     prefetched.current = true;
-    const gameUrl = `${GAMES_BASE}/${game.gamePath}/index.html`;
+    const gUrl = `${GAMES_BASE}/${game.gamePath}/index.html`;
     if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-      navigator.serviceWorker.controller.postMessage({ type: 'PREFETCH_GAME', url: gameUrl });
+      navigator.serviceWorker.controller.postMessage({ type: 'PREFETCH_GAME', url: gUrl });
     }
   }, [game.gamePath]);
 
-  const handlePlay = () => {
-    if (!effectiveLive) return;
+  // Determine what the play button should say
+  const getPlayButton = () => {
+    // Not playable at all (only scheduled contest, no sessions)
+    if (!isPlayable && isContestScheduled) {
+      return { disabled: true, label: '🔒 Coming Soon' };
+    }
+    if (!isPlayable) {
+      return { disabled: true, label: '🔒 Not Available' };
+    }
+    // Needs login for paid games
+    if (!isLoggedIn && (contestEntryFee > 0 || sessionAttemptCost > 0 || sessionEntryFee > 0)) {
+      return { disabled: false, label: '🔒 Sign Up to Play', href: '/signup' };
+    }
+    // Contest with entry fee
+    if (isContestPlayable && contestEntryFee > 0) {
+      return { disabled: false, label: `🎟️ Enter — PKR ${contestEntryFee}` };
+    }
+    // Session with attempt cost
+    if (isSessionPlayable && sessionAttemptCost > 0) {
+      return { disabled: false, label: `🎯 Play — PKR ${sessionAttemptCost}/try` };
+    }
+    return { disabled: false, label: '▶ Play Now' };
   };
+
+  const playBtn = getPlayButton();
 
   return (
     <div
       className="glass-card group transition-all duration-300 animate-fade-in-up relative overflow-hidden flex flex-col"
       style={{
         animationDelay: `${i * 0.08}s`,
-        opacity: effectiveLive ? 1 : 0.7,
-        border: `2px solid ${(game.color || '#00e5ff')}30`,
-        boxShadow: `0 0 10px ${(game.color || '#00e5ff')}12, inset 0 1px 0 ${(game.color || '#00e5ff')}0a`,
+        opacity: isPlayable ? 1 : 0.7,
+        border: `2px solid ${accentColor}30`,
+        boxShadow: `0 0 10px ${accentColor}12, inset 0 1px 0 ${accentColor}0a`,
       }}
       onMouseEnter={e => {
         prefetchGame();
-        if (!effectiveLive) return;
-        e.currentTarget.style.borderColor = (game.color || '#00e5ff') + '60';
-        e.currentTarget.style.boxShadow = `0 0 24px ${game.color || '#00e5ff'}28, inset 0 1px 0 ${game.color || '#00e5ff'}14`;
+        if (!isPlayable) return;
+        e.currentTarget.style.borderColor = accentColor + '60';
+        e.currentTarget.style.boxShadow = `0 0 24px ${accentColor}28, inset 0 1px 0 ${accentColor}14`;
         e.currentTarget.style.transform = 'translateY(-4px)';
       }}
       onTouchStart={() => { prefetchGame(); }}
       onMouseLeave={e => {
-        e.currentTarget.style.borderColor = (game.color || '#00e5ff') + '30';
-        e.currentTarget.style.boxShadow = `0 0 10px ${(game.color || '#00e5ff')}12, inset 0 1px 0 ${(game.color || '#00e5ff')}0a`;
+        e.currentTarget.style.borderColor = accentColor + '30';
+        e.currentTarget.style.boxShadow = `0 0 10px ${accentColor}12, inset 0 1px 0 ${accentColor}0a`;
         e.currentTarget.style.transform = 'translateY(0)';
       }}
     >
-      <div className="relative h-40 sm:h-48 flex items-center justify-center overflow-hidden card-thumb-shimmer" style={{ borderBottom: `1px solid ${(game.color || '#00e5ff')}15` }}>
+      <div className="relative h-40 sm:h-48 flex items-center justify-center overflow-hidden card-thumb-shimmer" style={{ borderBottom: `1px solid ${accentColor}15` }}>
         {thumb ? (
           <>
             <Image src={thumb} alt={game.name} fill className="object-cover" sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" priority={i < 3} loading={i < 3 ? 'eager' : 'lazy'} />
             <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(11,11,26,0.95) 0%, rgba(11,11,26,0.3) 40%, transparent 100%)' }} />
           </>
         ) : (
-          <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(circle at 50% 80%, ${game.color || '#00e5ff'}18, transparent 70%)` }}>
-            <span className="absolute inset-0 flex items-center justify-center text-6xl sm:text-7xl select-none" style={{ filter: `drop-shadow(0 0 20px ${game.color || '#00e5ff'}60)` }}>🎮</span>
+          <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(circle at 50% 80%, ${accentColor}18, transparent 70%)` }}>
+            <span className="absolute inset-0 flex items-center justify-center text-6xl sm:text-7xl select-none" style={{ filter: `drop-shadow(0 0 20px ${accentColor}60)` }}>🎮</span>
           </div>
         )}
-        {game.tag && (
-          <span className="absolute top-3 left-3 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full" style={{ background: 'rgba(0,255,136,0.12)', color: 'var(--neon-green)', border: '1px solid rgba(0,255,136,0.25)' }}>{game.tag}</span>
-        )}
-        {game.entryFee > 0 && effectiveLive && (
-          <span className="absolute top-3 right-3 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full" style={{ background: 'rgba(168,85,247,0.12)', color: '#c084fc', border: '1px solid rgba(168,85,247,0.3)' }}>🎟️ Entry PKR {game.entryFee}</span>
-        )}
-        {!game.entryFee && game.attemptCost > 0 && effectiveLive && (
-          <span className="absolute top-3 right-3 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full" style={{ background: 'rgba(255,217,61,0.12)', color: '#ffd93d', border: '1px solid rgba(255,217,61,0.3)' }}>🎯 PKR {game.attemptCost}/play</span>
-        )}
-        {!game.entryFee && !game.attemptCost && effectiveLive && (
-          <span className="absolute top-3 right-3 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full" style={{ background: 'rgba(0,255,136,0.12)', color: 'var(--neon-green)', border: '1px solid rgba(0,255,136,0.25)' }}>FREE</span>
-        )}
-        {!effectiveLive && (
-          <span className="absolute top-3 right-3 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full" style={{ background: 'rgba(255,45,120,0.15)', color: '#ff5c8a', border: '1px solid rgba(255,45,120,0.3)' }}>Not Live</span>
+
+        {/* Tag badge — top left */}
+        {tag && (
+          <span className="absolute top-3 left-3 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full" style={{ background: 'rgba(0,255,136,0.12)', color: 'var(--neon-green)', border: '1px solid rgba(0,255,136,0.25)' }}>{tag}</span>
         )}
 
-        {/* Heart + Comment badges — bottom left */}
+        {/* Pricing badge — top right */}
+        {isPlayable && contestEntryFee > 0 && (
+          <span className="absolute top-3 right-3 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full" style={{ background: 'rgba(168,85,247,0.12)', color: '#c084fc', border: '1px solid rgba(168,85,247,0.3)' }}>🎟️ Entry PKR {contestEntryFee}</span>
+        )}
+        {isPlayable && !contestEntryFee && sessionAttemptCost > 0 && (
+          <span className="absolute top-3 right-3 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full" style={{ background: 'rgba(255,217,61,0.12)', color: '#ffd93d', border: '1px solid rgba(255,217,61,0.3)' }}>🎯 PKR {sessionAttemptCost}/play</span>
+        )}
+        {isPlayable && !contestEntryFee && !sessionAttemptCost && (
+          <span className="absolute top-3 right-3 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full" style={{ background: 'rgba(0,255,136,0.12)', color: 'var(--neon-green)', border: '1px solid rgba(0,255,136,0.25)' }}>FREE</span>
+        )}
+        {!isPlayable && isContestScheduled && (
+          <span className="absolute top-3 right-3 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full" style={{ background: 'rgba(255,217,61,0.12)', color: '#ffd93d', border: '1px solid rgba(255,217,61,0.3)' }}>⏳ Coming Soon</span>
+        )}
+
+        {/* Like + Comment badges — bottom left */}
         <div className="absolute bottom-3 left-3 flex items-center gap-1.5" style={{ zIndex: 10 }}>
           <button
-            onClick={(e) => {
-              e.preventDefault(); e.stopPropagation();
-              if (onToggleLike) onToggleLike(game.slug);
-            }}
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (onToggleLike) onToggleLike(game.slug); }}
             className="flex items-center gap-1.5 transition-all duration-200"
             style={{
               padding: '4px 10px 4px 7px', borderRadius: 20,
@@ -414,8 +369,6 @@ export default function GameCard({ game, i, isLoggedIn, reviewData, onToggleLike
               color: userLiked ? '#ff2d78' : 'rgba(255,255,255,0.7)',
               cursor: 'pointer', fontSize: 12, fontWeight: 600,
             }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(11,11,26,0.9)'; if (!userLiked) { e.currentTarget.style.color = '#ff2d78'; e.currentTarget.style.borderColor = 'rgba(255,45,120,0.3)'; } }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(11,11,26,0.75)'; if (!userLiked) { e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; } }}
             title={userLiked ? 'Unlike' : 'Like this game'}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill={userLiked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -431,11 +384,8 @@ export default function GameCard({ game, i, isLoggedIn, reviewData, onToggleLike
               padding: '5px 10px 5px 7px', borderRadius: 20,
               background: 'rgba(11,11,26,0.75)', backdropFilter: 'blur(8px)',
               border: '1px solid rgba(255,255,255,0.12)',
-              color: 'rgba(255,255,255,0.7)', cursor: 'pointer',
-              fontSize: 12, fontWeight: 600,
+              color: 'rgba(255,255,255,0.7)', cursor: 'pointer', fontSize: 12, fontWeight: 600,
             }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(11,11,26,0.9)'; e.currentTarget.style.color = '#00e5ff'; e.currentTarget.style.borderColor = 'rgba(0,229,255,0.4)'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(11,11,26,0.75)'; e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; }}
             title={comments > 0 ? `${comments} comment${comments !== 1 ? 's' : ''}` : 'Add a comment'}
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -445,140 +395,88 @@ export default function GameCard({ game, i, isLoggedIn, reviewData, onToggleLike
           </button>
 
           {commentsOpen && (
-            <CommentsModal
-              slug={game.slug}
-              gameName={game.name}
-              onClose={() => setCommentsOpen(false)}
-            />
+            <CommentsModal slug={game.slug} gameName={game.name} onClose={() => setCommentsOpen(false)} />
           )}
         </div>
 
         {/* Share button — bottom right */}
         <div className="absolute bottom-3 right-3 flex items-center gap-1.5" style={{ zIndex: 10 }}>
-
-        {/* Share button */}
-        <div ref={shareRef}>
-          {!shareOpen ? (
-            <button
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShareOpen(true); }}
-              className="flex items-center justify-center transition-all duration-200"
-              style={{
-                width: 32, height: 32, borderRadius: '50%',
-                background: 'rgba(0,229,255,0.1)', backdropFilter: 'blur(8px)',
-                border: '1px solid rgba(0,229,255,0.3)',
-                color: '#00e5ff', cursor: 'pointer',
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,229,255,0.2)'; e.currentTarget.style.borderColor = 'rgba(0,229,255,0.6)'; e.currentTarget.style.boxShadow = '0 0 10px rgba(0,229,255,0.3)'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,229,255,0.1)'; e.currentTarget.style.borderColor = 'rgba(0,229,255,0.3)'; e.currentTarget.style.boxShadow = 'none'; }}
-              title="Share this game"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
-                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-              </svg>
-            </button>
-          ) : (
-            <div
-              className="flex items-center gap-1 animate-fade-in-up"
-              style={{
-                padding: '4px 6px', borderRadius: 20,
-                background: 'rgba(11,11,26,0.85)', backdropFilter: 'blur(12px)',
-                border: '1px solid rgba(255,255,255,0.12)',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
-              }}
-            >
-              {sharePlatforms.map(p => (
-                <button
-                  key={p.name}
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleShareClick(p); }}
-                  className="flex items-center justify-center transition-all duration-150"
-                  style={{
-                    width: 30, height: 30, borderRadius: '50%',
-                    background: 'transparent', border: 'none',
-                    color: 'rgba(255,255,255,0.65)', cursor: 'pointer',
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.color = p.color; e.currentTarget.style.background = `${p.color}18`; e.currentTarget.style.transform = 'scale(1.15)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.65)'; e.currentTarget.style.background = 'transparent'; e.currentTarget.style.transform = 'scale(1)'; }}
-                  title={p.name === 'Copy' ? (copied ? 'Copied!' : 'Copy link') : p.name === 'Instagram' ? (copied ? 'Link copied — paste in IG' : 'Share on Instagram') : `Share on ${p.name}`}
-                >
-                  {p.name === 'Copy' && copied ? (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00e5ff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                  ) : p.icon}
-                </button>
-              ))}
+          <div ref={shareRef}>
+            {!shareOpen ? (
               <button
-                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShareOpen(false); }}
-                className="flex items-center justify-center transition-all duration-150"
-                style={{
-                  width: 24, height: 24, borderRadius: '50%',
-                  background: 'transparent', border: 'none',
-                  color: 'rgba(255,255,255,0.35)', cursor: 'pointer', marginLeft: 2,
-                }}
-                onMouseEnter={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; }}
-                onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.35)'; }}
-                title="Close"
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShareOpen(true); }}
+                className="flex items-center justify-center transition-all duration-200"
+                style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(0,229,255,0.1)', backdropFilter: 'blur(8px)', border: '1px solid rgba(0,229,255,0.3)', color: '#00e5ff', cursor: 'pointer' }}
+                title="Share this game"
               >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                  <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                </svg>
               </button>
-            </div>
-          )}
-        </div>
+            ) : (
+              <div className="flex items-center gap-1 animate-fade-in-up" style={{ padding: '4px 6px', borderRadius: 20, background: 'rgba(11,11,26,0.85)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.12)', boxShadow: '0 4px 20px rgba(0,0,0,0.4)' }}>
+                {sharePlatforms.map(p => (
+                  <button key={p.name} onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleShareClick(p); }} className="flex items-center justify-center transition-all duration-150" style={{ width: 30, height: 30, borderRadius: '50%', background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.65)', cursor: 'pointer' }} title={p.name === 'Copy' ? (copied ? 'Copied!' : 'Copy link') : p.name === 'Instagram' ? (copied ? 'Link copied — paste in IG' : 'Share on Instagram') : `Share on ${p.name}`}>
+                    {p.name === 'Copy' && copied ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00e5ff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg> : p.icon}
+                  </button>
+                ))}
+                <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShareOpen(false); }} className="flex items-center justify-center transition-all duration-150" style={{ width: 24, height: 24, borderRadius: '50%', background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.35)', cursor: 'pointer', marginLeft: 2 }} title="Close">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
       <div className="p-5 flex flex-col flex-1">
         <h3 className="text-base font-bold mb-3" style={{ color: 'var(--text-primary)' }}>{game.name}</h3>
 
-        {game.gameType === 'rewarding' && (() => {
-          const pd = game.rewardPeriodDays || 0;
-          const ph = game.rewardPeriodHours || 0;
-          const pm = game.rewardPeriodMinutes || 0;
-          const hasPeriod = pd + ph + pm > 0;
-          return (
-            <div className="flex-1 flex flex-col items-center justify-center rounded-xl mb-3 px-4 py-5 text-center" style={{ background: 'linear-gradient(135deg, rgba(0,255,136,0.08), rgba(255,217,61,0.06))', border: '1px solid rgba(0,255,136,0.15)' }}>
-              <span style={{ fontSize: 34, lineHeight: 1, marginBottom: 10 }}>💰</span>
-              <span className="font-bold" style={{ color: '#00ff88', fontSize: 17 }}>Play &amp; Earn Cash Rewards</span>
-              <p style={{ color: 'var(--text-secondary)', margin: '8px 0 0', fontSize: 13.5 }}>Score points and win real money!</p>
-              {hasPeriod && <RewardPeriodCountdown days={pd} hours={ph} minutes={pm} slug={game.slug} anchor={game.periodAnchor} />}
-            </div>
-          );
-        })()}
+        {/* ── Session: Play & Earn panel ── */}
+        {session && (
+          <div className="flex-1 flex flex-col items-center justify-center rounded-xl mb-3 px-4 py-5 text-center" style={{ background: 'linear-gradient(135deg, rgba(0,255,136,0.08), rgba(255,217,61,0.06))', border: '1px solid rgba(0,255,136,0.15)' }}>
+            <span style={{ fontSize: 34, lineHeight: 1, marginBottom: 10 }}>💰</span>
+            <span className="font-bold" style={{ color: '#00ff88', fontSize: 17 }}>Play &amp; Earn Cash Rewards</span>
+            <p style={{ color: 'var(--text-secondary)', margin: '8px 0 0', fontSize: 13.5 }}>Score points and win real money!</p>
+            <SessionCountdown session={session} slug={game.slug} onSessionEnd={onSessionEnd} />
+          </div>
+        )}
 
-        {game.gameType === 'competitive' && game.prizes?.length > 0 && (
+        {/* ── Contest: Prizes panel ── */}
+        {contest && contestPrizes.length > 0 && (
           <div className="mb-3 px-3 py-2 rounded-lg" style={{ background: 'linear-gradient(135deg, rgba(255,217,61,0.08), rgba(168,85,247,0.08))', border: '1px solid rgba(255,217,61,0.15)' }}>
             <div className="flex items-center gap-2 mb-1">
               <span style={{ fontSize: 14 }}>🏆</span>
               <span className="text-[11px] font-bold" style={{ color: '#ffd93d' }}>Compete &amp; Win Prizes</span>
             </div>
             <div className="flex flex-wrap gap-x-3 gap-y-0.5 ml-6">
-              {game.prizes.slice(0, 3).map((p, j) => {
+              {contestPrizes.slice(0, 3).map((p, j) => {
                 const icons = ['🥇', '🥈', '🥉'];
                 return <span key={j} className="text-[10px]" style={{ color: 'var(--text-secondary)' }}>{icons[j]} PKR {p.toLocaleString()}</span>;
               })}
-              {game.prizes.length > 3 && <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>+{game.prizes.length - 3} more</span>}
+              {contestPrizes.length > 3 && <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>+{contestPrizes.length - 3} more</span>}
             </div>
           </div>
         )}
 
-        {game.gameType === 'competitive' && game.scheduleStart && game.scheduleEnd && (
-          <CompetitiveSchedule
-            scheduleStart={game.scheduleStart}
-            scheduleEnd={game.scheduleEnd}
-            prizesDistributed={game.prizesDistributed}
-          />
+        {/* ── Contest countdown (before-start or time-remaining) ── */}
+        {contest && (
+          <ContestCountdown contest={contest} onPhaseChange={(p) => { setContestPhase(p); if (p === 'running' && onContestLive) onContestLive(); }} />
         )}
 
-        {!effectiveLive ? (
+        {/* ── Play button ── */}
+        {playBtn.disabled ? (
           <div className="btn-neon text-sm w-full text-center" style={{ opacity: 0.4, cursor: 'not-allowed' }}>
-            🔒 Not Available
+            {playBtn.label}
           </div>
-        ) : !isLoggedIn && (game.entryFee > 0 || game.attemptCost > 0) ? (
-          <Link href="/signup" className="btn-neon text-sm w-full text-center" style={{ textDecoration: 'none', opacity: 0.7 }}>
-            🔒 Sign Up to Play
+        ) : playBtn.href ? (
+          <Link href={playBtn.href} className="btn-neon text-sm w-full text-center" style={{ textDecoration: 'none', opacity: 0.7 }}>
+            {playBtn.label}
           </Link>
         ) : (
-          <Link href={`/games/${game.slug}`} className="btn-neon btn-neon-primary text-sm w-full text-center" style={{ textDecoration: 'none' }}>
-            {game.entryFee > 0 ? `🎟️ Enter — PKR ${game.entryFee}` : game.attemptCost > 0 ? `🎯 Play — PKR ${game.attemptCost}/try` : '▶ Play Now'}
+          <Link href={`/games/${game.slug}${contest ? `?contestId=${contest._id}` : session ? `?sessionId=${session._id}` : ''}`} className="btn-neon btn-neon-primary text-sm w-full text-center" style={{ textDecoration: 'none' }}>
+            {playBtn.label}
           </Link>
         )}
       </div>

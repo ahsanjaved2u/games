@@ -12,6 +12,8 @@ export function AuthProvider({ children }) {
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
   const [walletBalance, setWalletBalance] = useState(0);
+  const [lockedBalance, setLockedBalance] = useState(0);
+  const [availableBalance, setAvailableBalance] = useState(0);
   const router = useRouter();
 
   // Force-logout helper (used by refreshUser & authFetch when server returns 403)
@@ -19,6 +21,8 @@ export function AuthProvider({ children }) {
     setToken(null);
     setUser(null);
     setWalletBalance(0);
+    setLockedBalance(0);
+    setAvailableBalance(0);
     localStorage.removeItem('gz_token');
     localStorage.removeItem('gz_user');
     router.push('/login');
@@ -50,6 +54,8 @@ export function AuthProvider({ children }) {
       });
       const data = await res.json();
       if (data.balance !== undefined) setWalletBalance(data.balance);
+      if (data.lockedBalance !== undefined) setLockedBalance(data.lockedBalance);
+      if (data.availableBalance !== undefined) setAvailableBalance(data.availableBalance);
     } catch { /* ignore */ }
   }, [token]);
 
@@ -92,9 +98,10 @@ export function AuthProvider({ children }) {
     });
     es.addEventListener('unblocked', () => refreshUser());
     es.addEventListener('restored', () => refreshUser());
+    es.addEventListener('wallet-update', () => fetchBalance());
 
     return () => es.close();
-  }, [token, forceLogout, refreshUser]);
+  }, [token, forceLogout, refreshUser, fetchBalance]);
 
   // Fetch balance when token is available, then poll every 30s (only when tab visible)
   useEffect(() => {
@@ -160,6 +167,8 @@ export function AuthProvider({ children }) {
     setToken(null);
     setUser(null);
     setWalletBalance(0);
+    setLockedBalance(0);
+    setAvailableBalance(0);
     localStorage.removeItem('gz_token');
     localStorage.removeItem('gz_user');
     router.push('/');
@@ -216,6 +225,8 @@ export function AuthProvider({ children }) {
       isAdmin,
       isLoggedIn: !!user,
       walletBalance,
+      lockedBalance,
+      availableBalance,
       fetchBalance,
       signup,
       login,
