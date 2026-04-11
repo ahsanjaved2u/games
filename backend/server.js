@@ -193,8 +193,25 @@ cron.schedule('*/10 * * * * *', async () => {
         }
 
         // Step 3 — session auto-end: lock expired sessions and spawn successors
+        // GUARD: Deduplicate — only keep ONE active session per game.
+        // If duplicates exist (from past bugs), end the extras without spawning.
         const activeSessions = await Session.find({ isActive: true, ended: false });
+        const seenGames = new Set();          // tracks which games already have a keeper
+        const spawnedGames = new Set();       // tracks which games already got a successor this tick
+
         for (const sess of activeSessions) {
+            const gameKey = String(sess.game);
+
+            // If we already have an active session for this game, kill the duplicate
+            if (seenGames.has(gameKey)) {
+                sess.ended = true;
+                sess.isActive = false;
+                await sess.save();
+                console.log(`[Cron] Duplicate session ${sess._id} ended for game ${gameKey}`);
+                continue;
+            }
+            seenGames.add(gameKey);
+
             const periodMs = ((sess.durationDays || 0) * 86400000)
                 + ((sess.durationHours || 0) * 3600000)
                 + ((sess.durationMinutes || 0) * 60000);
@@ -235,6 +252,10 @@ cron.schedule('*/10 * * * * *', async () => {
                 await sess.save();
                 console.log(`[Cron] Session ${sess._id} ended (period finished)`);
 
+                // Only spawn ONE successor per game per cron tick
+                if (spawnedGames.has(gameKey)) continue;
+                spawnedGames.add(gameKey);
+
                 // Calculate the current valid period anchor (skip over missed periods)
                 let nextAnchor = endOfPeriod;
                 while (nextAnchor + periodMs <= Date.now()) {
@@ -261,7 +282,7 @@ cron.schedule('*/10 * * * * *', async () => {
                     tag: sess.tag,
                     instructions: sess.instructions,
                 });
-                console.log(`[Cron] New session spawned for game ${sess.game}`);
+                console.log(`[Cron] New session spawned for game ${gameKey}`);
                 broadcastEvent('session-update', { gameId: sess.game });
             }
         }
