@@ -11,6 +11,7 @@ const {
   adminGetClaimableSummary,
   adminGetPlayerContestClaimableSummary,
   adminGetUserTransactions,
+  adminGetAllTransactions,
   adminGetWithdrawals,
   adminHandleWithdrawal,
 } = require('../controllers/walletController');
@@ -23,6 +24,7 @@ router.post('/withdraw', protect, requestWithdrawal);
 router.get('/admin/all', protect, admin, adminGetAllWallets);
 router.get('/admin/claimable-summary', protect, admin, adminGetClaimableSummary);
 router.get('/admin/claimable-summary/:userId/contests', protect, admin, adminGetPlayerContestClaimableSummary);
+router.get('/admin/transactions', protect, admin, adminGetAllTransactions);
 router.get('/admin/transactions/:userId', protect, admin, adminGetUserTransactions);
 router.get('/admin/withdrawals', protect, admin, adminGetWithdrawals);
 router.patch('/admin/withdrawals/:id', protect, admin, adminHandleWithdrawal);

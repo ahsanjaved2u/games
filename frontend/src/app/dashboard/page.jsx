@@ -49,6 +49,7 @@ function DashboardContent() {
   const [users, setUsers] = useState([]);
   const [loadingStats, setLoadingStats] = useState(true);
   const [loadingUsers, setLoadingUsers] = useState(true);
+  const [pendingWithdrawals, setPendingWithdrawals] = useState(0);
 
   const fetchStats = async () => {
     setLoadingStats(true);
@@ -68,9 +69,17 @@ function DashboardContent() {
     setLoadingUsers(false);
   };
 
+  const fetchPendingCount = async () => {
+    try {
+      const data = await authFetch('/wallet/admin/withdrawals?status=pending');
+      setPendingWithdrawals(Array.isArray(data) ? data.length : 0);
+    } catch { /* ignore */ }
+  };
+
   useEffect(() => {
     fetchStats();
     fetchUsers();
+    fetchPendingCount();
   }, []);
 
   const statCards = stats ? [
@@ -123,8 +132,11 @@ function DashboardContent() {
             <Link href="/dashboard/claimable" className="btn-neon text-sm justify-center" style={{ textDecoration: 'none' }}>
               💸 <span>Claimables</span>
             </Link>
-            <Link href="/dashboard/wallet" className="btn-neon text-sm justify-center" style={{ textDecoration: 'none' }}>
+            <Link href="/dashboard/wallet" className="btn-neon text-sm justify-center relative overflow-hidden" style={{ textDecoration: 'none' }}>
               💰 <span>Wallets</span>
+              {pendingWithdrawals > 0 && (
+                <span className="absolute top-1 right-1 w-2 h-2 rounded-full" style={{ background: '#ff5c8a', boxShadow: '0 0 6px rgba(255,92,138,0.6)' }} />
+              )}
             </Link>
             <Link href="/dashboard/users" className="btn-neon text-sm justify-center" style={{ textDecoration: 'none' }}>
               👥 <span>Users</span>

@@ -185,6 +185,11 @@ export function AuthProvider({ children }) {
         ...options.headers,
       },
     });
+    // 401 = expired / invalid token → force logout so user re-authenticates
+    if (res.status === 401) {
+      forceLogout();
+      throw new Error('Session expired. Please log in again.');
+    }
     // 403 from protect middleware = blocked/deleted → force logout
     if (res.status === 403) {
       const ct = res.headers.get('content-type') || '';

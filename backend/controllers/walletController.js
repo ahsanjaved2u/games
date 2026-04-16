@@ -5,6 +5,7 @@ const Game = require('../models/Game');
 const Contest = require('../models/Contest');
 const GameScore = require('../models/GameScore');
 const { sendWithdrawalRequestToAdmin, sendWithdrawalApprovedToPlayer, sendWithdrawalRejectedToPlayer } = require('../utils/mailer');
+const { pushEvent } = require('../utils/sse');
 
 const safeIso = (value) => {
   if (!value) return null;
@@ -175,6 +176,8 @@ const requestWithdrawal = async (req, res) => {
     // Fire-and-forget email to admin
     sendWithdrawalRequestToAdmin(req.user, amount, paymentMethod, note);
 
+    pushEvent(String(req.user._id), 'wallet-update', { balance: wallet.balance });
+
     res.status(201).json({ message: 'Withdrawal requested', balance: wallet.balance, transaction: txn });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -208,6 +211,8 @@ const adminCredit = async (req, res) => {
       createdBy: req.user._id,
     });
 
+    pushEvent(String(userId), 'wallet-update', { balance: wallet.balance });
+
     res.json({ message: `PKR ${amount} credited`, balance: wallet.balance, transaction: txn });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -238,6 +243,8 @@ const adminDebit = async (req, res) => {
       status: 'completed',
       createdBy: req.user._id,
     });
+
+    pushEvent(String(userId), 'wallet-update', { balance: wallet.balance });
 
     res.json({ message: `PKR ${amount} debited`, balance: wallet.balance, transaction: txn });
   } catch (error) {
@@ -582,6 +589,8 @@ const adminHandleWithdrawal = async (req, res) => {
       await wallet.save();
     }
 
+    pushEvent(String(txn.user), 'wallet-update', {});
+
     // Fire-and-forget email to player
     const player = await User.findById(txn.user);
     if (player) {
@@ -626,6 +635,7 @@ const autoCreditScore = async (userId, gameSlug, gameName, newTotalPkr) => {
 
     wallet.balance = parseFloat((wallet.balance + delta).toFixed(2));
     await wallet.save();
+    pushEvent(String(userId), 'wallet-update', { balance: wallet.balance });
   } else {
     // First time earning from this game — create the transaction
     const amount = parseFloat(newTotalPkr.toFixed(2));
@@ -640,6 +650,7 @@ const autoCreditScore = async (userId, gameSlug, gameName, newTotalPkr) => {
 
     wallet.balance = parseFloat((wallet.balance + amount).toFixed(2));
     await wallet.save();
+    pushEvent(String(userId), 'wallet-update', { balance: wallet.balance });
   }
 
   return wallet.balance;
@@ -678,6 +689,7 @@ const creditRewardingGame = async (userId, gameLabel, earnedPkr, scheduleId, per
 
     wallet.balance = parseFloat((wallet.balance + delta).toFixed(2));
     await wallet.save();
+    pushEvent(String(userId), 'wallet-update', { balance: wallet.balance });
   } else {
     // First play in this schedule period — create the transaction
     const amount = parseFloat(earnedPkr.toFixed(2));
@@ -694,9 +706,90 @@ const creditRewardingGame = async (userId, gameLabel, earnedPkr, scheduleId, per
 
     wallet.balance = parseFloat((wallet.balance + amount).toFixed(2));
     await wallet.save();
+    pushEvent(String(userId), 'wallet-update', { balance: wallet.balance });
   }
 
   return wallet.balance;
+};
+
+// ────────────────────────────────────────
+// @desc    Get ALL transactions (admin) with pagination, filters, and totals
+// @route   GET /api/wallet/admin/transactions
+// @access  Private/Admin
+const adminGetAllTransactions = async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 50));
+    const skip = (page - 1) * limit;
+
+    const filter = {};
+
+    // Type filter
+    if (req.query.type && ['credit', 'debit', 'withdrawal'].includes(req.query.type)) {
+      filter.type = req.query.type;
+    }
+
+    // Status filter
+    if (req.query.status && ['completed', 'pending', 'rejected'].includes(req.query.status)) {
+      filter.status = req.query.status;
+    }
+
+    // Search by user name (requires lookup, handled below)
+    const searchName = (req.query.search || '').trim();
+
+    // If searching by user name, find matching user IDs first
+    if (searchName) {
+      const matchingUsers = await User.find({
+        name: { $regex: searchName, $options: 'i' },
+      }).select('_id').lean();
+      filter.user = { $in: matchingUsers.map(u => u._id) };
+    }
+
+    const [transactions, total] = await Promise.all([
+      Transaction.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate('user', 'name email')
+        .lean(),
+      Transaction.countDocuments(filter),
+    ]);
+
+    // Compute totals for the current filter
+    const totals = await Transaction.aggregate([
+      { $match: filter },
+      {
+        $group: {
+          _id: null,
+          totalCredits: {
+            $sum: { $cond: [{ $eq: ['$type', 'credit'] }, '$amount', 0] },
+          },
+          totalDebits: {
+            $sum: { $cond: [{ $eq: ['$type', 'debit'] }, '$amount', 0] },
+          },
+          totalWithdrawals: {
+            $sum: { $cond: [{ $and: [{ $eq: ['$type', 'withdrawal'] }, { $eq: ['$status', 'completed'] }] }, '$amount', 0] },
+          },
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const summary = totals[0] || { totalCredits: 0, totalDebits: 0, totalWithdrawals: 0, count: 0 };
+
+    res.json({
+      transactions,
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+      summary: {
+        totalCredits: parseFloat(summary.totalCredits.toFixed(2)),
+        totalDebits: parseFloat(summary.totalDebits.toFixed(2)),
+        totalWithdrawals: parseFloat(summary.totalWithdrawals.toFixed(2)),
+        net: parseFloat((summary.totalCredits - summary.totalDebits - summary.totalWithdrawals).toFixed(2)),
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 };
 
 module.exports = {
@@ -712,6 +805,7 @@ module.exports = {
   adminGetClaimableSummary,
   adminGetPlayerContestClaimableSummary,
   adminGetUserTransactions,
+  adminGetAllTransactions,
   adminGetWithdrawals,
   adminHandleWithdrawal,
 };

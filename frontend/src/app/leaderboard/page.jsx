@@ -54,9 +54,10 @@ function AdminSummaryView({ rows, loading }) {
   }
 
   const filteredRows = rows.filter((row) => {
+    if (typeFilter === 'contest' && row.isRewarding) return false;
     if (typeFilter === 'rewarding' && !row.isRewarding) return false;
-    if (typeFilter === 'live' && !row.isLive) return false;
-    if (typeFilter === 'ended' && !row.isEnded) return false;
+    if (typeFilter === 'liveContest' && (row.isRewarding || !row.isLive)) return false;
+    if (typeFilter === 'liveRewarding' && (!row.isRewarding || !row.isLive)) return false;
     if (searchTerm.trim()) {
       const text = `${row.gameName || row.game} ${row.game}`.toLowerCase();
       if (!text.includes(searchTerm.trim().toLowerCase())) return false;
@@ -64,9 +65,10 @@ function AdminSummaryView({ rows, loading }) {
     return true;
   });
 
+  const contestCount = rows.filter(r => !r.isRewarding).length;
   const rewardingCount = rows.filter(r => r.isRewarding).length;
-  const liveCount = rows.filter(r => r.isLive).length;
-  const endedCount = rows.filter(r => r.isEnded).length;
+  const liveContestCount = rows.filter(r => !r.isRewarding && r.isLive).length;
+  const liveRewardingCount = rows.filter(r => r.isRewarding && r.isLive).length;
 
   const filterBtn = (key, label) => ({
     background: typeFilter === key ? 'rgba(0,229,255,0.14)' : 'var(--subtle-overlay)',
@@ -77,30 +79,35 @@ function AdminSummaryView({ rows, loading }) {
   return (
     <div className="space-y-3 animate-fade-in-up">
       <div className="glass-card p-3">
-        <div className="grid grid-cols-4 gap-2 mb-3 text-center">
+        <div className="grid grid-cols-5 gap-2 mb-3 text-center">
           <div className="rounded-lg py-2" style={{ background: 'rgba(0,229,255,0.08)', border: '1px solid rgba(0,229,255,0.2)' }}>
             <p className="text-base font-extrabold" style={{ color: 'var(--neon-cyan)' }}>{rows.length}</p>
             <p className="text-[10px] uppercase" style={{ color: 'var(--text-muted)' }}>Total</p>
           </div>
+          <div className="rounded-lg py-2" style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)' }}>
+            <p className="text-base font-extrabold" style={{ color: '#f59e0b' }}>{contestCount}</p>
+            <p className="text-[10px] uppercase" style={{ color: 'var(--text-muted)' }}>Contests</p>
+          </div>
           <div className="rounded-lg py-2" style={{ background: 'rgba(0,255,136,0.08)', border: '1px solid rgba(0,255,136,0.2)' }}>
             <p className="text-base font-extrabold" style={{ color: '#00ff88' }}>{rewardingCount}</p>
-            <p className="text-[10px] uppercase" style={{ color: 'var(--text-muted)' }}>Standard / Rewarding</p>
+            <p className="text-[10px] uppercase" style={{ color: 'var(--text-muted)' }}>Rewarding</p>
           </div>
           <div className="rounded-lg py-2" style={{ background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)' }}>
-            <p className="text-base font-extrabold" style={{ color: '#22c55e' }}>{liveCount}</p>
-            <p className="text-[10px] uppercase" style={{ color: 'var(--text-muted)' }}>Live</p>
+            <p className="text-base font-extrabold" style={{ color: '#22c55e' }}>{liveContestCount}</p>
+            <p className="text-[10px] uppercase" style={{ color: 'var(--text-muted)' }}>Live Contest</p>
           </div>
-          <div className="rounded-lg py-2" style={{ background: 'rgba(255,92,138,0.08)', border: '1px solid rgba(255,92,138,0.2)' }}>
-            <p className="text-base font-extrabold" style={{ color: '#ff5c8a' }}>{endedCount}</p>
-            <p className="text-[10px] uppercase" style={{ color: 'var(--text-muted)' }}>Ended</p>
+          <div className="rounded-lg py-2" style={{ background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)' }}>
+            <p className="text-base font-extrabold" style={{ color: '#22c55e' }}>{liveRewardingCount}</p>
+            <p className="text-[10px] uppercase" style={{ color: 'var(--text-muted)' }}>Live Rewarding</p>
           </div>
         </div>
 
         <div className="flex flex-wrap gap-2 mb-3">
           <button className="text-xs font-semibold px-3 py-1 rounded-full" style={filterBtn('all')} onClick={() => setTypeFilter('all')}>All</button>
-          <button className="text-xs font-semibold px-3 py-1 rounded-full" style={filterBtn('rewarding')} onClick={() => setTypeFilter('rewarding')}>💰 Standard / Rewarding</button>
-          <button className="text-xs font-semibold px-3 py-1 rounded-full" style={filterBtn('live')} onClick={() => setTypeFilter('live')}>🟢 Live</button>
-          <button className="text-xs font-semibold px-3 py-1 rounded-full" style={filterBtn('ended')} onClick={() => setTypeFilter('ended')}>🔴 Ended</button>
+          <button className="text-xs font-semibold px-3 py-1 rounded-full" style={filterBtn('contest')} onClick={() => setTypeFilter('contest')}>🏆 Contests</button>
+          <button className="text-xs font-semibold px-3 py-1 rounded-full" style={filterBtn('rewarding')} onClick={() => setTypeFilter('rewarding')}>💰 Rewarding</button>
+          <button className="text-xs font-semibold px-3 py-1 rounded-full" style={filterBtn('liveContest')} onClick={() => setTypeFilter('liveContest')}>🟢 Live Contest</button>
+          <button className="text-xs font-semibold px-3 py-1 rounded-full" style={filterBtn('liveRewarding')} onClick={() => setTypeFilter('liveRewarding')}>🟢 Live Rewarding</button>
         </div>
 
         <input
@@ -117,22 +124,22 @@ function AdminSummaryView({ rows, loading }) {
         />
       </div>
 
-      <div className="glass-card overflow-hidden">
+      <div className="glass-card overflow-hidden" style={{ maxHeight: '65vh', display: 'flex', flexDirection: 'column' }}>
         {filteredRows.length === 0 ? (
           <div className="text-center py-12">
             <span style={{ fontSize: 30, display: 'block', marginBottom: 8, opacity: 0.35 }}>📋</span>
             <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No {typeFilter === 'all' ? '' : typeFilter} entries found.</p>
           </div>
         ) : (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto" style={{ overflowY: 'auto', flex: 1 }}>
           <table className="w-full min-w-[1200px]">
-            <thead>
-              <tr style={{ background: 'var(--subtle-overlay)' }}>
-                <th className="text-left text-[10px] uppercase tracking-wider px-4 py-2 sticky left-0 z-10" style={{ color: 'var(--text-muted)', background: 'var(--bg-card)' }}>
+            <thead className="sticky top-0 z-20">
+              <tr style={{ background: 'var(--bg-card, #141428)' }}>
+                <th className="text-left text-[10px] uppercase tracking-wider px-4 py-2 sticky left-0 z-30" style={{ color: 'var(--text-muted)', background: 'var(--bg-card, #141428)' }}>
                   Game / Contest
                 </th>
                 {Array.from({ length: 10 }).map((_, idx) => (
-                  <th key={idx} className="text-center text-[10px] uppercase tracking-wider px-2 py-2" style={{ color: 'var(--text-muted)' }}>
+                  <th key={idx} className="text-center text-[10px] uppercase tracking-wider px-2 py-2" style={{ color: 'var(--text-muted)', background: 'var(--bg-card, #141428)' }}>
                     #{idx + 1}
                   </th>
                 ))}
@@ -141,11 +148,11 @@ function AdminSummaryView({ rows, loading }) {
             <tbody>
               {filteredRows.map((row) => {
                 return (
-                  <tr key={`${row.game}-${row.contestId || ''}-${row.periodStart || ''}`} style={{ borderTop: '1px solid var(--subtle-border)' }}>
+                  <tr key={`${row.game}-${row.contestId || ''}-${row.sessionId || ''}-${row.periodStart || ''}`} style={{ borderTop: '1px solid var(--subtle-border)' }}>
                     <td className="px-4 py-3 sticky left-0 z-10" style={{ background: 'var(--bg-card)' }}>
                       <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
                         {row.gameName || row.game}
-                        {row.isRewarding && <span className="text-[10px] font-normal ml-1" style={{ color: '#00ff88' }}>(Rewarding)</span>}
+                        <span className="text-[10px] font-normal ml-1" style={{ color: row.isRewarding ? '#00ff88' : '#f59e0b' }}>({row.isRewarding ? 'Rewarding' : 'Contest'})</span>
                       </p>
                       {(row.contestStart || row.periodStart) && <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>{formatContestDate(row.periodStart || row.contestStart, row.periodEnd || row.contestEnd)}</p>}
                       <span className="inline-block mt-1 text-[10px] font-bold uppercase px-2 py-0.5 rounded-full" style={{
@@ -255,9 +262,7 @@ function SummaryView({ summaryData, loading, isLoggedIn, user, games }) {
 
   const uniqueGames = new Set(summaryEntries.map(e => e._slug)).size;
   const totalContests = summaryEntries.filter(e => e.contestId || e.contest).length;
-  const liveCount = summaryEntries.filter(e => !!(e.contestId || e.contest) && !!e.isLive).length;
-  const endedCount = summaryEntries.filter(e => !!(e.contestId || e.contest) && !e.isLive).length;
-  const standardCount = summaryEntries.filter(e => !(e.contestId || e.contest)).length;
+  const totalSessions = summaryEntries.filter(e => !(e.contestId || e.contest)).length;
 
   const filteredEntries = summaryEntries.filter((entry) => {
     const status = (entry.contestId || entry.contest) ? (entry.isLive ? 'live' : 'ended') : 'standard';
@@ -293,6 +298,7 @@ function SummaryView({ summaryData, loading, isLoggedIn, user, games }) {
           {summaryEntries.length} entr{summaryEntries.length !== 1 ? 'ies' : 'y'}
           {` · ${uniqueGames} game${uniqueGames !== 1 ? 's' : ''}`}
           {totalContests > 0 && ` · ${totalContests} contest${totalContests !== 1 ? 's' : ''}`}
+          {totalSessions > 0 && ` · ${totalSessions} session${totalSessions !== 1 ? 's' : ''}`}
         </p>
       </div>
 
@@ -386,7 +392,10 @@ function SummaryView({ summaryData, loading, isLoggedIn, user, games }) {
                   <div className="flex items-center justify-between gap-2 mb-1">
                     <div className="flex items-center gap-2 min-w-0">
                       <span style={{ fontSize: 18 }}>{game.emoji}</span>
-                      <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{game.title}</p>
+                      <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
+                        {game.title}
+                        <span className="text-[10px] font-normal ml-1" style={{ color: isContestEntry ? '#f59e0b' : isPeriodEntry ? '#00ff88' : 'var(--text-muted)' }}>({isContestEntry ? 'Contest' : 'Reward'})</span>
+                      </p>
                     </div>
                     <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full" style={{
                       color: statusColor,
@@ -426,7 +435,10 @@ function SummaryView({ summaryData, loading, isLoggedIn, user, games }) {
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 min-w-0">
                       <span style={{ fontSize: 18 }}>{game.emoji}</span>
-                      <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{game.title}</p>
+                      <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
+                        {game.title}
+                        <span className="text-[10px] font-normal ml-1" style={{ color: isContestEntry ? '#f59e0b' : isPeriodEntry ? '#00ff88' : 'var(--text-muted)' }}>({isContestEntry ? 'Contest' : 'Reward'})</span>
+                      </p>
                     </div>
                     <p className="text-[11px] truncate" style={{ color: 'var(--text-muted)' }}>{subtitle}</p>
                   </div>
@@ -743,6 +755,173 @@ function GameView({ game, isLoggedIn, authFetch, user }) {
   );
 }
 
+/* ─────────────── Entry Leaderboard View (player-specific contest/session) ─────────────── */
+function EntryView({ game, entry, isLoggedIn, authFetch, user }) {
+  const [leaderboard, setLeaderboard] = useState([]);
+  const [myStats, setMyStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const isContest = !!entry.contestId;
+
+  // Fetch leaderboard for this specific contest/session
+  useEffect(() => {
+    setLoading(true);
+    let url = `${API}/scores/leaderboard/${encodeURIComponent(game.id)}?limit=10`;
+    if (isContest) url += `&contestId=${encodeURIComponent(entry.contestId)}`;
+    else if (entry.periodStart) {
+      url += `&periodStart=${encodeURIComponent(entry.periodStart)}`;
+      if (entry.sessionId) url += `&sessionId=${encodeURIComponent(entry.sessionId)}`;
+    }
+    fetch(url)
+      .then(r => r.json())
+      .then(data => { setLeaderboard(Array.isArray(data) ? data : []); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [game.id, entry.contestId, entry.periodStart, entry.sessionId, isContest]);
+
+  // Fetch my stats for this contest/session
+  useEffect(() => {
+    if (!isLoggedIn) { setMyStats(null); return; }
+    let url = `/scores/me/${encodeURIComponent(game.id)}`;
+    if (isContest) url += `?contestId=${encodeURIComponent(entry.contestId)}`;
+    else if (entry.periodStart) {
+      url += `?periodStart=${encodeURIComponent(entry.periodStart)}`;
+      if (entry.sessionId) url += `&sessionId=${encodeURIComponent(entry.sessionId)}`;
+    }
+    authFetch(url).then(data => setMyStats(data)).catch(() => setMyStats(null));
+  }, [game.id, isLoggedIn, authFetch, entry.contestId, entry.periodStart, entry.sessionId, isContest]);
+
+  const statusColor = entry.isLive ? '#22c55e' : entry.isEnded ? '#ff5c8a' : '#f59e0b';
+  const statusLabel = entry.isLive ? 'LIVE' : entry.isEnded ? 'ENDED' : 'UPCOMING';
+  const dateStr = formatContestDate(entry.contestStart || entry.periodStart, entry.contestEnd || entry.periodEnd);
+
+  return (
+    <div className="space-y-4 animate-fade-in-up">
+      <div className="glass-card overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between gap-3 px-4 py-3" style={{
+          background: `linear-gradient(135deg, ${game.color}12, transparent)`,
+          borderBottom: `1px solid ${game.color}22`,
+        }}>
+          <div className="flex items-center gap-2.5">
+            <span style={{ fontSize: 20 }}>{game.emoji}</span>
+            <div>
+              <span className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{game.title}</span>
+              <span className="text-[11px] font-semibold ml-2" style={{ color: isContest ? '#f59e0b' : '#00ff88' }}>
+                ({isContest ? 'Contest' : 'Rewarding'})
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {dateStr !== 'Unknown' && (
+              <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{dateStr}</span>
+            )}
+            <span className="text-[10px] font-bold uppercase px-2.5 py-1 rounded-full" style={{
+              background: `${statusColor}18`, border: `1px solid ${statusColor}40`, color: statusColor,
+            }}>
+              {statusLabel}
+            </span>
+          </div>
+        </div>
+
+        {/* My stats */}
+        {isLoggedIn && myStats && myStats.totalPlays > 0 && (
+          <div className="flex items-center gap-3 px-4 py-2.5" style={{
+            background: `${game.color}08`, borderBottom: `1px solid ${game.color}18`,
+          }}>
+            <div className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0" style={{
+              background: `linear-gradient(135deg, ${game.color}, #a855f7)`, color: '#fff',
+            }}>
+              {user?.name?.charAt(0).toUpperCase()}
+            </div>
+            <span className="text-xs font-semibold flex-1 truncate" style={{ color: 'var(--text-secondary)' }}>
+              {user?.name} <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>· {myStats.totalPlays} played</span>
+            </span>
+            <div className="flex items-center gap-4 text-right">
+              <div>
+                <p className="text-sm font-extrabold" style={{ color: game.color }}>#{myStats.rank}</p>
+                <p className="text-[9px] uppercase" style={{ color: 'var(--text-muted)' }}>Rank</p>
+              </div>
+              <div>
+                <p className="text-sm font-extrabold" style={{ color: 'var(--neon-yellow)' }}>{myStats.bestScore}</p>
+                <p className="text-[9px] uppercase" style={{ color: 'var(--text-muted)' }}>Best</p>
+              </div>
+              {(isContest && entry.isLive) ? (
+                <div>
+                  <p className="text-sm font-extrabold italic" style={{ color: 'var(--text-muted)' }}>Pending</p>
+                  <p className="text-[9px] uppercase" style={{ color: 'var(--text-muted)' }}>Prize</p>
+                </div>
+              ) : myStats.earnedPkr > 0 && (
+                <div>
+                  <p className="text-sm font-extrabold" style={{ color: '#00ff88' }}>₨{myStats.earnedPkr}</p>
+                  <p className="text-[9px] uppercase" style={{ color: 'var(--text-muted)' }}>Earned</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Column headers — for rewarding, PKR column only shows in contest mode */}
+        <div className="grid px-4 py-2 text-[10px] uppercase tracking-wider font-bold" style={{
+          gridTemplateColumns: (isContest && (leaderboard.some(e => e.earnedPkr > 0) || entry.isLive)) ? '40px 1fr 56px 56px 64px 64px' : '40px 1fr 56px 56px 64px',
+          color: 'var(--text-muted)', borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.012)',
+        }}>
+          <span>Rank</span><span>Player</span><span className="text-center">Pts</span><span className="text-center">Time</span><span className="text-right">Score</span>
+          {(isContest && (leaderboard.some(e => e.earnedPkr > 0) || entry.isLive)) && <span className="text-right">PKR</span>}
+        </div>
+
+        {/* Rows */}
+        {loading ? (
+          <div className="flex items-center justify-center py-12 gap-3">
+            <div className="loader" /><span className="text-sm" style={{ color: 'var(--text-muted)' }}>Loading...</span>
+          </div>
+        ) : leaderboard.length === 0 ? (
+          <div className="text-center py-12">
+            <span style={{ fontSize: 32, display: 'block', marginBottom: 8, opacity: 0.3 }}>🎮</span>
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No scores yet — be the first!</p>
+          </div>
+        ) : (
+          leaderboard.map((lbEntry) => {
+            const badge = rankBadge(lbEntry.rank);
+            const isMe = isLoggedIn && user && lbEntry.userId === user._id;
+            const hasEarningsCol = isContest && (leaderboard.some(e => e.earnedPkr > 0) || entry.isLive);
+            return (
+              <div key={lbEntry.rank} className="grid px-4 py-2.5 items-center" style={{
+                gridTemplateColumns: hasEarningsCol ? '40px 1fr 56px 56px 64px 64px' : '40px 1fr 56px 56px 64px',
+                borderBottom: '1px solid rgba(255,255,255,0.035)',
+                background: isMe ? `${game.color}0a` : lbEntry.rank <= 3 ? badge.bg : 'transparent',
+                transition: 'background 0.15s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'var(--subtle-overlay)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = isMe ? `${game.color}0a` : lbEntry.rank <= 3 ? badge.bg : 'transparent'; }}
+              >
+                <span className="text-sm font-bold" style={{ color: badge.color }}>{badge.label}</span>
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0" style={{
+                    background: lbEntry.rank <= 3 ? `linear-gradient(135deg, ${badge.color}, ${game.color})` : 'var(--subtle-border)', color: '#fff',
+                  }}>{lbEntry.name?.charAt(0).toUpperCase()}</div>
+                  <p className="text-xs font-semibold truncate" style={{ color: isMe ? game.color : 'var(--text-primary)' }}>
+                    {lbEntry.name}{isMe && <span className="ml-1 text-[9px] font-normal opacity-60">(you)</span>}
+                  </p>
+                </div>
+                <span className="text-xs text-center" style={{ color: 'var(--text-secondary)' }}>{lbEntry.points}</span>
+                <span className="text-xs text-center" style={{ color: 'var(--text-muted)' }}>{formatTime(lbEntry.time)}</span>
+                <span className="text-xs text-right font-bold" style={{ color: lbEntry.rank <= 3 ? badge.color : 'var(--text-primary)' }}>{lbEntry.score}</span>
+                {hasEarningsCol && <span className="text-xs text-right font-semibold italic" style={{ color: (isContest && entry.isLive) ? 'var(--text-muted)' : '#00ff88' }}>{(isContest && entry.isLive) ? 'Pending' : lbEntry.earnedPkr > 0 ? `₨${lbEntry.earnedPkr}` : '—'}</span>}
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {!isLoggedIn && (
+        <p className="text-center text-sm" style={{ color: 'var(--text-muted)' }}>
+          <a href="/login" style={{ color: 'var(--neon-cyan)', textDecoration: 'none', fontWeight: 600 }}>Log in</a> to save your scores and appear here.
+        </p>
+      )}
+    </div>
+  );
+}
+
 /* ═══════════════════ Main Page ═══════════════════ */
 export default function LeaderboardPage() {
   const [selected, setSelected] = useState('summary');
@@ -796,34 +975,6 @@ export default function LeaderboardPage() {
     let cancelled = false;
     setSummaryLoading(true);
 
-    const buildStandardEntry = async (slug, baseEntry) => {
-      try {
-        const stats = await authFetch(`/scores/me/${slug}`);
-        if ((stats?.totalPlays || 0) <= 0) return null;
-        return {
-          game: slug,
-          contestId: null,
-          contestStart: null,
-          contestEnd: null,
-          rank: stats.rank ?? null,
-          bestScore: stats.bestScore ?? baseEntry?.bestScore ?? 0,
-          earnedPkr: stats.earnedPkr ?? 0,
-          totalPlays: stats.totalPlays ?? baseEntry?.totalPlays ?? 0,
-          lastPlayed: stats?.record?.updatedAt || baseEntry?.lastPlayed || null,
-        };
-      } catch {
-        if ((baseEntry?.totalPlays || 0) <= 0) return null;
-        return {
-          ...baseEntry,
-          game: slug,
-          contestId: null,
-          contestStart: null,
-          contestEnd: null,
-          rank: baseEntry?.rank ?? null,
-        };
-      }
-    };
-
     authFetch('/scores/me')
       .then(async (data) => {
         if (!Array.isArray(data)) {
@@ -835,97 +986,88 @@ export default function LeaderboardPage() {
 
         const entriesBySlug = await Promise.all(
           slugs.map(async (slug) => {
-            const baseEntry = data.find(entry => getScoreEntryGameSlug(entry) === slug) || null;
+            const results = [];
 
+            // ── Check contests the player played ──
             try {
               const contestRes = await fetch(`${API}/scores/contests/${encodeURIComponent(slug)}`);
               const contestData = contestRes.ok ? await contestRes.json() : [];
               const contests = Array.isArray(contestData) ? contestData : [];
 
-              if (contests.length === 0) {
-                // Check reward periods for rewarding games
-                try {
-                  const periodsRes = await fetch(`${API}/scores/reward-periods/${encodeURIComponent(slug)}`);
-                  const periodsData = periodsRes.ok ? await periodsRes.json() : [];
-                  const periods = Array.isArray(periodsData) ? periodsData : [];
-
-                  if (periods.length > 0) {
-                    const periodEntries = await Promise.all(
-                      periods.map(async (period) => {
-                        if (!period?.periodStart) return null;
-                        try {
-                          const stats = await authFetch(`/scores/me/${encodeURIComponent(slug)}?periodStart=${encodeURIComponent(period.periodStart)}`);
-                          if ((stats?.totalPlays || 0) <= 0) return null;
-                          return {
-                            game: slug,
-                            contestId: null,
-                            periodStart: period.periodStart,
-                            periodEnd: period.periodEnd,
-                            contestStart: null,
-                            contestEnd: null,
-                            isLive: !!period.isActive,
-                            isEnded: !period.isActive,
-                            rank: stats.rank ?? null,
-                            bestScore: stats.bestScore ?? 0,
-                            earnedPkr: stats.earnedPkr ?? 0,
-                            totalPlays: stats.totalPlays ?? 0,
-                            lastPlayed: stats?.record?.updatedAt || null,
-                          };
-                        } catch {
-                          return null;
-                        }
-                      })
-                    );
-
-                    const validPeriodEntries = periodEntries.filter(Boolean);
-                    if (validPeriodEntries.length > 0) return validPeriodEntries;
-                  }
-                } catch {}
-
-                const standard = await buildStandardEntry(slug, baseEntry);
-                return standard ? [standard] : [];
+              if (contests.length > 0) {
+                const contestEntries = await Promise.all(
+                  contests.map(async (contest) => {
+                    if (!contest?.contestId) return null;
+                    try {
+                      const stats = await authFetch(`/scores/me/${slug}?contestId=${encodeURIComponent(contest.contestId)}`);
+                      if ((stats?.totalPlays || 0) <= 0) return null;
+                      return {
+                        game: slug,
+                        contestId: contest.contestId,
+                        contestStart: contest.contestStart,
+                        contestEnd: contest.contestEnd,
+                        periodStart: null,
+                        periodEnd: null,
+                        isLive: !!contest.isLive,
+                        isEnded: !!contest.isEnded,
+                        rank: stats.rank ?? null,
+                        bestScore: stats.bestScore ?? 0,
+                        earnedPkr: stats.earnedPkr ?? 0,
+                        totalPlays: stats.totalPlays ?? 0,
+                        lastPlayed: stats?.record?.updatedAt || contest.contestEnd || contest.contestStart || null,
+                      };
+                    } catch { return null; }
+                  })
+                );
+                results.push(...contestEntries.filter(Boolean));
               }
+            } catch {}
 
-              const contestEntries = await Promise.all(
-                contests.map(async (contest) => {
-                  if (!contest?.contestId) return null;
-                  try {
-                    const stats = await authFetch(`/scores/me/${slug}?contestId=${encodeURIComponent(contest.contestId)}`);
-                    if ((stats?.totalPlays || 0) <= 0) return null;
-                    return {
-                      game: slug,
-                      contestId: contest.contestId,
-                      contestStart: contest.contestStart,
-                      contestEnd: contest.contestEnd,
-                      isLive: !!contest.isLive,
-                      isEnded: !!contest.isEnded,
-                      rank: stats.rank ?? null,
-                      bestScore: stats.bestScore ?? 0,
-                      earnedPkr: stats.earnedPkr ?? 0,
-                      totalPlays: stats.totalPlays ?? 0,
-                      lastPlayed: stats?.record?.updatedAt || contest.contestEnd || contest.contestStart || null,
-                    };
-                  } catch {
-                    return null;
-                  }
-                })
-              );
+            // ── Check reward-period sessions the player played ──
+            try {
+              const periodsRes = await fetch(`${API}/scores/reward-periods/${encodeURIComponent(slug)}`);
+              const periodsData = periodsRes.ok ? await periodsRes.json() : [];
+              const periods = Array.isArray(periodsData) ? periodsData : [];
 
-              const validContestEntries = contestEntries.filter(Boolean);
-              if (validContestEntries.length > 0) return validContestEntries;
+              if (periods.length > 0) {
+                const periodEntries = await Promise.all(
+                  periods.map(async (period) => {
+                    if (!period?.periodStart) return null;
+                    try {
+                      let pUrl = `/scores/me/${encodeURIComponent(slug)}?periodStart=${encodeURIComponent(period.periodStart)}`;
+                      if (period.session) pUrl += `&sessionId=${encodeURIComponent(String(period.session))}`;
+                      const stats = await authFetch(pUrl);
+                      if ((stats?.totalPlays || 0) <= 0) return null;
+                      return {
+                        game: slug,
+                        contestId: null,
+                        periodStart: period.periodStart,
+                        periodEnd: period.periodEnd,
+                        sessionId: period.session ? String(period.session) : null,
+                        contestStart: null,
+                        contestEnd: null,
+                        isLive: !!period.isActive,
+                        isEnded: !period.isActive,
+                        rank: stats.rank ?? null,
+                        bestScore: stats.bestScore ?? 0,
+                        earnedPkr: stats.earnedPkr ?? 0,
+                        totalPlays: stats.totalPlays ?? 0,
+                        lastPlayed: stats?.record?.updatedAt || null,
+                      };
+                    } catch { return null; }
+                  })
+                );
+                results.push(...periodEntries.filter(Boolean));
+              }
+            } catch {}
 
-              const standard = await buildStandardEntry(slug, baseEntry);
-              return standard ? [standard] : [];
-            } catch {
-              const standard = await buildStandardEntry(slug, baseEntry);
-              return standard ? [standard] : [];
-            }
+            return results;
           })
         );
 
         const expandedEntries = entriesBySlug.flat().sort((a, b) => {
-          const aTs = new Date(a.contestStart || a.lastPlayed || 0).getTime();
-          const bTs = new Date(b.contestStart || b.lastPlayed || 0).getTime();
+          const aTs = new Date(a.contestStart || a.periodStart || a.lastPlayed || 0).getTime();
+          const bTs = new Date(b.contestStart || b.periodStart || b.lastPlayed || 0).getTime();
           return bTs - aTs;
         });
 
@@ -1066,7 +1208,7 @@ export default function LeaderboardPage() {
         .filter(Boolean)
         .sort((a, b) => new Date(b.contestStart || 0).getTime() - new Date(a.contestStart || 0).getTime());
 
-      return [...rewardingRows, ...allCompetitive];
+      return [...allCompetitive, ...rewardingRows];
     };
 
     authFetch('/scores/admin/contest-summary')
@@ -1099,25 +1241,61 @@ export default function LeaderboardPage() {
   }, [isLoggedIn, isAdmin, authFetch, games]);
 
   // Build dropdown options:
-  // - Admin: all games from the games list
-  // - Regular user: every game slug from summaryData (their played games),
-  //   enriched with metadata from the games list if available
+  // - Admin: all contests/sessions from adminSummaryData
+  // - Regular user: every contest/session entry the player has played in
   const options = [
     { id: 'summary', label: 'Summary', emoji: '📊' },
     ...(() => {
-      if (isAdmin) return games.map(g => ({ id: g.id, label: g.title, emoji: g.emoji }));
-      const slugs = [...new Set(summaryData.map(s => getScoreEntryGameSlug(s)).filter(Boolean))];
-      return slugs.map(slug => {
+      if (isAdmin) {
+        return adminSummaryData.map((row, idx) => {
+          const isContest = !row.isRewarding;
+          const tag = isContest ? 'Contest' : 'Rewarding';
+          const uniqueId = isContest
+            ? `admin_contest_${row.contestId || idx}`
+            : `admin_period_${row.game}_${row.sessionId || idx}_${row.periodStart || ''}`;
+          return {
+            id: uniqueId,
+            label: row.gameName || row.game,
+            tag,
+            emoji: '🎮',
+            entryData: {
+              contestId: row.contestId || null,
+              periodStart: row.periodStart || null,
+              periodEnd: row.periodEnd || null,
+              sessionId: row.sessionId || (row.session ? String(row.session) : null),
+              contestStart: row.contestStart || null,
+              contestEnd: row.contestEnd || null,
+              isLive: !!row.isLive,
+              isEnded: !!row.isEnded,
+            },
+            gameInfo: games.find(g => g.id === row.game) || { id: row.game, title: row.gameName || row.game, color: '#00e5ff', emoji: '🎮', gameType: isContest ? 'competitive' : 'rewarding' },
+          };
+        });
+      }
+      return summaryData.map((entry, idx) => {
+        const slug = getScoreEntryGameSlug(entry);
         const gInfo = games.find(g => g.id === slug);
-        return { id: slug, label: gInfo?.title || slug, emoji: gInfo?.emoji || '🎮' };
+        const gameName = gInfo?.title || slug;
+        const isContest = !!entry.contestId;
+        const tag = isContest ? 'Contest' : 'Rewarding';
+        const uniqueId = isContest
+          ? `contest_${entry.contestId}`
+          : entry.periodStart
+            ? `period_${slug}_${entry.periodStart}`
+            : `standard_${slug}_${idx}`;
+        return {
+          id: uniqueId,
+          label: gameName,
+          tag,
+          emoji: gInfo?.emoji || '🎮',
+          entryData: entry,
+          gameInfo: gInfo || { id: slug, title: gameName, color: '#00e5ff', emoji: '🎮', gameType: isContest ? 'competitive' : 'rewarding' },
+        };
       });
     })(),
   ];
 
   const activeOption = options.find(o => o.id === selected) || options[0];
-  // If game is in games list use it; otherwise build a minimal fallback so GameView still renders
-  const activeGame = games.find(g => g.id === selected) ||
-    (selected !== 'summary' ? { id: selected, title: selected, color: '#00e5ff', emoji: '🎮', gameType: 'competitive' } : null);
 
   return (
     <div className="bg-grid relative" style={{ overflowX: 'hidden', minHeight: 'calc(100vh - 64px)' }}>
@@ -1137,10 +1315,13 @@ export default function LeaderboardPage() {
             <button
               onClick={() => setDropdownOpen(!dropdownOpen)}
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200"
-              style={{ background: 'var(--input-bg)', border: '1px solid rgba(255,255,255,0.12)', color: 'var(--text-primary)', minWidth: 170 }}
+              style={{ background: 'var(--input-bg)', border: '1px solid rgba(255,255,255,0.12)', color: 'var(--text-primary)', minWidth: 200 }}
             >
               <span>{activeOption.emoji}</span>
-              <span className="flex-1 text-left truncate">{activeOption.label}</span>
+              <span className="flex-1 text-left truncate">
+                {activeOption.label}
+                {activeOption.tag && <span className="text-[10px] font-normal ml-1 opacity-70">({activeOption.tag})</span>}
+              </span>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
                 style={{ transition: 'transform 0.2s', transform: dropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)', flexShrink: 0 }}>
                 <polyline points="6 9 12 15 18 9" />
@@ -1148,7 +1329,7 @@ export default function LeaderboardPage() {
             </button>
 
             {dropdownOpen && (
-              <div className="absolute right-0 mt-2 w-52 py-1.5 rounded-xl shadow-2xl animate-fade-in-up" style={{
+              <div className="absolute right-0 mt-2 w-64 max-h-72 overflow-y-auto py-1.5 rounded-xl shadow-2xl animate-fade-in-up" style={{
                 zIndex: 9999, background: 'var(--bg-card, #141428)',
                 border: '1px solid var(--input-border)', backdropFilter: 'blur(16px)',
               }}>
@@ -1165,7 +1346,10 @@ export default function LeaderboardPage() {
                     onMouseLeave={e => { if (selected !== opt.id) e.currentTarget.style.background = 'transparent'; }}
                   >
                     <span>{opt.emoji}</span>
-                    <span className="flex-1 truncate">{opt.label}</span>
+                    <span className="flex-1 truncate">
+                      {opt.label}
+                      {opt.tag && <span className="text-[10px] font-normal ml-1 opacity-60">({opt.tag})</span>}
+                    </span>
                     {selected === opt.id && (
                       <svg className="ml-auto flex-shrink-0" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="20 6 9 17 4 12" />
@@ -1185,8 +1369,8 @@ export default function LeaderboardPage() {
           ) : (
             <SummaryView summaryData={summaryData} loading={summaryLoading || gamesLoading} isLoggedIn={isLoggedIn} user={user} games={games} />
           )
-        ) : activeGame ? (
-          <GameView game={activeGame} isLoggedIn={isLoggedIn} authFetch={authFetch} user={user} />
+        ) : activeOption?.entryData ? (
+          <EntryView game={activeOption.gameInfo} entry={activeOption.entryData} isLoggedIn={isLoggedIn} authFetch={authFetch} user={user} />
         ) : null}
       </div>
 

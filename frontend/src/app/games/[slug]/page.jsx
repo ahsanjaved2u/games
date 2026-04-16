@@ -258,7 +258,9 @@ export default function GamePage() {
           // Update period countdown from response
           if (result?.periodEndsAt) setPeriodEndsAt(new Date(result.periodEndsAt));
           sendLeaderboardToIframe();
-        } catch { /* ignore */ }
+        } catch (err) {
+          console.error('Score submit failed:', err.message);
+        }
         return;
       }
       // SDK "Try Again" button was clicked

@@ -442,7 +442,7 @@ export default function WalletPage() {
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{txn.description || cfg.label}</span>
                         {txn.game && <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: 'rgba(0,229,255,0.08)', color: 'var(--neon-cyan)' }}>{txn.game}</span>}
-                        {txn.status !== 'completed' && (
+                        {(txn.status !== 'completed' || txn.type === 'withdrawal') && (
                           <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded" style={{ background: sc.bg, color: sc.color, border: `1px solid ${sc.border}` }}>{txn.status}</span>
                         )}
                       </div>

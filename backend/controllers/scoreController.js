@@ -70,10 +70,29 @@ const saveScore = async (req, res) => {
     let sessionPeriod = null;
     if (!contest && sessionId) {
       sessionDoc = await Session.findById(sessionId);
-      if (!sessionDoc || !sessionDoc.isActive) {
-        return res.status(403).json({ message: 'This session is not active.' });
+      if (!sessionDoc) {
+        return res.status(403).json({ message: 'Session not found.' });
       }
-      sessionPeriod = getSessionPeriod(sessionDoc);
+      if (sessionDoc.isActive) {
+        sessionPeriod = getSessionPeriod(sessionDoc);
+      } else {
+        // Grace: session ended while player was mid-game.
+        // Allow score submission within 10 minutes of session ending.
+        const endedAt = sessionDoc.updatedAt ? new Date(sessionDoc.updatedAt).getTime() : 0;
+        const GRACE_MS = 10 * 60 * 1000; // 10 minutes
+        if (Date.now() - endedAt > GRACE_MS) {
+          return res.status(403).json({ message: 'This session has ended.' });
+        }
+        // Assign score to the last active period (the one the player was in).
+        const current = getSessionPeriod(sessionDoc);
+        if (current) {
+          sessionPeriod = {
+            start: new Date(current.start.getTime() - current.periodMs),
+            end: current.start,
+            periodMs: current.periodMs,
+          };
+        }
+      }
     }
 
     // ── Entry fee gate ──
@@ -557,7 +576,7 @@ const getAdminContestSummary = async (req, res) => {
       };
     }));
 
-    // ── 2. Session rows ──
+    // ── 2. Session rows — one row per session document ──
     const allSessions = await Session.find({}).sort({ createdAt: -1 }).lean();
     const sessionGameIds = [...new Set(allSessions.map(s => String(s.game)))];
     const sessionGames = await Game.find({ _id: { $in: sessionGameIds } })
@@ -566,89 +585,68 @@ const getAdminContestSummary = async (req, res) => {
     const sessGameMap = {};
     sessionGames.forEach(g => { sessGameMap[String(g._id)] = g; });
 
-    // Get session scores grouped by session + periodStart
-    const sessionSlugs = sessionGames.map(g => g.slug);
-    const sessionRows = sessionSlugs.length > 0 ? await GameScore.aggregate([
-      { $match: { game: { $in: sessionSlugs }, session: { $ne: null } } },
+    // Pre-fetch top-10 winners per session in one aggregation
+    const sessionIds = allSessions.map(s => s._id);
+    const sessionScoreRows = sessionIds.length > 0 ? await GameScore.aggregate([
+      { $match: { session: { $in: sessionIds } } },
+      { $sort: { score: -1 } },
       {
         $group: {
-          _id: { game: '$game', session: '$session', periodStart: { $ifNull: ['$periodStart', '__none__'] }, user: '$user' },
+          _id: { session: '$session', user: '$user' },
           bestScore: { $max: '$score' },
         }
       },
-      { $sort: { '_id.game': 1, '_id.periodStart': -1, bestScore: -1 } },
+      { $sort: { bestScore: -1 } },
       {
         $group: {
-          _id: { game: '$_id.game', session: '$_id.session', periodStart: '$_id.periodStart' },
-          winners: {
-            $push: {
-              userId: '$_id.user',
-              score: '$bestScore',
-            }
-          },
+          _id: '$_id.session',
+          winners: { $push: { userId: '$_id.user', score: '$bestScore' } },
         }
       },
-      {
-        $project: {
-          _id: 0,
-          game: '$_id.game',
-          session: '$_id.session',
-          periodStart: '$_id.periodStart',
-          winners: { $slice: ['$winners', 10] },
-        }
-      },
-      { $sort: { game: 1, periodStart: -1 } },
+      { $project: { _id: 1, winners: { $slice: ['$winners', 10] } } },
     ]) : [];
 
-    // Build session map for enrichment
-    const sessMap = {};
-    allSessions.forEach(s => { sessMap[String(s._id)] = s; });
+    const sessionWinnersMap = {};
+    sessionScoreRows.forEach(r => { sessionWinnersMap[String(r._id)] = r.winners; });
+
+    // Only include sessions that are live OR have at least one score
+    const relevantSessions = allSessions.filter(s =>
+      s.isActive || sessionWinnersMap[String(s._id)]
+    );
 
     const now = new Date();
-    const sessionResult = sessionRows.map((row) => {
-      const sess = sessMap[String(row.session)];
-      const gDoc = sess ? sessGameMap[String(sess.game)] : null;
-      const hasPeriod = row.periodStart && row.periodStart !== '__none__';
-      let periodEnd = null;
-      let isActive = false;
+    const sessionResult = relevantSessions.map((sess) => {
+      const gDoc = sessGameMap[String(sess.game)];
+      if (!gDoc) return null;
 
-      if (hasPeriod && sess) {
-        const period = getSessionPeriod(sess);
-        if (period) {
-          periodEnd = new Date(new Date(row.periodStart).getTime() + period.periodMs);
-          isActive = now < periodEnd;
-        }
-      }
+      const period = getSessionPeriod(sess);
+      const isActive = sess.isActive;
 
-      const enrichedWinners = (row.winners || []).map((w, idx) => {
+      const rawWinners = sessionWinnersMap[String(sess._id)] || [];
+      const enrichedWinners = rawWinners.map((w, idx) => {
         let earnedPkr = 0;
-        if (sess && sess.conversionRate > 0) {
+        if (sess.conversionRate > 0) {
           earnedPkr = parseFloat((w.score / Number(sess.conversionRate)).toFixed(2));
         }
-        return {
-          rank: idx + 1,
-          userId: w.userId,
-          score: w.score,
-          earnedPkr,
-        };
+        return { rank: idx + 1, userId: w.userId, score: w.score, earnedPkr };
       });
 
       return {
-        game: gDoc?.slug || row.game,
-        gameName: gDoc?.name || row.game,
-        sessionId: String(row.session),
-        sessionName: sess?.name || '',
+        game: gDoc.slug,
+        gameName: gDoc.name,
+        sessionId: String(sess._id),
+        sessionName: sess.name || '',
         contestId: null,
         contestStart: null,
         contestEnd: null,
-        periodStart: hasPeriod ? row.periodStart : null,
-        periodEnd: periodEnd ? periodEnd.toISOString() : null,
+        periodStart: period ? period.start.toISOString() : null,
+        periodEnd: period ? period.end.toISOString() : null,
         isLive: isActive,
-        isEnded: hasPeriod ? !isActive : false,
+        isEnded: !isActive,
         isRewarding: true,
         winners: enrichedWinners,
       };
-    });
+    }).filter(Boolean);
 
     // ── 3. Gather user info ──
     const allUserIds = [...new Set([
@@ -676,7 +674,15 @@ const getAdminContestSummary = async (req, res) => {
       })),
     }));
 
-    res.json([...enrichedSessionResult, ...competitiveResult]);
+    res.json([...competitiveResult, ...enrichedSessionResult].sort((a, b) => {
+      // Live items always first
+      if (a.isLive && !b.isLive) return -1;
+      if (!a.isLive && b.isLive) return 1;
+      // Then by date, newest first
+      const dateA = new Date(a.contestStart || a.periodStart || 0);
+      const dateB = new Date(b.contestStart || b.periodStart || 0);
+      return dateB - dateA;
+    }));
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
