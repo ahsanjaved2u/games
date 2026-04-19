@@ -6,7 +6,7 @@ const Transaction = require('../models/Transaction');
 const AppSettings = require('../models/AppSettings');
 const Referral = require('../models/Referral');
 const crypto = require('crypto');
-const { sendVerificationCode } = require('../utils/mailer');
+const { sendVerificationCode, sendPasswordResetCode } = require('../utils/mailer');
 const { pushEvent } = require('../utils/sse');
 
 // Generate a 6-digit verification code
@@ -365,6 +365,104 @@ exports.updateProfile = async (req, res, next) => {
             { new: true, runValidators: true }
         );
         res.status(200).json({ success: true, user });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// @desc    Change password (logged-in user)
+// @route   PUT /api/users/change-password
+// @access  Private
+exports.changePassword = async (req, res, next) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({ success: false, message: 'Current password and new password are required' });
+        }
+        if (newPassword.length < 6) {
+            return res.status(400).json({ success: false, message: 'New password must be at least 6 characters' });
+        }
+
+        const user = await User.findById(req.user.id).select('+password');
+        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+        const isMatch = await user.matchPassword(currentPassword);
+        if (!isMatch) {
+            return res.status(401).json({ success: false, message: 'Current password is incorrect' });
+        }
+
+        user.password = newPassword;
+        await user.save();
+
+        res.json({ success: true, message: 'Password changed successfully' });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// @desc    Forgot password — send 6-digit reset code
+// @route   POST /api/users/forgot-password
+// @access  Public
+exports.forgotPassword = async (req, res, next) => {
+    try {
+        const { email } = req.body;
+        if (!email) return res.status(400).json({ success: false, message: 'Email is required' });
+
+        const user = await User.findOne({ email: email.toLowerCase() });
+        if (!user) {
+            // Don't reveal whether email exists
+            return res.json({ success: true, message: 'If that email is registered, a reset code has been sent.' });
+        }
+
+        const code = generateCode();
+        user.resetPasswordToken = code;
+        user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+        await user.save({ validateBeforeSave: false });
+
+        await sendPasswordResetCode(user.email, user.name, code);
+
+        res.json({ success: true, message: 'If that email is registered, a reset code has been sent.' });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// @desc    Reset password using 6-digit code
+// @route   POST /api/users/reset-password
+// @access  Public
+exports.resetPassword = async (req, res, next) => {
+    try {
+        const { code, email, newPassword } = req.body;
+        if (!code || !email || !newPassword) {
+            return res.status(400).json({ success: false, message: 'Code, email, and new password are required' });
+        }
+        if (newPassword.length < 6) {
+            return res.status(400).json({ success: false, message: 'Password must be at least 6 characters' });
+        }
+
+        const user = await User.findOne({
+            email: email.toLowerCase(),
+            resetPasswordToken: code,
+            resetPasswordExpires: { $gt: new Date() },
+        }).select('+resetPasswordToken +resetPasswordExpires +password');
+
+        if (!user) {
+            return res.status(400).json({ success: false, message: 'Invalid or expired code' });
+        }
+
+        user.password = newPassword;
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpires = undefined;
+        await user.save();
+
+        // Auto-login: return JWT + user data
+        const token = user.getSignedJwtToken();
+        const userData = user.toObject();
+        delete userData.password;
+        delete userData.resetPasswordToken;
+        delete userData.resetPasswordExpires;
+
+        res.json({ success: true, message: 'Password has been reset.', token, user: userData });
     } catch (error) {
         next(error);
     }

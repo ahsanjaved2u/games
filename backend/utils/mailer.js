@@ -189,10 +189,35 @@ const sendContactEmail = async (name, email, subject, message) => {
   });
 };
 
+// ── 6. Password reset code ──────────────────────────────────────
+const sendPasswordResetCode = async (playerEmail, playerName, code) => {
+  const siteUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+  const resetLink = `${siteUrl}/forgot-password?email=${encodeURIComponent(playerEmail)}&code=${code}`;
+  await send({
+    to: playerEmail,
+    subject: `🔑 Your Password Reset Code — ${code}`,
+    html: shell(`
+      <div class="hdr"><h1>🔑 Reset Your Password</h1></div>
+      <div class="bdy">
+        <p>Hi <strong>${playerName}</strong>,</p>
+        <p>We received a request to reset your password. Use this code:</p>
+        <div class="amt">${code}</div>
+        <p style="margin:28px 0;text-align:center">
+          <a href="${resetLink}" style="display:inline-block;padding:16px 48px;border-radius:12px;background:linear-gradient(135deg,#00e5ff,#a855f7);color:#fff;font-weight:800;font-size:16px;text-decoration:none;letter-spacing:.5px;box-shadow:0 4px 20px rgba(0,229,255,.3)">🔐 Reset My Password</a>
+        </p>
+        <p style="font-size:13px;color:rgba(255,255,255,.5)">
+          This code expires in <strong>1 hour</strong>. If you didn't request a password reset, ignore this email — your password will remain unchanged.
+        </p>
+      </div>
+      <div class="ftr">GameVesta · ${ts()}</div>`),
+  });
+};
+
 module.exports = {
   sendWithdrawalRequestToAdmin,
   sendWithdrawalApprovedToPlayer,
   sendWithdrawalRejectedToPlayer,
   sendVerificationCode,
   sendContactEmail,
+  sendPasswordResetCode,
 };

@@ -111,6 +111,15 @@ export default function LoginPage() {
             />
           </div>
 
+          <div className="flex justify-end">
+            <Link href="/forgot-password" className="text-xs font-medium transition-colors" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}
+              onMouseEnter={e => e.target.style.color = 'var(--neon-cyan)'}
+              onMouseLeave={e => e.target.style.color = 'var(--text-muted)'}
+            >
+              Forgot Password?
+            </Link>
+          </div>
+
           <button
             type="submit"
             disabled={submitting}

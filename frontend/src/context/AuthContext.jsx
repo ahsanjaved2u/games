@@ -163,6 +163,15 @@ export function AuthProvider({ children }) {
     return data;
   };
 
+  // Set auth state from externally obtained token + user (e.g. password reset)
+  const loginWithToken = (tkn, usr) => {
+    setToken(tkn);
+    setUser(usr);
+    localStorage.setItem('gz_token', tkn);
+    localStorage.setItem('gz_user', JSON.stringify(usr));
+    fetchBalance(tkn);
+  };
+
   const logout = () => {
     setToken(null);
     setUser(null);
@@ -185,8 +194,19 @@ export function AuthProvider({ children }) {
         ...options.headers,
       },
     });
-    // 401 = expired / invalid token → force logout so user re-authenticates
+    // 401 = either expired/invalid token (force logout) OR wrong password (throw error)
     if (res.status === 401) {
+      const ct = res.headers.get('content-type') || '';
+      if (ct.includes('application/json')) {
+        const data = await res.json();
+        const msg = data.message || '';
+        // Only force-logout for token/auth failures, not business logic 401s (e.g. wrong password)
+        if (msg.toLowerCase().includes('not authorized') || msg.toLowerCase().includes('token')) {
+          forceLogout();
+          throw new Error('Session expired. Please log in again.');
+        }
+        throw new Error(msg || 'Unauthorized');
+      }
       forceLogout();
       throw new Error('Session expired. Please log in again.');
     }
@@ -235,6 +255,7 @@ export function AuthProvider({ children }) {
       fetchBalance,
       signup,
       login,
+      loginWithToken,
       logout,
       authFetch,
       updateUser,

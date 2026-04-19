@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 /* Chevron icon */
@@ -61,9 +62,15 @@ function ThemeCard({ t, active, onSelect, light }) {
 }
 
 export default function SettingsPage() {
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, authFetch } = useAuth();
   const { themeId, setTheme, themes } = useTheme();
+  const router = useRouter();
   const [themeOpen, setThemeOpen] = useState(false);
+  const [pwOpen, setPwOpen] = useState(false);
+  const [pwForm, setPwForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  const [pwError, setPwError] = useState('');
+  const [pwSuccess, setPwSuccess] = useState('');
+  const [pwSubmitting, setPwSubmitting] = useState(false);
 
   if (!isLoggedIn) {
     return (
@@ -142,6 +149,121 @@ export default function SettingsPage() {
                   ))}
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* ── Change Password Section (collapsible) ── */}
+          <div className="glass-card animate-fade-in-up" style={{ border: '1px solid var(--glass-border)' }}>
+            <button
+              type="button"
+              onClick={() => { setPwOpen(!pwOpen); setPwError(''); setPwSuccess(''); }}
+              className="w-full flex items-center gap-3 p-4 sm:p-5 text-left transition-colors"
+            >
+              <div className="w-9 h-9 rounded-lg flex items-center justify-center text-base shrink-0" style={{
+                background: 'linear-gradient(135deg, rgba(255,92,138,0.2), rgba(168,85,247,0.2))',
+                border: '1px solid rgba(255,92,138,0.15)',
+              }}>🔒</div>
+              <div className="flex-1 min-w-0">
+                <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Change Password</h2>
+                <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>Update your account password</p>
+              </div>
+              <span style={{ color: 'var(--text-muted)' }}><Chevron open={pwOpen} /></span>
+            </button>
+
+            <div style={{
+              maxHeight: pwOpen ? 500 : 0,
+              opacity: pwOpen ? 1 : 0,
+              overflow: 'hidden',
+              transition: 'max-height 0.4s ease, opacity 0.3s ease',
+            }}>
+              <form
+                className="px-4 sm:px-5 pb-4 sm:pb-5 pt-0 space-y-3"
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  setPwError(''); setPwSuccess('');
+                  if (pwForm.newPassword !== pwForm.confirmPassword) {
+                    setPwError('New passwords do not match'); return;
+                  }
+                  if (pwForm.newPassword.length < 6) {
+                    setPwError('New password must be at least 6 characters'); return;
+                  }
+                  setPwSubmitting(true);
+                  try {
+                    const data = await authFetch('/users/change-password', {
+                      method: 'PUT',
+                      body: JSON.stringify({ currentPassword: pwForm.currentPassword, newPassword: pwForm.newPassword }),
+                    });
+                    setPwSuccess(data.message || 'Password changed successfully');
+                    setPwForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+                    setTimeout(() => router.push('/'), 1000);
+                  } catch (err) {
+                    setPwError(err.message || 'Failed to change password');
+                  } finally {
+                    setPwSubmitting(false);
+                  }
+                }}
+              >
+                {pwError && (
+                  <div className="px-3 py-2 rounded-lg text-xs font-medium" style={{
+                    background: 'rgba(255,45,120,0.1)', border: '1px solid rgba(255,45,120,0.3)', color: 'var(--neon-pink)',
+                  }}>{pwError}</div>
+                )}
+                {pwSuccess && (
+                  <div className="px-3 py-2 rounded-lg text-xs font-medium" style={{
+                    background: 'rgba(0,255,136,0.1)', border: '1px solid rgba(0,255,136,0.25)', color: '#00ff88',
+                  }}>{pwSuccess}</div>
+                )}
+                <div>
+                  <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: 'var(--text-muted)' }}>Current Password</label>
+                  <input
+                    type="password"
+                    required
+                    value={pwForm.currentPassword}
+                    onChange={e => setPwForm({ ...pwForm, currentPassword: e.target.value })}
+                    placeholder="••••••••"
+                    className="w-full px-3 py-2.5 rounded-lg text-sm outline-none transition-all duration-200"
+                    style={{ background: 'rgba(10,11,26,0.6)', border: '1px solid rgba(0,229,255,0.15)', color: 'var(--text-primary)' }}
+                    onFocus={e => e.target.style.borderColor = 'rgba(0,229,255,0.5)'}
+                    onBlur={e => e.target.style.borderColor = 'rgba(0,229,255,0.15)'}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: 'var(--text-muted)' }}>New Password</label>
+                  <input
+                    type="password"
+                    required
+                    value={pwForm.newPassword}
+                    onChange={e => setPwForm({ ...pwForm, newPassword: e.target.value })}
+                    placeholder="••••••••"
+                    className="w-full px-3 py-2.5 rounded-lg text-sm outline-none transition-all duration-200"
+                    style={{ background: 'rgba(10,11,26,0.6)', border: '1px solid rgba(0,229,255,0.15)', color: 'var(--text-primary)' }}
+                    onFocus={e => e.target.style.borderColor = 'rgba(0,229,255,0.5)'}
+                    onBlur={e => e.target.style.borderColor = 'rgba(0,229,255,0.15)'}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: 'var(--text-muted)' }}>Confirm New Password</label>
+                  <input
+                    type="password"
+                    required
+                    value={pwForm.confirmPassword}
+                    onChange={e => setPwForm({ ...pwForm, confirmPassword: e.target.value })}
+                    placeholder="••••••••"
+                    className="w-full px-3 py-2.5 rounded-lg text-sm outline-none transition-all duration-200"
+                    style={{ background: 'rgba(10,11,26,0.6)', border: '1px solid rgba(0,229,255,0.15)', color: 'var(--text-primary)' }}
+                    onFocus={e => e.target.style.borderColor = 'rgba(0,229,255,0.5)'}
+                    onBlur={e => e.target.style.borderColor = 'rgba(0,229,255,0.15)'}
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={pwSubmitting}
+                  className="btn-neon btn-neon-primary text-sm px-6 py-2.5 w-full sm:w-auto"
+                  style={{ opacity: pwSubmitting ? 0.6 : 1, cursor: pwSubmitting ? 'not-allowed' : 'pointer' }}
+                >
+                  {pwSubmitting ? 'Saving...' : '🔐 Update Password'}
+                </button>
+              </form>
             </div>
           </div>
 
