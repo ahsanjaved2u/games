@@ -499,7 +499,7 @@ function GamesManagement() {
             {games.map((game, i) => {
               const badges = getGameBadges(game);
               return (
-                <div key={game._id} className="glass-card p-5 animate-fade-in-up flex flex-col sm:flex-row sm:items-center gap-4" style={{ animationDelay: `${i * 0.05}s` }}>
+                <div key={game._id} className="glass-card p-5 animate-fade-in-up flex flex-col sm:flex-row sm:items-center gap-4" style={{ animationDelay: `${i * 0.05}s`, position: 'relative', zIndex: dropdownOpen === game._id ? 10 : 1 }}>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <h3 className="text-base font-bold truncate" style={{ color: 'var(--text-primary)' }}>{game.name}</h3>

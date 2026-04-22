@@ -24,12 +24,19 @@ export default function GameInstructions({ game, onStart, attemptCost = 0, walle
 
   return (
     <>
-    <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: '#0b0b1a', display: 'flex', flexDirection: 'column' }}>
-      {/* Background image */}
+    <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: '#0b0b1a', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      {/* Blurred thumbnail background — portrait canvas shape, centred */}
       {thumbSrc && (
-        <Image src={thumbSrc} alt="" fill className="object-cover" style={{ opacity: 0.18 }} priority />
+        <div style={{
+          position: 'absolute', top: 0, bottom: 0,
+          left: '50%', transform: 'translateX(-50%)',
+          width: 'min(calc(100vh * 12 / 16), 100vw)',
+          backgroundImage: `url(${thumbSrc})`,
+          backgroundSize: 'cover', backgroundPosition: 'center',
+          filter: 'blur(8px) brightness(0.4)',
+          pointerEvents: 'none',
+        }} />
       )}
-
       {/* Glow accents */}
       <div style={{ position: 'absolute', width: 260, height: 260, borderRadius: '50%', background: `radial-gradient(circle, ${color}20, transparent 70%)`, top: '-60px', right: '-40px', pointerEvents: 'none' }} />
       <div style={{ position: 'absolute', width: 200, height: 200, borderRadius: '50%', background: 'radial-gradient(circle, rgba(168,85,247,0.10), transparent 70%)', bottom: '10%', left: '-30px', pointerEvents: 'none' }} />

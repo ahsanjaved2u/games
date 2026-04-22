@@ -1,4 +1,4 @@
-const CACHE = 'gamevesta-v4';
+const CACHE = 'gamevesta-v3';
 const GAME_CACHE = 'gamevesta-games-v2';
 
 // File extensions worth caching for games
