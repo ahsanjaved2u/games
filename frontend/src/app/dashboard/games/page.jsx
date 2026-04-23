@@ -85,7 +85,7 @@ const selectStyle = {
 };
 
 const emptyForm = {
-  name: '', slug: '', description: '', thumbnail: 'images/background.webp',
+  name: '', slug: '', description: '', thumbnail: 'thumbnail.webp',
   gamePath: '',
 };
 
@@ -468,7 +468,7 @@ function GamesManagement() {
                   <input style={inputStyle} value={form.gamePath} onChange={e => setForm(f => ({ ...f, gamePath: e.target.value }))} required />
                 </Field>
                 <Field label="Thumbnail (relative path)" half>
-                  <input style={inputStyle} value={form.thumbnail} onChange={e => setForm(f => ({ ...f, thumbnail: e.target.value }))} placeholder="images/background.webp" />
+                  <input style={inputStyle} value={form.thumbnail} onChange={e => setForm(f => ({ ...f, thumbnail: e.target.value }))} placeholder="thumbnail.webp" />
                 </Field>
                 <Field label="Description">
                   <textarea style={{ ...inputStyle, minHeight: 70, resize: 'vertical' }} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />

@@ -431,7 +431,6 @@ export default function GameCard({ game, contest, session, i, isLoggedIn, review
       </div>
 
       <div className="p-5 flex flex-col flex-1">
-        <h3 className="text-base font-bold mb-3" style={{ color: 'var(--text-primary)' }}>{game.name}</h3>
 
         {/* ── Session: Play & Earn panel ── */}
         {session && (
