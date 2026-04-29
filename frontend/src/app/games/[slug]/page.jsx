@@ -319,18 +319,66 @@ export default function GamePage() {
   const focusGame = useCallback(() => { iframeRef.current?.focus(); }, []);
 
   /* Fullscreen */
+  // Cross-browser helpers. Wrapped in try/catch + Promise.resolve so that
+  // browsers without Fullscreen API (e.g. iOS Safari iPhone) never throw —
+  // the game just runs without fullscreen, without disturbing the app.
+  const enterFullscreen = useCallback(() => {
+    try {
+      const el = document.documentElement;
+      const req = el.requestFullscreen
+        || el.webkitRequestFullscreen
+        || el.webkitRequestFullScreen
+        || el.msRequestFullscreen;
+      if (!req) return Promise.resolve();
+      const result = req.call(el);
+      return (result && typeof result.then === 'function') ? result.catch(() => {}) : Promise.resolve();
+    } catch { return Promise.resolve(); }
+  }, []);
+
+  const exitFullscreenSafe = useCallback(() => {
+    try {
+      const fsEl = document.fullscreenElement
+        || document.webkitFullscreenElement
+        || document.msFullscreenElement;
+      if (!fsEl) return Promise.resolve();
+      const exit = document.exitFullscreen
+        || document.webkitExitFullscreen
+        || document.webkitCancelFullScreen
+        || document.msExitFullscreen;
+      if (!exit) return Promise.resolve();
+      const result = exit.call(document);
+      return (result && typeof result.then === 'function') ? result.catch(() => {}) : Promise.resolve();
+    } catch { return Promise.resolve(); }
+  }, []);
+
   const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => {});
-    } else {
-      document.exitFullscreen().then(() => setIsFullscreen(false)).catch(() => {});
-    }
+    const fsEl = document.fullscreenElement || document.webkitFullscreenElement;
+    if (!fsEl) enterFullscreen().then(() => setIsFullscreen(true));
+    else       exitFullscreenSafe().then(() => setIsFullscreen(false));
   };
   useEffect(() => {
-    const handler = () => setIsFullscreen(!!document.fullscreenElement);
+    const handler = () => setIsFullscreen(
+      !!(document.fullscreenElement || document.webkitFullscreenElement)
+    );
     document.addEventListener('fullscreenchange', handler);
-    return () => document.removeEventListener('fullscreenchange', handler);
+    document.addEventListener('webkitfullscreenchange', handler);
+    return () => {
+      document.removeEventListener('fullscreenchange', handler);
+      document.removeEventListener('webkitfullscreenchange', handler);
+    };
   }, []);
+
+  /* Auto-enter fullscreen when the game actually starts.
+     Safe because `started` only flips inside a click handler (user gesture). */
+  useEffect(() => {
+    if (started) enterFullscreen();
+  }, [started, enterFullscreen]);
+
+  /* Always exit fullscreen when leaving the game page so the rest of the
+     app (header, mobile nav bar, browser chrome) is restored. */
+  useEffect(() => {
+    return () => { exitFullscreenSafe(); };
+  }, [exitFullscreenSafe]);
 
   /* Period countdown ticker — cyclic: restarts automatically when period ends */
   const [periodTimeLeft, setPeriodTimeLeft] = useState(null);
@@ -512,7 +560,7 @@ export default function GamePage() {
       }}>
         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 1, background: `linear-gradient(90deg, transparent, ${color}60 30%, rgba(168,85,247,0.4) 70%, transparent)` }} />
 
-        <Link href="/games" style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--text-secondary)', textDecoration: 'none', fontSize: 12, fontWeight: 600, padding: '4px 8px', borderRadius: 6, background: 'var(--input-bg)', border: '1px solid var(--subtle-border)', transition: 'all 0.2s', flexShrink: 0 }}>
+        <Link href="/games" onClick={() => { exitFullscreenSafe(); }} style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--text-secondary)', textDecoration: 'none', fontSize: 12, fontWeight: 600, padding: '4px 8px', borderRadius: 6, background: 'var(--input-bg)', border: '1px solid var(--subtle-border)', transition: 'all 0.2s', flexShrink: 0 }}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
           <span className="hidden sm:inline">Back</span>
         </Link>
@@ -544,7 +592,7 @@ export default function GamePage() {
           )}
         </div>
 
-        <button onClick={toggleFullscreen} style={{ display: 'flex', alignItems: 'center', color: 'var(--text-secondary)', padding: '4px 8px', borderRadius: 6, background: 'var(--input-bg)', border: '1px solid var(--subtle-border)', cursor: 'pointer', transition: 'all 0.2s', flexShrink: 0 }} title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}>
+        <button onClick={toggleFullscreen} style={{ display: 'none', alignItems: 'center', color: 'var(--text-secondary)', padding: '4px 8px', borderRadius: 6, background: 'var(--input-bg)', border: '1px solid var(--subtle-border)', cursor: 'pointer', transition: 'all 0.2s', flexShrink: 0 }} title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}>
           {isFullscreen ? (
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
           ) : (
