@@ -395,47 +395,6 @@ export default function GamePage() {
     if (started) enterFullscreen();
   }, [started, enterFullscreen]);
 
-  /* iOS Safari "minimal UI" trick — Apple does not expose a Fullscreen API
-     on iPhone, but Safari hides its URL/bottom bars when the page is
-     scrolled. We briefly make the document tall enough to scroll, scroll
-     1 px, then restore. Done once per game-start, iPhone-only.            */
-  useEffect(() => {
-    if (!started) return;
-    if (typeof window === 'undefined') return;
-    const ua = navigator.userAgent || '';
-    const isIPhone = /iPhone|iPod/.test(ua);
-    if (!isIPhone) return;
-    const isStandalone = window.navigator.standalone === true
-      || window.matchMedia?.('(display-mode: standalone)')?.matches;
-    if (isStandalone) return; // already fullscreen, nothing to do
-
-    const prevHtmlHeight = document.documentElement.style.minHeight;
-    const prevBodyHeight = document.body.style.minHeight;
-    document.documentElement.style.minHeight = '101vh';
-    document.body.style.minHeight = '101vh';
-
-    // Defer to next frames so layout settles before scrolling
-    let raf1, raf2, t;
-    raf1 = requestAnimationFrame(() => {
-      raf2 = requestAnimationFrame(() => {
-        try { window.scrollTo(0, 1); } catch {}
-        // Restore original heights after Safari has hidden its UI
-        t = setTimeout(() => {
-          document.documentElement.style.minHeight = prevHtmlHeight;
-          document.body.style.minHeight = prevBodyHeight;
-        }, 350);
-      });
-    });
-
-    return () => {
-      cancelAnimationFrame(raf1);
-      cancelAnimationFrame(raf2);
-      clearTimeout(t);
-      document.documentElement.style.minHeight = prevHtmlHeight;
-      document.body.style.minHeight = prevBodyHeight;
-    };
-  }, [started]);
-
   /* Always exit fullscreen when leaving the game page so the rest of the
      app (header, mobile nav bar, browser chrome) is restored. */
   useEffect(() => {
@@ -590,13 +549,42 @@ export default function GamePage() {
     const gameForUI = { ...game, color, instructions: derivedInstructions };
 
     return (
-      <GameInstructions
-        game={gameForUI}
-        onStart={handleStartClick}
-        attemptCost={hasAttemptCost ? attemptCost : 0}
-        walletBalance={walletBalance ?? 0}
-        onPayAndPlay={hasAttemptCost ? handlePayAndPlay : undefined}
-      />
+      <>
+        {/* iPhone-only fullscreen hint — shown on the instructions screen
+            (before the user starts) so it never overlaps the gameplay area. */}
+        {showIosHint && (
+          <div style={{
+            position: 'fixed', left: 12, right: 12, bottom: 12, zIndex: 1000,
+            padding: '10px 12px', borderRadius: 10,
+            background: 'rgba(10,11,26,0.94)',
+            border: '1px solid color-mix(in srgb, var(--neon-cyan) 30%, transparent)',
+            color: '#e6e6f0', fontSize: 12, lineHeight: 1.4,
+            display: 'flex', alignItems: 'center', gap: 10,
+            boxShadow: '0 4px 18px rgba(0,0,0,0.45)',
+          }}>
+            <span style={{ flex: 1 }}>
+              For true fullscreen on iPhone, tap <strong>Share</strong> →{' '}
+              <strong>Add to Home Screen</strong>, then open from the icon.
+            </span>
+            <button
+              onClick={dismissIosHint}
+              aria-label="Dismiss"
+              style={{
+                flexShrink: 0, padding: '4px 10px', borderRadius: 6,
+                background: 'var(--input-bg)', border: '1px solid var(--subtle-border)',
+                color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 12,
+              }}
+            >Got it</button>
+          </div>
+        )}
+        <GameInstructions
+          game={gameForUI}
+          onStart={handleStartClick}
+          attemptCost={hasAttemptCost ? attemptCost : 0}
+          walletBalance={walletBalance ?? 0}
+          onPayAndPlay={hasAttemptCost ? handlePayAndPlay : undefined}
+        />
+      </>
     );
   }
 
@@ -684,35 +672,6 @@ export default function GamePage() {
         title={game.name}
         tabIndex={0}
       />
-
-      {/* iPhone-only fullscreen hint — shown once per device.
-          iOS Safari blocks the Fullscreen API; the only way to truly hide
-          Safari's URL bar / home indicator is via Add to Home Screen. */}
-      {showIosHint && (
-        <div style={{
-          position: 'absolute', left: 12, right: 12, bottom: 12, zIndex: 50,
-          padding: '10px 12px', borderRadius: 10,
-          background: 'rgba(10,11,26,0.92)',
-          border: '1px solid color-mix(in srgb, var(--neon-cyan) 30%, transparent)',
-          color: '#e6e6f0', fontSize: 12, lineHeight: 1.4,
-          display: 'flex', alignItems: 'center', gap: 10,
-          boxShadow: '0 4px 18px rgba(0,0,0,0.45)',
-        }}>
-          <span style={{ flex: 1 }}>
-            For true fullscreen on iPhone, tap <strong>Share</strong> →{' '}
-            <strong>Add to Home Screen</strong>, then open from the icon.
-          </span>
-          <button
-            onClick={dismissIosHint}
-            aria-label="Dismiss"
-            style={{
-              flexShrink: 0, padding: '4px 10px', borderRadius: 6,
-              background: 'var(--input-bg)', border: '1px solid var(--subtle-border)',
-              color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 12,
-            }}
-          >Got it</button>
-        </div>
-      )}
 
       {/* Signup reward modal for guests */}
       {!isLoggedIn && (
