@@ -395,6 +395,47 @@ export default function GamePage() {
     if (started) enterFullscreen();
   }, [started, enterFullscreen]);
 
+  /* iOS Safari "minimal UI" trick — Apple does not expose a Fullscreen API
+     on iPhone, but Safari hides its URL/bottom bars when the page is
+     scrolled. We briefly make the document tall enough to scroll, scroll
+     1 px, then restore. Done once per game-start, iPhone-only.            */
+  useEffect(() => {
+    if (!started) return;
+    if (typeof window === 'undefined') return;
+    const ua = navigator.userAgent || '';
+    const isIPhone = /iPhone|iPod/.test(ua);
+    if (!isIPhone) return;
+    const isStandalone = window.navigator.standalone === true
+      || window.matchMedia?.('(display-mode: standalone)')?.matches;
+    if (isStandalone) return; // already fullscreen, nothing to do
+
+    const prevHtmlHeight = document.documentElement.style.minHeight;
+    const prevBodyHeight = document.body.style.minHeight;
+    document.documentElement.style.minHeight = '101vh';
+    document.body.style.minHeight = '101vh';
+
+    // Defer to next frames so layout settles before scrolling
+    let raf1, raf2, t;
+    raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        try { window.scrollTo(0, 1); } catch {}
+        // Restore original heights after Safari has hidden its UI
+        t = setTimeout(() => {
+          document.documentElement.style.minHeight = prevHtmlHeight;
+          document.body.style.minHeight = prevBodyHeight;
+        }, 350);
+      });
+    });
+
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+      clearTimeout(t);
+      document.documentElement.style.minHeight = prevHtmlHeight;
+      document.body.style.minHeight = prevBodyHeight;
+    };
+  }, [started]);
+
   /* Always exit fullscreen when leaving the game page so the rest of the
      app (header, mobile nav bar, browser chrome) is restored. */
   useEffect(() => {
