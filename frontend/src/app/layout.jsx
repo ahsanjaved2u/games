@@ -58,6 +58,19 @@ export const metadata = {
   },
 };
 
+// iOS Safari does NOT support the Fullscreen API on iPhone (Apple restriction).
+// These tags + the manifest let users "Add to Home Screen" and launch the app
+// in true fullscreen mode (no Safari URL bar, no bottom bar) on iPhone.
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',           // extend under iOS safe areas (notch / home indicator)
+  themeColor: '#0a0b1a',
+  // Allow users to pinch-zoom on regular pages (accessibility); games handle
+  // their own touch sizing via canvas.
+  userScalable: true,
+};
+
 const jsonLd = {
   '@context': 'https://schema.org',
   '@type': 'WebSite',
@@ -115,6 +128,12 @@ export default function RootLayout({ children }) {
     <html lang="en">
       <head>
         <meta name="theme-color" content="#0a0b1a" />
+        {/* iOS PWA — when added to Home Screen, the game launches truly
+            fullscreen with no Safari UI on iPhone */}
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="GameVesta" />
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <link rel="manifest" href="/manifest.json" />
         <link rel="dns-prefetch" href="https://games-3puq.onrender.com" />

@@ -55,6 +55,27 @@ export default function GamePage() {
   const iframeRef = useRef(null);
   const { isLoggedIn, authFetch, user, fetchBalance, walletBalance } = useAuth();
 
+  /* iOS Safari does not support the Fullscreen API. Detect iPhone (not in
+     standalone PWA mode) so we can show a one-time hint to "Add to Home
+     Screen" for true fullscreen. */
+  const [showIosHint, setShowIosHint] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof navigator === 'undefined') return;
+    const ua = navigator.userAgent || '';
+    const isIPhone = /iPhone|iPod/.test(ua) || (ua.includes('Mac') && 'ontouchend' in document);
+    const isStandalone = window.navigator.standalone === true
+      || window.matchMedia?.('(display-mode: standalone)')?.matches;
+    if (isIPhone && !isStandalone) {
+      try {
+        if (!localStorage.getItem('iosFullscreenHintSeen')) setShowIosHint(true);
+      } catch { /* localStorage may be blocked */ }
+    }
+  }, []);
+  const dismissIosHint = useCallback(() => {
+    setShowIosHint(false);
+    try { localStorage.setItem('iosFullscreenHintSeen', '1'); } catch {}
+  }, []);
+
   /* Signup reward modal states (for guests) */
   const [showSignupModal, setShowSignupModal] = useState(false);
   const [signupModalContext, setSignupModalContext] = useState('in-game');
@@ -622,6 +643,35 @@ export default function GamePage() {
         title={game.name}
         tabIndex={0}
       />
+
+      {/* iPhone-only fullscreen hint — shown once per device.
+          iOS Safari blocks the Fullscreen API; the only way to truly hide
+          Safari's URL bar / home indicator is via Add to Home Screen. */}
+      {showIosHint && (
+        <div style={{
+          position: 'absolute', left: 12, right: 12, bottom: 12, zIndex: 50,
+          padding: '10px 12px', borderRadius: 10,
+          background: 'rgba(10,11,26,0.92)',
+          border: '1px solid color-mix(in srgb, var(--neon-cyan) 30%, transparent)',
+          color: '#e6e6f0', fontSize: 12, lineHeight: 1.4,
+          display: 'flex', alignItems: 'center', gap: 10,
+          boxShadow: '0 4px 18px rgba(0,0,0,0.45)',
+        }}>
+          <span style={{ flex: 1 }}>
+            For true fullscreen on iPhone, tap <strong>Share</strong> →{' '}
+            <strong>Add to Home Screen</strong>, then open from the icon.
+          </span>
+          <button
+            onClick={dismissIosHint}
+            aria-label="Dismiss"
+            style={{
+              flexShrink: 0, padding: '4px 10px', borderRadius: 6,
+              background: 'var(--input-bg)', border: '1px solid var(--subtle-border)',
+              color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 12,
+            }}
+          >Got it</button>
+        </div>
+      )}
 
       {/* Signup reward modal for guests */}
       {!isLoggedIn && (
