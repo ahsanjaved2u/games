@@ -1,0 +1,9 @@
+# ads.txt — GameVesta
+#
+# Authorized Digital Sellers (IAB Tech Lab spec).
+# Placeholder file. Once Google AdSense approves the site, replace
+# the line below with the exact entry shown in your AdSense account
+# under Sites → Settings → ads.txt status.
+#
+# Expected format (replace pub-XXXXXXXXXXXXXXXX with your real publisher ID):
+# google.com, pub-XXXXXXXXXXXXXXXX, DIRECT, f08c47fec0942fa0

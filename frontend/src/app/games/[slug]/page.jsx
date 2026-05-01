@@ -673,6 +673,61 @@ export default function GamePage() {
         tabIndex={0}
       />
 
+      {/*
+        ── Reserved AdSense banner slot (below game canvas) ──────────────
+        Reserved height so the game canvas auto-rescales (iframe uses flex:1).
+        Sizes: 60px on mobile, 90px on tablet/desktop — standard AdSense
+        anchor / leaderboard banner heights. Avoids cumulative layout shift.
+
+        Currently empty (AdSense not yet approved). After approval:
+          1. Add Google AdSense head script in app/layout.jsx
+          2. Replace the inner <div> with:
+             <ins class="adsbygoogle"
+                  style="display:block"
+                  data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
+                  data-ad-slot="YOUR_SLOT_ID"
+                  data-ad-format="auto"
+                  data-full-width-responsive="true"></ins>
+             <Script id="ads-init">{`(adsbygoogle = window.adsbygoogle || []).push({});`}</Script>
+        Never place this slot inside the iframe and never overlap game UI.
+      */}
+      <div
+        className="ad-slot-belowgame"
+        aria-label="Advertisement"
+        style={{
+          flexShrink: 0,
+          width: '100%',
+          background: '#0b0b1a',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Inner placeholder — replaced with <ins class="adsbygoogle"> after approval.
+            On desktop the slot matches the centered game canvas width so it visually
+            extends the game frame (same side borders as the top bar). */}
+        <div
+          style={{
+            width: gameWidth > 0 ? gameWidth : '100%',
+            maxWidth: '100%',
+            height: '100%',
+            minHeight: 'inherit',
+            background: '#0b0b1a',
+            borderLeft: gameWidth > 0 ? '2px solid rgba(0, 255, 255, 0.25)' : 'none',
+            borderRight: gameWidth > 0 ? '2px solid rgba(0, 255, 255, 0.25)' : 'none',
+            borderBottom: gameWidth > 0 ? '2px solid rgba(0, 255, 255, 0.25)' : 'none',
+            borderRadius: gameWidth > 0 ? '0 0 12px 12px' : 0,
+          }}
+        />
+      </div>
+      <style>{`
+        .ad-slot-belowgame { min-height: 60px; height: 60px; }
+        @media (min-width: 640px) {
+          .ad-slot-belowgame { min-height: 90px; height: 90px; }
+        }
+      `}</style>
+
       {/* Signup reward modal for guests */}
       {!isLoggedIn && (
         <SignupRewardModal

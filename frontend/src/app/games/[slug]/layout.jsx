@@ -22,9 +22,7 @@ export async function generateMetadata({ params }) {
   const description = game.description
     || `Play ${game.name} on GameVesta. ${game.gameType === 'competitive' ? 'Compete with other players for cash prizes in PKR.' : 'Earn real PKR rewards based on your score.'}`;
   const url = `${BASE}/games/${slug}`;
-  const image = game.thumbnail
-    ? `${process.env.NEXT_PUBLIC_GAMES_BASE_URL || '/games'}/${game.gamePath}/${game.thumbnail}`
-    : '/og-image.png';
+  const image = `${process.env.NEXT_PUBLIC_GAMES_BASE_URL || '/games'}/${game.gamePath}/${game.thumbnail || 'images/thumbnail.webp'}`;
 
   return {
     title,

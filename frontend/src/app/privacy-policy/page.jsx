@@ -37,9 +37,10 @@ const sections = [
     icon: '🍪',
     title: 'Cookies & Local Storage',
     items: [
-      'We use cookies to keep you logged in and remember preferences',
+      'We use first-party cookies to keep you logged in and remember preferences',
       'Local storage may hold theme settings and session tokens',
-      'No third-party advertising or tracking cookies are used',
+      'Third-party vendors, including Google, may set cookies to serve ads based on your prior visits to this and other websites',
+      'You can opt out of personalised advertising via Google Ads Settings (adssettings.google.com) or aboutads.info',
     ],
   },
   {
@@ -69,6 +70,18 @@ const sections = [
       'Payment processing is handled by secure, PCI-compliant providers',
       'We may use analytics tools to understand platform usage (no personal data shared)',
       'Game assets are served from our own infrastructure',
+    ],
+  },
+  {
+    icon: '📢',
+    title: 'Advertising (Google AdSense)',
+    items: [
+      'We use Google AdSense, a third-party advertising service, to display ads on this site',
+      'Google, as a third-party vendor, uses cookies to serve ads based on your visits to this and other websites',
+      'Google\'s use of advertising cookies enables it and its partners to serve ads based on your visit to our site and/or other sites on the Internet',
+      'You may opt out of personalised advertising at https://adssettings.google.com',
+      'For more on how Google uses data when you use our partners\' sites, see https://policies.google.com/technologies/partner-sites',
+      'We do not share your personal account information with advertisers',
     ],
   },
 ];

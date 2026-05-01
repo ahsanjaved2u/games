@@ -76,6 +76,11 @@ export default function Footer() {
             Built with ❤️ for gamers
           </p>
         </div>
+
+        {/* Skill-based disclosure (AdSense / regulatory) */}
+        <p className="text-[11px] text-center mt-3 px-2" style={{ color: 'var(--text-muted)', opacity: 0.75, lineHeight: 1.55 }}>
+          GameVesta hosts skill-based gaming contests. All cash prizes are awarded for skill-based achievement and ranking — this is not a gambling, betting, or game-of-chance service. No element of luck determines prize outcomes.
+        </p>
       </div>
     </footer>
   );

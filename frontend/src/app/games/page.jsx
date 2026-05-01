@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import GameCard from '@/components/GameCard';
 import { useAuth } from '@/context/AuthContext';
 
@@ -73,11 +74,20 @@ export default function GamesPage() {
             <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Loading games...</p>
           </div>
         ) : games.length === 0 ? (
-          <div className="text-center py-24">
-            <p className="text-lg" style={{ color: 'var(--text-muted)' }}>No games available yet.</p>
+          <div className="text-center py-16 max-w-2xl mx-auto px-4">
+            <div style={{ fontSize: 64, marginBottom: 16 }}>🎮</div>
+            <h2 className="text-xl sm:text-2xl font-bold mb-3" style={{ color: 'var(--text-primary)' }}>New games are on the way!</h2>
+            <p className="text-base mb-6" style={{ color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+              GameVesta hosts skill-based HTML5 arcade and puzzle games where top scorers win real PKR cash prizes. We&apos;re actively adding new titles — check back soon, or browse what we have on the homepage.
+            </p>
+            <div className="flex flex-wrap gap-3 justify-center">
+              <Link href="/" className="btn-neon btn-neon-primary text-sm px-6 py-2.5" style={{ textDecoration: 'none' }}>🏠 Home</Link>
+              <Link href="/leaderboard" className="btn-neon text-sm px-6 py-2.5" style={{ textDecoration: 'none' }}>🏆 Leaderboard</Link>
+              <Link href="/faq" className="btn-neon text-sm px-6 py-2.5" style={{ textDecoration: 'none' }}>❓ How it works</Link>
+            </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
             {(() => {
               const cards = [];
               games.forEach(game => {

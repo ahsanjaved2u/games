@@ -12,7 +12,9 @@ export default function GameInstructions({ game, onStart, attemptCost = 0, walle
   const [showTopUp, setShowTopUp] = useState(false);
   const instructions = game.instructions || [];
   const color = game.color || '#00e5ff';
-  const thumbSrc = game.thumbnail ? `${GAMES_BASE}/${game.gamePath}/${game.thumbnail}` : null;
+  // Same auto-fallback used by <GameCard /> — any game folder containing
+  // `images/thumbnail.webp` will display it without needing the DB field set.
+  const thumbSrc = `${GAMES_BASE}/${game.gamePath}/${game.thumbnail || 'images/thumbnail.webp'}`;
   const isPaid = attemptCost > 0 && !!onPayAndPlay;
   const canAfford = walletBalance >= attemptCost;
 

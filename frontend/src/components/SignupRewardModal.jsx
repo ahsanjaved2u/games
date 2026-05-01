@@ -35,7 +35,7 @@ export default function SignupRewardModal({ show, rewardAmount = 0, onClose, con
     ? 'Save your score, earn real money & withdraw anytime!'
     : context === 'in-game'
     ? 'Your scores can earn you real cash — sign up to claim!'
-    : 'Play games, win real money & withdraw to your wallet!';
+    : 'Play skill-based games, earn cash prizes & withdraw to your wallet!';
 
   return (
     <div

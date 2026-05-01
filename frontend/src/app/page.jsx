@@ -156,11 +156,15 @@ export default function Home() {
         {loading ? (
           <GameCardSkeleton count={6} />
         ) : games.length === 0 ? (
-          <div className="text-center py-16">
-            <p className="text-lg" style={{ color: 'var(--text-muted)' }}>No games available yet.</p>
+          <div className="text-center py-16 max-w-2xl mx-auto px-4">
+            <div style={{ fontSize: 64, marginBottom: 16 }}>🎮</div>
+            <h2 className="text-xl sm:text-2xl font-bold mb-3" style={{ color: 'var(--text-primary)' }}>Get ready to play!</h2>
+            <p className="text-base mb-6" style={{ color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+              We&apos;re putting the finishing touches on a fresh batch of skill-based arcade and puzzle games. Top scorers win real PKR cash prizes — based purely on skill, never on chance. Check back soon.
+            </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
             {(() => {
               const cards = [];
               games.forEach(game => {

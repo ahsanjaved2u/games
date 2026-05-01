@@ -207,7 +207,11 @@ function SessionCountdown({ session, slug, onSessionEnd }) {
 
 export default function GameCard({ game, contest, session, i, isLoggedIn, reviewData, onToggleLike, onContestLive, onSessionEnd }) {
   const { user } = useAuth();
-  const thumb = game.thumbnail ? `${GAMES_BASE}/${game.gamePath}/${game.thumbnail}` : null;
+  // Auto-fallback: if no thumbnail field set in DB, look for the
+  // conventional `images/thumbnail.webp` inside the game's folder so dropping
+  // that file is enough — no admin form edit needed.
+  const thumb = `${GAMES_BASE}/${game.gamePath}/${game.thumbnail || 'images/thumbnail.webp'}`;
+  const [thumbBroken, setThumbBroken] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
@@ -326,10 +330,10 @@ export default function GameCard({ game, contest, session, i, isLoggedIn, review
         e.currentTarget.style.transform = 'translateY(0)';
       }}
     >
-      <div className="relative h-40 sm:h-48 flex items-center justify-center overflow-hidden card-thumb-shimmer" style={{ borderBottom: `1px solid ${accentColor}15` }}>
-        {thumb ? (
+      <div className="relative h-32 sm:h-48 flex items-center justify-center overflow-hidden card-thumb-shimmer" style={{ borderBottom: `1px solid ${accentColor}15` }}>
+        {!thumbBroken ? (
           <>
-            <Image src={thumb} alt={game.name} fill className="object-cover" sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" priority={i < 3} loading={i < 3 ? 'eager' : 'lazy'} />
+            <Image src={thumb} alt={game.name} fill className="object-cover" sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" priority={i < 3} loading={i < 3 ? 'eager' : 'lazy'} onError={() => setThumbBroken(true)} />
             <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(11,11,26,0.95) 0%, rgba(11,11,26,0.3) 40%, transparent 100%)' }} />
           </>
         ) : (
@@ -430,14 +434,14 @@ export default function GameCard({ game, contest, session, i, isLoggedIn, review
         </div>
       </div>
 
-      <div className="p-5 flex flex-col flex-1">
+      <div className="p-3 sm:p-5 flex flex-col flex-1">
 
         {/* ── Session: Play & Earn panel ── */}
         {session && (
-          <div className="flex-1 flex flex-col items-center justify-center rounded-xl mb-3 px-4 py-5 text-center" style={{ background: 'linear-gradient(135deg, rgba(0,255,136,0.08), rgba(255,217,61,0.06))', border: '1px solid rgba(0,255,136,0.15)' }}>
-            <span style={{ fontSize: 34, lineHeight: 1, marginBottom: 10 }}>💰</span>
-            <span className="font-bold" style={{ color: '#00ff88', fontSize: 17 }}>Play &amp; Earn Cash Rewards</span>
-            <p style={{ color: 'var(--text-secondary)', margin: '8px 0 0', fontSize: 13.5 }}>Score points and win real money!</p>
+          <div className="flex-1 flex flex-col items-center justify-center rounded-xl mb-3 px-2 py-3 sm:px-4 sm:py-5 text-center" style={{ background: 'linear-gradient(135deg, rgba(0,255,136,0.08), rgba(255,217,61,0.06))', border: '1px solid rgba(0,255,136,0.15)' }}>
+            <span className="text-[24px] sm:text-[34px]" style={{ lineHeight: 1, marginBottom: 8 }}>💰</span>
+            <span className="font-bold text-[13px] sm:text-[17px]" style={{ color: '#00ff88' }}>Skill-Based Cash Prizes</span>
+            <p className="text-[11px] sm:text-[13.5px]" style={{ color: 'var(--text-secondary)', margin: '6px 0 0' }}>Top scores win real cash prizes!</p>
             <SessionCountdown session={session} slug={game.slug} onSessionEnd={onSessionEnd} />
           </div>
         )}

@@ -19,17 +19,28 @@ export default function NotFound() {
         <p className="text-xl sm:text-2xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>
           Game Over — Page Not Found
         </p>
-        <p className="text-sm mb-8" style={{ color: 'var(--text-muted)', maxWidth: 400 }}>
-          Looks like this level doesn&apos;t exist. Let&apos;s get you back to the arcade.
+        <p className="text-sm mb-6" style={{ color: 'var(--text-muted)', maxWidth: 480, lineHeight: 1.7 }}>
+          The page you&apos;re looking for doesn&apos;t exist or may have been moved. While you&apos;re here, why not jump into a quick skill-based game on GameVesta? Top scorers win real PKR cash prizes — based purely on skill, never on chance.
         </p>
 
-        <div className="flex flex-wrap gap-3 justify-center">
+        <div className="flex flex-wrap gap-3 justify-center mb-8">
           <Link href="/" className="btn-neon btn-neon-primary text-sm px-6 py-2.5" style={{ textDecoration: 'none' }}>
             🏠 Back to Home
           </Link>
           <Link href="/games" className="btn-neon text-sm px-6 py-2.5" style={{ textDecoration: 'none' }}>
             🎯 Browse Games
           </Link>
+          <Link href="/leaderboard" className="btn-neon text-sm px-6 py-2.5" style={{ textDecoration: 'none' }}>
+            🏆 Leaderboard
+          </Link>
+        </div>
+
+        <div className="flex flex-wrap gap-x-5 gap-y-2 justify-center text-xs" style={{ color: 'var(--text-muted)', opacity: 0.75 }}>
+          <Link href="/about" style={{ color: 'inherit', textDecoration: 'none' }}>About</Link>
+          <Link href="/faq" style={{ color: 'inherit', textDecoration: 'none' }}>FAQ</Link>
+          <Link href="/contact" style={{ color: 'inherit', textDecoration: 'none' }}>Contact</Link>
+          <Link href="/privacy-policy" style={{ color: 'inherit', textDecoration: 'none' }}>Privacy</Link>
+          <Link href="/terms" style={{ color: 'inherit', textDecoration: 'none' }}>Terms</Link>
         </div>
       </div>
     </div>

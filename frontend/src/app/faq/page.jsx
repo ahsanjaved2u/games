@@ -11,7 +11,7 @@ const faqSections = [
     questions: [
       {
         q: 'What is GameVesta?',
-        a: 'GameVesta is a real-money gaming platform where you can play browser-based HTML5 games, earn cash rewards, and compete with other players for prize pools — all in PKR (Pakistani Rupees).',
+        a: 'GameVesta is a skill-based gaming platform where you play browser-based HTML5 games and compete with other players for cash prizes based on your scores — all in PKR (Pakistani Rupees). Prizes are awarded purely on skill and ranking, with no element of chance.',
       },
       {
         q: 'How do I create an account?',

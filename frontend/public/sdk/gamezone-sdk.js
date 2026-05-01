@@ -32,6 +32,12 @@ const GameZone = (() => {
     let onRestartCb = null;
     let gamePoints = 0;
     let gameTime = 0;
+    // PERF: throttle backend leaderboard fetches.
+    let _lastRequestAt = 0;
+    // PERF: cache the rendered game-over overlay onto an offscreen canvas
+    //       so the host game loop only blits, never re-draws the same frame.
+    let _gameOverCache = null;
+    let _gameOverCacheKey = '';
 
     // ── Leaderboard data ──
     const defaultEntries = [
@@ -49,10 +55,25 @@ const GameZone = (() => {
     let entries = [...defaultEntries];
 
     // ── Score calc ──
+    // Score is essentially equal to points, with a SMALL time-bonus so two
+    // players who tie on points still get sorted by speed.
+    //
+    //   bonus = 1 + max(0, 300 − t) / 6000      (t in seconds)
+    //
+    //   t = 0s   → 1.0500  (max +5%)
+    //   t = 60s  → 1.0400
+    //   t = 120s → 1.0300
+    //   t = 300s → 1.0000  (no bonus past 5 minutes)
+    //
+    // Example: 40 points
+    //   • 0s   → 42.00     • 30s → 41.80     • 60s → 41.60
+    //   • 120s → 41.20     • 300s → 40.00
+    // The numbers stay close to the raw points but the two-decimal precision
+    // guarantees a unique ordering for tied-point players.
     function calcScore(points, timeSec) {
         if (points <= 0) return 0;
         if (timeSec <= 0) timeSec = 1;
-        const timeBonus = 1 + Math.max(0, 120 - timeSec) / 600;
+        const timeBonus = 1 + Math.max(0, 300 - timeSec) / 6000;
         return parseFloat((points * timeBonus).toFixed(2));
     }
 
@@ -115,11 +136,21 @@ const GameZone = (() => {
                 const playerIdx = mapped.findIndex(en => en.isPlayer);
                 const rank = playerIdx >= 0 ? playerIdx + 1 : mapped.length + 1;
                 gameOverResult = { entries: mapped.slice(0, 10), score: playerScore, rank };
+                // Force end-screen to re-render once with the fresh data
+                _gameOverCacheKey = '';
             }
         }
     }
 
     function requestData() {
+        // PERF: Throttle leaderboard fetches. Each request is a parent → backend
+        // round-trip; spamming it (e.g. user toggling the panel quickly, or the
+        // game-over screen redrawing on every frame) caused noticeable lag.
+        // We allow at most one request per CACHE_MS window.
+        const CACHE_MS = 5000;
+        const now = Date.now();
+        if (now - _lastRequestAt < CACHE_MS) return;
+        _lastRequestAt = now;
         try {
             window.parent.postMessage({ type: 'REQUEST_LEADERBOARD', game: slug }, '*');
         } catch (e) {}
@@ -147,10 +178,50 @@ const GameZone = (() => {
         gameTime = Math.round(timeSec);
         gameOverResult = null;
         tryAgainBtn = null;
+        _gameOverCache = null;
+        _gameOverCacheKey = '';
     }
 
+    // PERF: Public entry point. Game-over screen content is static once
+    // the leaderboard data lands, so we render it ONCE into an offscreen
+    // canvas keyed by (size, score, rank, entries-snapshot). Subsequent
+    // calls just blit that cached bitmap — saves dozens of fillText /
+    // gradient / stroke ops per frame at 60fps.
     function drawGameOver() {
         if (!_isGameOver) return;
+
+        // Build a cache-busting key. If anything that affects the visuals
+        // changes, the key changes and we re-render once.
+        const entriesSig = gameOverResult
+            ? gameOverResult.entries.map(e => `${e.name}:${e.score}`).join('|')
+            : '';
+        const key = `${canvas.width}x${canvas.height}|${gamePoints}|${gameTime}|${gameOverResult ? gameOverResult.rank : 'no'}|${entriesSig}`;
+
+        if (key !== _gameOverCacheKey || !_gameOverCache) {
+            // (Re)render into the offscreen cache canvas.
+            if (!_gameOverCache
+                || _gameOverCache.width !== canvas.width
+                || _gameOverCache.height !== canvas.height) {
+                _gameOverCache = document.createElement('canvas');
+                _gameOverCache.width = canvas.width;
+                _gameOverCache.height = canvas.height;
+            }
+            const realCtx = ctx;
+            const realCanvas = canvas;
+            ctx = _gameOverCache.getContext('2d');
+            canvas = _gameOverCache;
+            // tryAgainBtn coords stay valid since cache is same size as canvas.
+            _drawGameOverInner();
+            ctx = realCtx;
+            canvas = realCanvas;
+            _gameOverCacheKey = key;
+        }
+
+        // Blit the cached overlay onto the real canvas.
+        ctx.drawImage(_gameOverCache, 0, 0);
+    }
+
+    function _drawGameOverInner() {
         const finalScore = calcScore(gamePoints, gameTime);
         const cx = canvas.width / 2;
         const W = canvas.width;
@@ -209,13 +280,13 @@ const GameZone = (() => {
         ctx.fillStyle = 'rgba(255, 71, 87, 0.15)';
         ctx.fillRect(cardL + 1, cardT + 1, cardW - 2, F(4));
 
-        let y = cardT + V(24);
+        let y = cardT + V(36);
 
         // ══ GAME OVER ══
         ctx.fillStyle = '#ff4757';
         ctx.font = `bold ${V(28)}px Arial`;
         ctx.fillText('GAME OVER', cx, y);
-        y += V(36);
+        y += V(40);
 
         // ══ Big score ══
         ctx.fillStyle = '#ffd93d';
@@ -231,7 +302,7 @@ const GameZone = (() => {
         // ══ Stats row ══
         const boxGap = F(8);
         const boxW = (cardW - pad * 2 - boxGap * 2) / 3;
-        const boxH = V(40);
+        const boxH = V(48);          // taller box → more breathing room around labels
         const boxL = cardL + pad;
         const boxR2 = F(8);
 
@@ -261,14 +332,14 @@ const GameZone = (() => {
 
             ctx.fillStyle = '#555';
             ctx.font = `bold ${V(9)}px Arial`;
-            ctx.fillText(s.label, bcx, y + boxH * 0.32);
+            ctx.fillText(s.label, bcx, y + boxH * 0.36);
 
             ctx.fillStyle = s.color;
             ctx.font = `bold ${V(15)}px Arial`;
-            ctx.fillText(s.value, bcx, y + boxH * 0.72);
+            ctx.fillText(s.value, bcx, y + boxH * 0.74);
         });
 
-        y += boxH + V(14);
+        y += boxH + V(20);
 
         // ══ Button (reserve space at bottom first) ══
         const btnH = V(38);
