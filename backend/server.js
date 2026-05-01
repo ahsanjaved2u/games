@@ -47,6 +47,7 @@ const reviewRoutes = require('./routes/reviewRoutes');
 const stripeRoutes = require('./stripe/stripeRoutes');
 const contestRoutes = require('./routes/contestRoutes');
 const sessionRoutes = require('./routes/sessionRoutes');
+const Transaction = require('./models/Transaction');
 
 // Contest / prize cron
 const cron = require('node-cron');
@@ -241,6 +242,11 @@ cron.schedule('*/10 * * * * *', async () => {
                     sess.ended = true;
                     sess.isActive = false;
                     await sess.save();
+                    // Unlock any rewards that were locked until this period ends
+                    await Transaction.updateMany(
+                        { type: 'credit', description: 'Game reward', scheduleId: { $regex: `^${String(sess._id)}_` }, lockedUntil: { $ne: null } },
+                        { $unset: { lockedUntil: '' } }
+                    ).catch(() => {});
                     console.log(`[Cron] Session ${sess._id} ended & paused (no successor)`);
                     broadcastEvent('session-update', { sessionId: sess._id, gameId: sess.game });
                     continue;
@@ -250,6 +256,11 @@ cron.schedule('*/10 * * * * *', async () => {
                 sess.ended = true;
                 sess.isActive = false;
                 await sess.save();
+                // Unlock any rewards that were locked until this period ends
+                await Transaction.updateMany(
+                    { type: 'credit', description: 'Game reward', scheduleId: { $regex: `^${String(sess._id)}_` }, lockedUntil: { $ne: null } },
+                    { $unset: { lockedUntil: '' } }
+                ).catch(() => {});
                 console.log(`[Cron] Session ${sess._id} ended (period finished)`);
 
                 // Only spawn ONE successor per game per cron tick

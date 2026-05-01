@@ -4,6 +4,7 @@ const User = require('../models/User');
 const Game = require('../models/Game');
 const Contest = require('../models/Contest');
 const GameScore = require('../models/GameScore');
+const Session = require('../models/Session');
 const { sendWithdrawalRequestToAdmin, sendWithdrawalApprovedToPlayer, sendWithdrawalRejectedToPlayer } = require('../utils/mailer');
 const { pushEvent } = require('../utils/sse');
 
@@ -98,19 +99,47 @@ const getMyWallet = async (req, res) => {
 // @desc    Get just the balance (lightweight, for navbar)
 // @route   GET /api/wallet/balance
 // ── Helper: compute locked balance (active reward session funds) ──
+// Only counts amounts locked to sessions that are still actively running.
+// Once a session ends (ended=true), its rewards are immediately considered available.
 const getLockedBalance = async (userId) => {
-  const result = await Transaction.aggregate([
-    {
-      $match: {
-        user: userId,
-        type: 'credit',
-        description: 'Game reward',
-        lockedUntil: { $gt: new Date() },
-      },
-    },
-    { $group: { _id: null, total: { $sum: '$amount' } } },
-  ]);
-  return result.length > 0 ? parseFloat(result[0].total.toFixed(2)) : 0;
+  // Get all locked reward transactions
+  const lockedTxns = await Transaction.find({
+    user: userId,
+    type: 'credit',
+    description: 'Game reward',
+    lockedUntil: { $gt: new Date() },
+  }).select('amount scheduleId').lean();
+
+  if (lockedTxns.length === 0) return 0;
+
+  // Extract session IDs from scheduleId (format: {sessionId}_{isoDate})
+  const sessionIds = [...new Set(
+    lockedTxns.map(t => t.scheduleId?.split('_')[0]).filter(id => id && /^[a-f\d]{24}$/i.test(id))
+  )];
+
+  if (sessionIds.length === 0) {
+    // No valid session IDs — can't verify, treat as unlocked
+    return 0;
+  }
+
+  // Find which sessions are still actively running
+  const activeSessions = await Session.find({
+    _id: { $in: sessionIds },
+    ended: false,
+    isActive: true,
+  }).select('_id').lean();
+
+  const activeSessionIdSet = new Set(activeSessions.map(s => String(s._id)));
+
+  // Only count transactions whose session is still active
+  let total = 0;
+  for (const txn of lockedTxns) {
+    const sessionId = txn.scheduleId?.split('_')[0];
+    if (sessionId && activeSessionIdSet.has(sessionId)) {
+      total += txn.amount;
+    }
+  }
+  return parseFloat(total.toFixed(2));
 };
 
 // ────────────────────────────────────────
