@@ -139,6 +139,12 @@ export default function RootLayout({ children }) {
         <link rel="dns-prefetch" href="https://games-3puq.onrender.com" />
         <link rel="preconnect" href="https://games-3puq.onrender.com" crossOrigin="anonymous" />
         <link rel="apple-touch-icon" href="/og-image.png" />
+        {/* Google AdSense verification */}
+        <script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4973580607812361"
+          crossOrigin="anonymous"
+        />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
