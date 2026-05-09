@@ -1,0 +1,47 @@
+///////////////////////////////////plasma burs////////////////////////////////////////
+🕹️ Plasma Burst
+Dodge walls, collect shields, and burst through levels as fast as you can.
+
+🎯 Score
+
+Red 3 • Golden 2 • Green 1 points
+
+🚫 Penalty
+
+Wall hit = -1 point
+
+🛡️ Energy
+
+Shield = +4 energy
+
+⏱️ Speed
+
+Less time = more score
+
+🏆 Rewards
+
+Best daily score • 10 score = 1 PKR
+
+///////////////////////////////////bubble crush////////////////////////////////////////
+
+🍬 Bubble Crush
+Swap candies to match 3 or more — chain combos for big points.
+
+🎯 Match  3 = 3 pts • 4 = 5 pts • 5 = 10 pts • 6+ = 10 + 2 per extra
+🔗 Cascade  Auto-chains after a match multiply your points
+🚫 Penalty  Bad swap = -1 pt + strength drain
+⚡ Strength  Drains on bad swaps — game over at 0
+⏱️ Speed  Less time = more score
+🏆 Rewards  Best daily score • Score → PKR
+
+///////////////////////////////////space shooter////////////////////////////////////////
+🚀 Space Shooter
+Survive enemy waves, upgrade your ship, and rack up the highest score.
+
+🎯 Kill  Red Core 1 • Spacecraft 2 • Drone 3 • Dangerous 5 pts
+💎 Gem   Collect after kill for bonus pts
+⚡ Strength  Green drop +10 • Blue drop +5 (game over at 0)
+🛡️ Shield  Upgrades ship for 15 s
+🚀 Ship   Every 5 pts = next tier (5 tiers)
+⏱️ Speed  Less time = more score
+🏆 Rewards  Best daily score • Score → PKR
