@@ -68,6 +68,18 @@ export default function GamesPage() {
       <div className="glow-orb" style={{ width: '25vw', height: '25vw', maxWidth: 300, maxHeight: 300, background: 'var(--neon-purple)', bottom: '10%', right: '5%', animationDelay: '5s' }} />
 
       <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+        {/* ── Static intro (always visible — SEO + first-time visitor context) ── */}
+        <div className="mb-6 sm:mb-8 text-center max-w-3xl mx-auto">
+          <h1 className="text-xl sm:text-3xl font-extrabold mb-2" style={{ color: 'var(--text-primary)' }}>
+            All Games on GameVesta
+          </h1>
+          <p className="text-xs sm:text-base leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+            Browse the full catalogue of skill-based browser games. Every game runs in your
+            browser — no downloads, no installs — and is free to try. Top scorers in each
+            session or contest win real cash prizes in PKR, awarded on skill alone.
+          </p>
+        </div>
+
         {loading ? (
           <div className="text-center py-24">
             <div className="w-10 h-10 border-2 border-t-transparent rounded-full animate-spin mx-auto mb-3" style={{ borderColor: 'rgba(0,229,255,0.3)', borderTopColor: 'transparent' }} />
