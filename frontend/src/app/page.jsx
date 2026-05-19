@@ -5,6 +5,7 @@ import Link from "next/link";
 import PaymentModal from '@/components/PaymentModal';
 import GameCard from '@/components/GameCard';
 import GameCardSkeleton from '@/components/GameCardSkeleton';
+import AdBanner from '@/components/AdBanner';
 import { useAuth } from "@/context/AuthContext";
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
@@ -184,6 +185,13 @@ export default function Home() {
           </div>
         )}
       </div>
+
+      {/* Adsterra 300x250 — below games grid */}
+      {!loading && games.length > 0 && (
+        <div className="flex justify-center pb-6">
+          <AdBanner adKey="cfab19a3191f4d8d60680461bdefb4c4" width={300} height={250} />
+        </div>
+      )}
 
       {payGame && (
         <PaymentModal

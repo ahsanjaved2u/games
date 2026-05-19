@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import GameCard from '@/components/GameCard';
+import AdBanner from '@/components/AdBanner';
 import { useAuth } from '@/context/AuthContext';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
@@ -104,6 +105,13 @@ export default function GamesPage() {
                 <GameCard key={entry.key} game={entry.game} contest={entry.contest} session={entry.session} i={i} isLoggedIn={isLoggedIn} reviewData={reviewMap[entry.game.slug]} onToggleLike={handleToggleLike} onContestLive={fetchGames} onSessionEnd={fetchGames} />
               ));
             })()}
+          </div>
+        )}
+
+        {/* Adsterra 300x250 — shown below games grid on all screen sizes */}
+        {!loading && games.length > 0 && (
+          <div className="flex justify-center mt-6 mb-2">
+            <AdBanner adKey="cfab19a3191f4d8d60680461bdefb4c4" width={300} height={250} />
           </div>
         )}
       </div>
