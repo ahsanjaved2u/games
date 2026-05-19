@@ -119,11 +119,6 @@ export default function Home() {
 
       <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-2 pb-4 sm:pb-6">
 
-        {/* ── Mobile-only SEO heading (visible to crawlers + mobile users) ── */}
-        <h1 className="sm:hidden text-center font-extrabold mb-3 px-2" style={{ fontSize: 18, color: 'var(--text-primary)', lineHeight: 1.3 }}>
-          GameVesta — Skill-Based Browser Games with Real Cash Prizes
-        </h1>
-
         {/* ── Hero Banner ── */}
         <div className="hidden sm:block mb-5 sm:mb-6 animate-fade-in-up">
           <div
