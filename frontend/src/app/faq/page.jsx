@@ -326,11 +326,12 @@ function AccordionItem({ question, answer, isOpen, onClick, index }) {
       </button>
       <div
         style={{
-          maxHeight: isOpen ? 600 : 0,
+          maxHeight: isOpen ? 2000 : 0,
           opacity: isOpen ? 1 : 0,
           overflow: 'hidden',
           transition: 'max-height 0.35s ease, opacity 0.25s ease',
         }}
+        aria-hidden={!isOpen}
       >
         <div
           className="px-5 pb-4 text-sm leading-relaxed"
@@ -383,7 +384,15 @@ function SectionChip({ title, icon, isActive, onClick }) {
 /* ── Main FAQ Page ── */
 export default function FAQPage() {
   const [activeSection, setActiveSection] = useState(0);
-  const [openItems, setOpenItems] = useState({});
+  // All questions open by default so the FAQ is fully readable on first paint
+  // (better UX + makes content visible to search-engine crawlers / AdSense reviewers)
+  const [openItems, setOpenItems] = useState(() => {
+    const initial = {};
+    faqSections.forEach((s, sIdx) => {
+      s.questions.forEach((_, qIdx) => { initial[`${sIdx}-${qIdx}`] = true; });
+    });
+    return initial;
+  });
 
   const toggleItem = (sectionIdx, questionIdx) => {
     const key = `${sectionIdx}-${questionIdx}`;
@@ -413,7 +422,7 @@ export default function FAQPage() {
       {/* ── Content ── */}
       <div className="max-w-4xl mx-auto px-4 pb-16">
 
-        {/* ── Section Navigation ── */}
+        {/* ── Section Navigation (scroll-to anchors so all sections stay in DOM) ── */}
         <div className="mb-8 -mx-4 px-4">
           <div className="flex gap-2 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
             {faqSections.map((section, i) => (
@@ -422,20 +431,22 @@ export default function FAQPage() {
                 title={section.title}
                 icon={section.icon}
                 isActive={activeSection === i}
-                onClick={() => setActiveSection(i)}
+                onClick={() => {
+                  setActiveSection(i);
+                  const el = document.getElementById(`faq-section-${i}`);
+                  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }}
               />
             ))}
           </div>
         </div>
 
-        {/* ── FAQ Sections ── */}
+        {/* ── FAQ Sections (all visible — SEO + AdSense readable) ── */}
         {faqSections.map((section, sIdx) => (
           <div
             key={sIdx}
-            className="mb-6"
-            style={{
-              display: activeSection === sIdx ? 'block' : 'none',
-            }}
+            id={`faq-section-${sIdx}`}
+            className="mb-8"
           >
             {/* Section Header */}
             <div className="flex items-center gap-3 mb-4">
