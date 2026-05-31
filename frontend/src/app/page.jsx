@@ -5,7 +5,6 @@ import Link from "next/link";
 import PaymentModal from '@/components/PaymentModal';
 import GameCard from '@/components/GameCard';
 import GameCardSkeleton from '@/components/GameCardSkeleton';
-import AdBanner from '@/components/AdBanner';
 import { useAuth } from "@/context/AuthContext";
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
@@ -185,18 +184,6 @@ export default function Home() {
           </div>
         )}
       </div>
-
-      {/* Adsterra banners — 320x50 strip on mobile, 300x250 on desktop */}
-      {!loading && games.length > 0 && (
-        <div className="flex justify-center pb-6">
-          <div className="sm:hidden">
-            <AdBanner adKey="070f46d32d0e028eb6c59f1d7d67ff25" width={320} height={50} />
-          </div>
-          <div className="hidden sm:block">
-            <AdBanner adKey="cfab19a3191f4d8d60680461bdefb4c4" width={300} height={250} />
-          </div>
-        </div>
-      )}
 
       {payGame && (
         <PaymentModal
